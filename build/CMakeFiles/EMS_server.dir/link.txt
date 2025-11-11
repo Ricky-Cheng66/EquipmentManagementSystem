@@ -1,0 +1,1 @@
+/usr/bin/c++     CMakeFiles/EMS_server.dir/src/epoll.cpp.o CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o CMakeFiles/EMS_server.dir/src/main.cpp.o CMakeFiles/EMS_server.dir/src/socket.cpp.o  -o EMS_server 

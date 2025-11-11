@@ -1,0 +1,30 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/liuliuqiu/EquipmentManagementSystem/include/epoll.h
+mutex
+-
+sys/epoll.h
+-
+
+/home/liuliuqiu/EquipmentManagementSystem/include/equipment_management_server.h
+epoll.h
+/home/liuliuqiu/EquipmentManagementSystem/include/epoll.h
+string
+-
+unordered_map
+-
+
+/home/liuliuqiu/EquipmentManagementSystem/src/main.cpp
+../include/equipment_management_server.h
+/home/liuliuqiu/EquipmentManagementSystem/include/equipment_management_server.h
+iostream
+-
+system_error
+-
+
