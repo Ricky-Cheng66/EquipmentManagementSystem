@@ -4,7 +4,7 @@
 int main() {
   //初始化Server
   EquipmentManagementServer server{};
-  if (!server.init(8080)) {
+  if (!server.init(9000)) {
     std::error_code ec(errno, std::system_category());
     std::cerr << "server init failed..." << ec.message() << std::endl;
     return -1;

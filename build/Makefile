@@ -111,6 +111,19 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named clean-all
+
+# Build rule for target.
+clean-all: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 clean-all
+.PHONY : clean-all
+
+# fast build rule for target.
+clean-all/fast:
+	$(MAKE) -f CMakeFiles/clean-all.dir/build.make CMakeFiles/clean-all.dir/build
+.PHONY : clean-all/fast
+
+#=============================================================================
 # Target rules for targets named EMS_server
 
 # Build rule for target.
@@ -122,6 +135,33 @@ EMS_server: cmake_check_build_system
 EMS_server/fast:
 	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/build
 .PHONY : EMS_server/fast
+
+src/connection_manager.o: src/connection_manager.cpp.o
+
+.PHONY : src/connection_manager.o
+
+# target to build an object file
+src/connection_manager.cpp.o:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o
+.PHONY : src/connection_manager.cpp.o
+
+src/connection_manager.i: src/connection_manager.cpp.i
+
+.PHONY : src/connection_manager.i
+
+# target to preprocess a source file
+src/connection_manager.cpp.i:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/connection_manager.cpp.i
+.PHONY : src/connection_manager.cpp.i
+
+src/connection_manager.s: src/connection_manager.cpp.s
+
+.PHONY : src/connection_manager.s
+
+# target to generate assembly for a file
+src/connection_manager.cpp.s:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/connection_manager.cpp.s
+.PHONY : src/connection_manager.cpp.s
 
 src/epoll.o: src/epoll.cpp.o
 
@@ -150,6 +190,33 @@ src/epoll.cpp.s:
 	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/epoll.cpp.s
 .PHONY : src/epoll.cpp.s
 
+src/equipment.o: src/equipment.cpp.o
+
+.PHONY : src/equipment.o
+
+# target to build an object file
+src/equipment.cpp.o:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/equipment.cpp.o
+.PHONY : src/equipment.cpp.o
+
+src/equipment.i: src/equipment.cpp.i
+
+.PHONY : src/equipment.i
+
+# target to preprocess a source file
+src/equipment.cpp.i:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/equipment.cpp.i
+.PHONY : src/equipment.cpp.i
+
+src/equipment.s: src/equipment.cpp.s
+
+.PHONY : src/equipment.s
+
+# target to generate assembly for a file
+src/equipment.cpp.s:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/equipment.cpp.s
+.PHONY : src/equipment.cpp.s
+
 src/equipment_management_server.o: src/equipment_management_server.cpp.o
 
 .PHONY : src/equipment_management_server.o
@@ -177,6 +244,33 @@ src/equipment_management_server.cpp.s:
 	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.s
 .PHONY : src/equipment_management_server.cpp.s
 
+src/equipment_manager.o: src/equipment_manager.cpp.o
+
+.PHONY : src/equipment_manager.o
+
+# target to build an object file
+src/equipment_manager.cpp.o:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o
+.PHONY : src/equipment_manager.cpp.o
+
+src/equipment_manager.i: src/equipment_manager.cpp.i
+
+.PHONY : src/equipment_manager.i
+
+# target to preprocess a source file
+src/equipment_manager.cpp.i:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.i
+.PHONY : src/equipment_manager.cpp.i
+
+src/equipment_manager.s: src/equipment_manager.cpp.s
+
+.PHONY : src/equipment_manager.s
+
+# target to generate assembly for a file
+src/equipment_manager.cpp.s:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.s
+.PHONY : src/equipment_manager.cpp.s
+
 src/main.o: src/main.cpp.o
 
 .PHONY : src/main.o
@@ -203,6 +297,33 @@ src/main.s: src/main.cpp.s
 src/main.cpp.s:
 	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
+
+src/protocol_parse.o: src/protocol_parse.cpp.o
+
+.PHONY : src/protocol_parse.o
+
+# target to build an object file
+src/protocol_parse.cpp.o:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/protocol_parse.cpp.o
+.PHONY : src/protocol_parse.cpp.o
+
+src/protocol_parse.i: src/protocol_parse.cpp.i
+
+.PHONY : src/protocol_parse.i
+
+# target to preprocess a source file
+src/protocol_parse.cpp.i:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/protocol_parse.cpp.i
+.PHONY : src/protocol_parse.cpp.i
+
+src/protocol_parse.s: src/protocol_parse.cpp.s
+
+.PHONY : src/protocol_parse.s
+
+# target to generate assembly for a file
+src/protocol_parse.cpp.s:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/protocol_parse.cpp.s
+.PHONY : src/protocol_parse.cpp.s
 
 src/socket.o: src/socket.cpp.o
 
@@ -239,16 +360,29 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
+	@echo "... clean-all"
 	@echo "... EMS_server"
+	@echo "... src/connection_manager.o"
+	@echo "... src/connection_manager.i"
+	@echo "... src/connection_manager.s"
 	@echo "... src/epoll.o"
 	@echo "... src/epoll.i"
 	@echo "... src/epoll.s"
+	@echo "... src/equipment.o"
+	@echo "... src/equipment.i"
+	@echo "... src/equipment.s"
 	@echo "... src/equipment_management_server.o"
 	@echo "... src/equipment_management_server.i"
 	@echo "... src/equipment_management_server.s"
+	@echo "... src/equipment_manager.o"
+	@echo "... src/equipment_manager.i"
+	@echo "... src/equipment_manager.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/protocol_parse.o"
+	@echo "... src/protocol_parse.i"
+	@echo "... src/protocol_parse.s"
 	@echo "... src/socket.o"
 	@echo "... src/socket.i"
 	@echo "... src/socket.s"

@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <unordered_map>
 
+#include "../include/connection_manager.h"
 #include "../include/epoll.h"
 #include "../include/equipment_management_server.h"
 #include "../include/socket.h"
@@ -46,13 +47,16 @@ bool EquipmentManagementServer::start() {
   //获取Epoll单例
   Epoll &ep = Epoll::get_instance();
   if (!ep.initialize()) {
+    std::cerr << "Epoll初始化失败" << std::endl;
     return false;
   }
 
   int max_events = ep.get_epoll_max_events();
-  struct epoll_event evs[max_events];
+  struct epoll_event *evs = new epoll_event[max_events]{};
+  std::cout << "设备管理服务器启动成功，开始事件循环..." << std::endl;
 
-  while (1) {
+  //主服务器循环
+  while (true) {
     int nfds = ep.wait_events(evs, -1);
     std::cout << "DEBUG: epoll_wait returned " << nfds << " events"
               << std::endl;
@@ -65,38 +69,292 @@ bool EquipmentManagementServer::start() {
       std::cerr << "epoll_wait other errors" << std::endl;
       continue;
     }
+    //处理事件
+    if (!process_events(nfds, evs)) {
+      std::cerr << "事件处理失败..." << std::endl;
+      break;
+    }
+    // 定期执行维护任务（每10次循环执行一次）
+    static int loop_count = 0;
+    if (++loop_count >= 10) {
+      perform_maintenance_tasks();
+      loop_count = 0;
+    }
+  }
 
-    for (int i = 0; i < nfds; i++) {
-      std::cout << "DEBUG: Event " << i << ": fd=" << evs[i].data.fd
-                << ", events=0x" << std::hex << evs[i].events << std::dec
-                << std::endl;
-      if (evs[i].data.fd == server_fd_) {
-        // accept新连接
-        Socket server_socket{};
-        int client_fd = server_socket.accept_socket(evs[i].data.fd);
-        if (client_fd < 0) {
-          if (errno == EAGAIN || errno == EMFILE) {
-            continue; // 资源暂时不可用
-          }
-          std::error_code ec(errno, std::system_category());
-          std::cerr << "accept failed..." << ec.message() << std::endl;
-          continue;
-        }
+  delete[] evs;
+  std::cout << "服务器正常退出" << std::endl;
+  return true;
+}
 
-        Socket client_socket{};
-        client_socket.set_nonblock(client_fd);
-
-        // 获取客户端地址
-        struct sockaddr_in client_addr;
-        socklen_t client_len = sizeof(client_addr);
-        getpeername(client_fd, (struct sockaddr *)&client_addr, &client_len);
-        std::cout << "new client has connected..." << std::endl;
-        // 注册到epoll（ET模式）
-        ep.add_epoll(client_fd, EPOLLIN | EPOLLET | EPOLLRDHUP);
-
-      } else {
+bool EquipmentManagementServer::process_events(int nfds,
+                                               struct epoll_event *evs) {
+  for (int i = 0; i < nfds; i++) {
+    int event_fd = evs[i].data.fd;
+    uint32_t events = evs[i].events;
+    // 记录调试信息
+    std::cout << "处理事件: fd=" << event_fd << ", events=0x" << std::hex
+              << events << std::dec << std::endl;
+    //检查错误事件
+    if (events & (EPOLLERR | EPOLLHUP)) {
+      std::cerr << "连接错误或挂起，关闭fd: " << event_fd << std::endl;
+      handle_connection_close(event_fd);
+      continue;
+    }
+    //服务器接受新连接
+    if (event_fd == server_fd_) {
+      if (!accept_new_connection()) {
+        std::cerr << "接受新连接失败" << std::endl;
       }
+
+    } else if (events & EPOLLIN) {
+      handle_client_data(event_fd);
+    } else {
+      std::cout << "未处理的事件类型: 0x" << std::hex << events << std::dec
+                << std::endl;
     }
   }
   return true;
+}
+
+void EquipmentManagementServer::handle_client_data(int fd) {
+  // 在handleClientData中的处理流程：
+  // 1. 接收数据 → ProtocolParser解析
+  // 2. 根据消息类型调用不同处理函数
+  // 3. 设备注册 → DeviceManager注册设备
+  // 4. 状态更新 → DeviceManager更新状态
+  // 5. 控制指令 → DeviceManager发送控制
+  char buffer[1024];
+
+  // 1.接受数据
+  int bytes_received = recv(fd, buffer, sizeof(buffer) - 1, 0);
+
+  if (bytes_received <= 0) {
+    //连接关闭或错误
+    if (bytes_received == 0) {
+      std::cout << "客户端断开连接: fd= " << fd << std::endl;
+    } else {
+      std::cout << "接收数据错误: fd= " << fd << std::endl;
+    }
+    connections_manager_->remove_connection(fd);
+    close(fd);
+    return;
+  }
+
+  //确保字符串以null结尾
+  buffer[bytes_received] = '\0';
+  std::string received_data(buffer);
+  std::cout << "收到数据: " << received_data << " from fd=" << fd << std::endl;
+
+  // 2.ProtocolParse解析
+  auto parse_result = ProtocolParser::parse_message(received_data);
+  if (!parse_result.success) {
+    std::cout << "协议解析失败" << received_data << std::endl;
+    return;
+  }
+
+  // 3.根据消息类型调用不同处理函数
+  switch (parse_result.type) {
+  case ProtocolParser::EQUIPMENT_REGISTER:
+    handle_equipment_register(fd, parse_result.equipment_id,
+                              parse_result.payload);
+    break;
+  case ProtocolParser::STATUS_UPDATE:
+    handle_status_update(fd, parse_result.equipment_id, parse_result.payload);
+    break;
+  case ProtocolParser::CONTROL_CMD:
+    handle_control_command(fd, parse_result.equipment_id, parse_result.payload);
+    break;
+  case ProtocolParser::HEARTBEAT:
+    handle_heartbeat(fd, parse_result.equipment_id);
+    break;
+  default:
+    std::cout << "收到数据: " << received_data << " from fd=" << fd
+              << std::endl;
+  }
+}
+
+//处理设备注册
+void EquipmentManagementServer::handle_equipment_register(
+    int fd, const std::string &equipment_id, const std::string &payload) {
+
+  std::cout << "DEBUG: 进入handle_equipment_register" << std::endl;
+
+  // 检查成员变量是否初始化
+  if (!equipment_manager_) {
+    std::cerr << "ERROR: equipment_manager_ 未初始化!" << std::endl;
+    return;
+  }
+
+  if (!connections_manager_) {
+    std::cerr << "ERROR: connection_manager_ 未初始化!" << std::endl;
+    return;
+  }
+
+  std::cout << "DEBUG: 开始解析payload: " << payload << std::endl;
+  ;
+
+  // 解析payload获取设备信息 (格式: "classroom_101|projector")
+  auto parts = ProtocolParser::split_string(payload, '|');
+  if (parts.size() < 2) {
+    std::cout << "设备注册数据格式错误" << std::endl;
+    return;
+  }
+  std::string location = parts[0];
+  std::string equipment_type = parts[1];
+
+  //注册到EquipmentManager
+  bool success = equipment_manager_->register_equipment(
+      equipment_id, equipment_type, location);
+  //添加到连接管理
+  if (success) {
+    auto equip = equipment_manager_->get_equipment(equipment_id);
+    if (equip) {
+      connections_manager_->add_connection(fd, equip);
+    }
+  }
+  // 发送响应
+  std::string response = ProtocolParser::build_register_response(success);
+  send(fd, response.c_str(), response.length(), 0);
+
+  std::cout << "设备注册" << (success ? "成功" : "失败") << ": " << equipment_id
+            << std::endl;
+}
+
+//处理状态更新
+void EquipmentManagementServer::handle_status_update(
+    int fd, const std::string &equipment_id, const std::string &payload) {
+  std::cout << "处理状态更新: " << equipment_id << " payload: " << payload
+            << std::endl;
+  //解析状态数据(格式: "online|on|45")
+  auto parts = ProtocolParser::split_string(payload, '|');
+  if (parts.size() < 2) {
+    std::cout << "状态数据格式错误" << std::endl;
+    return;
+  }
+
+  std::string status = parts[0];
+  std::string power_state = parts[1];
+
+  //更新设备状态
+  equipment_manager_->update_equipment_status(equipment_id, status);
+  equipment_manager_->update_equipment_power_state(equipment_id, power_state);
+
+  //更新心跳时间
+  connections_manager_->update_heartbeat(fd);
+  std::cout << "设备状态更新: " << equipment_id << " -> " << status << ","
+            << power_state << std::endl;
+}
+
+//处理控制指令(从设备端发来的控制响应)
+void EquipmentManagementServer::handle_control_command(
+    int fd, const std::string &equipment_id, const std::string &payload) {
+  std::cout << "处理控制响应: " << equipment_id << " payload: " << payload
+            << std::endl;
+
+  // 这里处理设备对控制指令的响应
+  // 比如设备执行turn_on后的确认消息
+
+  //更新设备状态
+  if (payload == "turn_on_success") {
+    equipment_manager_->update_equipment_power_state(equipment_id, "on");
+  } else if (payload == "turn_off_success") {
+    equipment_manager_->update_equipment_power_state(equipment_id, "off");
+  }
+  std::cout << "控制响应处理完成: " << equipment_id << " -> " << payload
+            << std::endl;
+}
+
+// 处理心跳
+void EquipmentManagementServer::handle_heartbeat(
+    int fd, const std::string &equipment_id) {
+  //更新心跳时间
+  connections_manager_->update_heartbeat(fd);
+
+  //发送心跳响应
+  std::string response = ProtocolParser::build_heartbeat_response();
+  send(fd, response.c_str(), response.length(), 0);
+
+  std::cout << "心跳处理: " << equipment_id << " fd=" << fd << std::endl;
+}
+
+void EquipmentManagementServer::check_heartbeat_timeout() {
+  connections_manager_->check_heartbeat_timeout(60); // 60秒超时
+}
+
+bool EquipmentManagementServer::accept_new_connection() {
+  Socket server_socket{};
+  int client_fd = server_socket.accept_socket(server_fd_);
+
+  if (client_fd < 0) {
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      // 没有更多连接可接受，不是错误
+      return true;
+    }
+    std::cerr << "accept失败: " << std::endl;
+    return false;
+  }
+
+  // 设置非阻塞
+  Socket client_socket{};
+  if (!client_socket.set_nonblock(client_fd)) {
+    std::cerr << "设置非阻塞失败: " << client_fd << std::endl;
+    close(client_fd);
+    return false;
+  }
+
+  // 注册到epoll（ET模式）
+  Epoll &ep = Epoll::get_instance();
+  if (!ep.add_epoll(client_fd, EPOLLIN | EPOLLET | EPOLLRDHUP)) {
+    std::cerr << "epoll注册失败: " << client_fd << std::endl;
+    close(client_fd);
+    return false;
+  }
+
+  // 获取客户端信息
+  struct sockaddr_in client_addr;
+  socklen_t client_len = sizeof(client_addr);
+  if (getpeername(client_fd, (struct sockaddr *)&client_addr, &client_len) ==
+      0) {
+    std::cout << "新客户端连接: fd=" << client_fd
+              << ", IP=" << inet_ntoa(client_addr.sin_addr)
+              << ", Port=" << ntohs(client_addr.sin_port) << std::endl;
+  } else {
+    std::cout << "新客户端连接: fd=" << client_fd << " (无法获取地址)"
+              << std::endl;
+  }
+
+  return true;
+}
+
+void EquipmentManagementServer::handle_connection_close(int fd) {
+  std::cout << "连接关闭: fd=" << fd << std::endl;
+
+  // 从连接管理中移除
+  auto equipment = connections_manager_->get_equipment_by_fd(fd);
+  if (equipment) {
+    std::cout << "设备离线: " << equipment->get_equipment_id() << std::endl;
+    // 更新设备状态为离线
+    equipment_manager_->update_equipment_status(equipment->get_equipment_id(),
+                                                "offline");
+  }
+
+  connections_manager_->remove_connection(fd);
+  close(fd);
+}
+
+void EquipmentManagementServer::perform_maintenance_tasks() {
+  // 检查心跳超时
+  connections_manager_->check_heartbeat_timeout(60);
+
+  // 打印当前状态
+  std::cout << "=== 系统状态 ===" << std::endl;
+  std::cout << "活跃连接: " << connections_manager_->get_connection_count()
+            << std::endl;
+  std::cout << "注册设备: " << equipment_manager_->get_equipment_count()
+            << std::endl;
+
+  // 可选：打印详细连接信息
+  connections_manager_->print_connections();
+  std::cout << "=================" << std::endl;
 }

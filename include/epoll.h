@@ -28,5 +28,5 @@ private:
   int max_events_ = 64;
   int epfd_ = -1;
   int server_fd_{};
-  std::mutex epoll_mutex_;
+  mutable std::mutex epoll_mutex_;
 };
