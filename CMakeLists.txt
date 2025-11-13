@@ -15,6 +15,10 @@ add_executable(EMS_server ${SRCS})
 # 头文件路径
 target_include_directories(EMS_server PRIVATE include)
 
+# 数据库
+find_library(MYSQL_LIB mysqlclient)
+target_link_libraries(your_target ${MYSQL_LIB})
+
 # 可选：常用编译警告/优化
 target_compile_options(EMS_server PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>
