@@ -189,6 +189,9 @@ EMS_BINARY_DIR:STATIC=/home/liuliuqiu/EquipmentManagementSystem/build
 //Value Computed by CMake
 EMS_SOURCE_DIR:STATIC=/home/liuliuqiu/EquipmentManagementSystem
 
+//Path to a library.
+MYSQL_LIB:FILEPATH=/usr/lib/x86_64-linux-gnu/libmysqlclient.so
+
 
 ########################
 # INTERNAL cache entries

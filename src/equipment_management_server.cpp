@@ -15,6 +15,7 @@
 #include "../include/epoll.h"
 #include "../include/equipment_management_server.h"
 #include "../include/socket.h"
+
 bool EquipmentManagementServer::init(int server_port) {
   // socket部分
   server_port_ = server_port;
@@ -44,6 +45,12 @@ bool EquipmentManagementServer::init(int server_port) {
 }
 
 bool EquipmentManagementServer::start() {
+  // 初始化数据库
+  if (!initialize_database()) {
+    std::cerr << "数据库初始化失败，服务器启动中止" << std::endl;
+    return false;
+  }
+
   //获取Epoll单例
   Epoll &ep = Epoll::get_instance();
   if (!ep.initialize()) {
@@ -84,6 +91,22 @@ bool EquipmentManagementServer::start() {
 
   delete[] evs;
   std::cout << "服务器正常退出" << std::endl;
+  return true;
+}
+
+bool EquipmentManagementServer::initialize_database() {
+  // 数据库连接配置
+  std::string host = "localhost";
+  std::string user = "root";
+  std::string password = "509876.zxn"; // 修改为你的MySQL密码
+  std::string database = "equipment_management";
+
+  if (!db_manager_->connect(host, user, password, database)) {
+    std::cerr << "数据库连接失败!" << std::endl;
+    return false;
+  }
+
+  std::cout << "数据库连接成功!" << std::endl;
   return true;
 }
 
@@ -206,6 +229,34 @@ void EquipmentManagementServer::handle_equipment_register(
   //注册到EquipmentManager
   bool success = equipment_manager_->register_equipment(
       equipment_id, equipment_type, location);
+
+  //保存到数据库
+  if (success && db_manager_->is_connected()) {
+    // 先查询设备是否已存在
+    std::string query =
+        "SELECT COUNT(*) FROM equipments WHERE equipment_id = '" +
+        equipment_id + "'";
+    auto result = db_manager_->execute_query(query);
+
+    if (!result.empty() && std::stoi(result[0][0]) > 0) {
+      // 设备已存在，更新状态
+      bool update_success =
+          db_manager_->update_equipment_status(equipment_id, "online", "on");
+      if (update_success) {
+        std::cout << "设备状态更新成功: " << equipment_id << std::endl;
+      }
+    } else {
+      // 设备不存在，插入新设备
+      bool insert_success = db_manager_->add_equipment(
+          equipment_id, equipment_id, equipment_type, location);
+      if (!insert_success) {
+        std::cerr << "设备注册到数据库失败: " << equipment_id << std::endl;
+      } else {
+        std::cout << "设备注册到数据库成功: " << equipment_id << std::endl;
+      }
+    }
+  }
+
   //添加到连接管理
   if (success) {
     auto equip = equipment_manager_->get_equipment(equipment_id);
@@ -235,10 +286,31 @@ void EquipmentManagementServer::handle_status_update(
 
   std::string status = parts[0];
   std::string power_state = parts[1];
+  std::string additional_data = "";
+
+  // 如果有额外数据（如温度）
+  if (parts.size() > 2) {
+    additional_data = parts[2];
+  }
 
   //更新设备状态
   equipment_manager_->update_equipment_status(equipment_id, status);
   equipment_manager_->update_equipment_power_state(equipment_id, power_state);
+
+  //更新数据库
+  if (db_manager_->is_connected()) {
+    //更新设备表的状态
+    bool update_success =
+        db_manager_->update_equipment_status(equipment_id, status, power_state);
+
+    //记录状态日志
+    bool log_success = db_manager_->log_equipment_status(
+        equipment_id, status, power_state, additional_data);
+
+    if (!update_success || !log_success) {
+      std::cerr << "状态更新到数据库失败" << equipment_id << std::endl;
+    }
+  }
 
   //更新心跳时间
   connections_manager_->update_heartbeat(fd);

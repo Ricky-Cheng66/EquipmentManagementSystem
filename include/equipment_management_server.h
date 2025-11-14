@@ -1,9 +1,11 @@
 #pragma once
 
 #include "connection_manager.h"
+#include "database_manager.h"
 #include "epoll.h"
 #include "equipment_manager.h"
 #include "protocol_parser.h"
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -12,10 +14,12 @@ class EquipmentManagementServer {
 public:
   EquipmentManagementServer()
       : equipment_manager_(std::make_unique<EquipmentManager>()),
-        connections_manager_(std::make_unique<ConnectionManager>()) {}
+        connections_manager_(std::make_unique<ConnectionManager>()),
+        db_manager_(std::make_unique<DatabaseManager>()) {}
 
   bool init(int server_port);
   bool start();
+  bool initialize_database();
   bool process_events(int nfds, struct epoll_event *evs);
   void handle_client_data(int fd);
   bool accept_new_connection();
@@ -40,4 +44,5 @@ private:
   std::unique_ptr<EquipmentManager> equipment_manager_;
   std::unique_ptr<ConnectionManager> connections_manager_;
   std::unique_ptr<ProtocolParser> protocol_parser_;
+  std::unique_ptr<DatabaseManager> db_manager_;
 };

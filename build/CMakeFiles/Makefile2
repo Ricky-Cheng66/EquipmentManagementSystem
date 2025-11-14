@@ -75,7 +75,7 @@ clean: CMakeFiles/EMS_server.dir/clean
 CMakeFiles/clean-all.dir/all:
 	$(MAKE) -f CMakeFiles/clean-all.dir/build.make CMakeFiles/clean-all.dir/depend
 	$(MAKE) -f CMakeFiles/clean-all.dir/build.make CMakeFiles/clean-all.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=10 "Built target clean-all"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=11 "Built target clean-all"
 .PHONY : CMakeFiles/clean-all.dir/all
 
 # Build rule for subdir invocation for target.
@@ -102,12 +102,12 @@ CMakeFiles/clean-all.dir/clean:
 CMakeFiles/EMS_server.dir/all:
 	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/depend
 	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9 "Built target EMS_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10 "Built target EMS_server"
 .PHONY : CMakeFiles/EMS_server.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/EMS_server.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 9
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 10
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/EMS_server.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 0
 .PHONY : CMakeFiles/EMS_server.dir/rule

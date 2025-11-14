@@ -15,9 +15,15 @@ add_executable(EMS_server ${SRCS})
 # 头文件路径
 target_include_directories(EMS_server PRIVATE include)
 
-# 数据库
+# 查找 MySQL 库
 find_library(MYSQL_LIB mysqlclient)
-target_link_libraries(your_target ${MYSQL_LIB})
+
+if(NOT MYSQL_LIB)
+    message(FATAL_ERROR "MySQL client library not found")
+endif()
+
+# 链接到目标
+target_link_libraries(EMS_server ${MYSQL_LIB})
 
 # 可选：常用编译警告/优化
 target_compile_options(EMS_server PRIVATE

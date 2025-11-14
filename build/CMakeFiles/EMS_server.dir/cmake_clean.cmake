@@ -1,5 +1,6 @@
 file(REMOVE_RECURSE
   "CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o"
+  "CMakeFiles/EMS_server.dir/src/database_manager.cpp.o"
   "CMakeFiles/EMS_server.dir/src/epoll.cpp.o"
   "CMakeFiles/EMS_server.dir/src/equipment.cpp.o"
   "CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o"

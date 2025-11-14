@@ -163,6 +163,33 @@ src/connection_manager.cpp.s:
 	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/connection_manager.cpp.s
 .PHONY : src/connection_manager.cpp.s
 
+src/database_manager.o: src/database_manager.cpp.o
+
+.PHONY : src/database_manager.o
+
+# target to build an object file
+src/database_manager.cpp.o:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/database_manager.cpp.o
+.PHONY : src/database_manager.cpp.o
+
+src/database_manager.i: src/database_manager.cpp.i
+
+.PHONY : src/database_manager.i
+
+# target to preprocess a source file
+src/database_manager.cpp.i:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/database_manager.cpp.i
+.PHONY : src/database_manager.cpp.i
+
+src/database_manager.s: src/database_manager.cpp.s
+
+.PHONY : src/database_manager.s
+
+# target to generate assembly for a file
+src/database_manager.cpp.s:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/database_manager.cpp.s
+.PHONY : src/database_manager.cpp.s
+
 src/epoll.o: src/epoll.cpp.o
 
 .PHONY : src/epoll.o
@@ -365,6 +392,9 @@ help:
 	@echo "... src/connection_manager.o"
 	@echo "... src/connection_manager.i"
 	@echo "... src/connection_manager.s"
+	@echo "... src/database_manager.o"
+	@echo "... src/database_manager.i"
+	@echo "... src/database_manager.s"
 	@echo "... src/epoll.o"
 	@echo "... src/epoll.i"
 	@echo "... src/epoll.s"

@@ -5,6 +5,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
   "/home/liuliuqiu/EquipmentManagementSystem/src/connection_manager.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o"
+  "/home/liuliuqiu/EquipmentManagementSystem/src/database_manager.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/EMS_server.dir/src/database_manager.cpp.o"
   "/home/liuliuqiu/EquipmentManagementSystem/src/epoll.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/EMS_server.dir/src/epoll.cpp.o"
   "/home/liuliuqiu/EquipmentManagementSystem/src/equipment.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/EMS_server.dir/src/equipment.cpp.o"
   "/home/liuliuqiu/EquipmentManagementSystem/src/equipment_management_server.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o"

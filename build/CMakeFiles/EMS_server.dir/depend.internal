@@ -5,6 +5,9 @@ CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o
  /home/liuliuqiu/EquipmentManagementSystem/include/connection_manager.h
  /home/liuliuqiu/EquipmentManagementSystem/include/equipment.h
  /home/liuliuqiu/EquipmentManagementSystem/src/connection_manager.cpp
+CMakeFiles/EMS_server.dir/src/database_manager.cpp.o
+ /home/liuliuqiu/EquipmentManagementSystem/include/database_manager.h
+ /home/liuliuqiu/EquipmentManagementSystem/src/database_manager.cpp
 CMakeFiles/EMS_server.dir/src/epoll.cpp.o
  /home/liuliuqiu/EquipmentManagementSystem/include/epoll.h
  /home/liuliuqiu/EquipmentManagementSystem/include/socket.h
@@ -14,6 +17,7 @@ CMakeFiles/EMS_server.dir/src/equipment.cpp.o
  /home/liuliuqiu/EquipmentManagementSystem/src/equipment.cpp
 CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o
  /home/liuliuqiu/EquipmentManagementSystem/include/connection_manager.h
+ /home/liuliuqiu/EquipmentManagementSystem/include/database_manager.h
  /home/liuliuqiu/EquipmentManagementSystem/include/epoll.h
  /home/liuliuqiu/EquipmentManagementSystem/include/equipment.h
  /home/liuliuqiu/EquipmentManagementSystem/include/equipment_management_server.h
@@ -27,6 +31,7 @@ CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o
  /home/liuliuqiu/EquipmentManagementSystem/src/equipment_manager.cpp
 CMakeFiles/EMS_server.dir/src/main.cpp.o
  /home/liuliuqiu/EquipmentManagementSystem/include/connection_manager.h
+ /home/liuliuqiu/EquipmentManagementSystem/include/database_manager.h
  /home/liuliuqiu/EquipmentManagementSystem/include/epoll.h
  /home/liuliuqiu/EquipmentManagementSystem/include/equipment.h
  /home/liuliuqiu/EquipmentManagementSystem/include/equipment_management_server.h

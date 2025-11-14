@@ -5,6 +5,9 @@ CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o: ../include/connection_ma
 CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o: ../include/equipment.h
 CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o: ../src/connection_manager.cpp
 
+CMakeFiles/EMS_server.dir/src/database_manager.cpp.o: ../include/database_manager.h
+CMakeFiles/EMS_server.dir/src/database_manager.cpp.o: ../src/database_manager.cpp
+
 CMakeFiles/EMS_server.dir/src/epoll.cpp.o: ../include/epoll.h
 CMakeFiles/EMS_server.dir/src/epoll.cpp.o: ../include/socket.h
 CMakeFiles/EMS_server.dir/src/epoll.cpp.o: ../src/epoll.cpp
@@ -13,6 +16,7 @@ CMakeFiles/EMS_server.dir/src/equipment.cpp.o: ../include/equipment.h
 CMakeFiles/EMS_server.dir/src/equipment.cpp.o: ../src/equipment.cpp
 
 CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../include/connection_manager.h
+CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../include/database_manager.h
 CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../include/epoll.h
 CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../include/equipment.h
 CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../include/equipment_management_server.h
@@ -26,6 +30,7 @@ CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o: ../include/equipment_mana
 CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o: ../src/equipment_manager.cpp
 
 CMakeFiles/EMS_server.dir/src/main.cpp.o: ../include/connection_manager.h
+CMakeFiles/EMS_server.dir/src/main.cpp.o: ../include/database_manager.h
 CMakeFiles/EMS_server.dir/src/main.cpp.o: ../include/epoll.h
 CMakeFiles/EMS_server.dir/src/main.cpp.o: ../include/equipment.h
 CMakeFiles/EMS_server.dir/src/main.cpp.o: ../include/equipment_management_server.h
