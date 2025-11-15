@@ -325,6 +325,33 @@ src/main.cpp.s:
 	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+src/message_buffer.o: src/message_buffer.cpp.o
+
+.PHONY : src/message_buffer.o
+
+# target to build an object file
+src/message_buffer.cpp.o:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/message_buffer.cpp.o
+.PHONY : src/message_buffer.cpp.o
+
+src/message_buffer.i: src/message_buffer.cpp.i
+
+.PHONY : src/message_buffer.i
+
+# target to preprocess a source file
+src/message_buffer.cpp.i:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/message_buffer.cpp.i
+.PHONY : src/message_buffer.cpp.i
+
+src/message_buffer.s: src/message_buffer.cpp.s
+
+.PHONY : src/message_buffer.s
+
+# target to generate assembly for a file
+src/message_buffer.cpp.s:
+	$(MAKE) -f CMakeFiles/EMS_server.dir/build.make CMakeFiles/EMS_server.dir/src/message_buffer.cpp.s
+.PHONY : src/message_buffer.cpp.s
+
 src/protocol_parse.o: src/protocol_parse.cpp.o
 
 .PHONY : src/protocol_parse.o
@@ -410,6 +437,9 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/message_buffer.o"
+	@echo "... src/message_buffer.i"
+	@echo "... src/message_buffer.s"
 	@echo "... src/protocol_parse.o"
 	@echo "... src/protocol_parse.i"
 	@echo "... src/protocol_parse.s"

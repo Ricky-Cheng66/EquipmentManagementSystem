@@ -1,12 +1,27 @@
 #include "../include/protocol_parser.h"
+#include <arpa/inet.h>
+#include <cstring>
 #include <sstream>
-
 // 简单协议格式：类型|设备ID|数据
 // 示例：
 // 设备注册: "1|projector_101|classroom_101"
 // 状态上报: "2|projector_101|online|on|45"
 // 控制指令: "3|projector_101|turn_on"
 // 心跳: "4|projector_101|"
+
+std::vector<char> ProtocolParser::pack_message(const std::string &body) {
+  uint32_t body_len = body.length();
+  uint32_t net_len = htonl(body_len); // 转换为网络字节序
+
+  std::vector<char> packed_message(4 + body_len);
+
+  // 写入长度头
+  memcpy(packed_message.data(), &net_len, 4);
+  // 写入消息体
+  memcpy(packed_message.data() + 4, body.data(), body_len);
+
+  return packed_message;
+}
 
 ProtocolParser::ParseResult
 ProtocolParser::parse_message(const std::string &data) {
@@ -43,15 +58,17 @@ ProtocolParser::parse_message(const std::string &data) {
 }
 
 // 构建控制消息: "3|设备ID|命令"
-std::string
+std::vector<char>
 ProtocolParser::build_control_message(const std::string &equipment_id,
                                       const std::string &command) {
-  return "3|" + equipment_id + "|" + command;
+  std::string body = "3|" + equipment_id + "|" + command;
+  return pack_message(body);
 }
 
 // 构建注册响应: "1|响应|success" 或 "1|响应|fail"
-std::string ProtocolParser::build_register_response(bool success) {
-  return "1|response|" + std::string(success ? "success" : "fail");
+std::vector<char> ProtocolParser::build_register_response(bool success) {
+  std::string body = "1|response|" + std::string(success ? "success" : "fail");
+  return pack_message(body);
 }
 
 // 构建心跳响应: "4|pong"

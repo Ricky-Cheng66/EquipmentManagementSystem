@@ -22,6 +22,7 @@ CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o
  /home/liuliuqiu/EquipmentManagementSystem/include/equipment.h
  /home/liuliuqiu/EquipmentManagementSystem/include/equipment_management_server.h
  /home/liuliuqiu/EquipmentManagementSystem/include/equipment_manager.h
+ /home/liuliuqiu/EquipmentManagementSystem/include/message_buffer.h
  /home/liuliuqiu/EquipmentManagementSystem/include/protocol_parser.h
  /home/liuliuqiu/EquipmentManagementSystem/include/socket.h
  /home/liuliuqiu/EquipmentManagementSystem/src/equipment_management_server.cpp
@@ -36,8 +37,12 @@ CMakeFiles/EMS_server.dir/src/main.cpp.o
  /home/liuliuqiu/EquipmentManagementSystem/include/equipment.h
  /home/liuliuqiu/EquipmentManagementSystem/include/equipment_management_server.h
  /home/liuliuqiu/EquipmentManagementSystem/include/equipment_manager.h
+ /home/liuliuqiu/EquipmentManagementSystem/include/message_buffer.h
  /home/liuliuqiu/EquipmentManagementSystem/include/protocol_parser.h
  /home/liuliuqiu/EquipmentManagementSystem/src/main.cpp
+CMakeFiles/EMS_server.dir/src/message_buffer.cpp.o
+ /home/liuliuqiu/EquipmentManagementSystem/include/message_buffer.h
+ /home/liuliuqiu/EquipmentManagementSystem/src/message_buffer.cpp
 CMakeFiles/EMS_server.dir/src/protocol_parse.cpp.o
  /home/liuliuqiu/EquipmentManagementSystem/include/protocol_parser.h
  /home/liuliuqiu/EquipmentManagementSystem/src/protocol_parse.cpp

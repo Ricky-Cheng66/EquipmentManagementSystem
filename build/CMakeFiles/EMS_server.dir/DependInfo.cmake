@@ -11,6 +11,7 @@ set(CMAKE_DEPENDS_CHECK_CXX
   "/home/liuliuqiu/EquipmentManagementSystem/src/equipment_management_server.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o"
   "/home/liuliuqiu/EquipmentManagementSystem/src/equipment_manager.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o"
   "/home/liuliuqiu/EquipmentManagementSystem/src/main.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/EMS_server.dir/src/main.cpp.o"
+  "/home/liuliuqiu/EquipmentManagementSystem/src/message_buffer.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/EMS_server.dir/src/message_buffer.cpp.o"
   "/home/liuliuqiu/EquipmentManagementSystem/src/protocol_parse.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/EMS_server.dir/src/protocol_parse.cpp.o"
   "/home/liuliuqiu/EquipmentManagementSystem/src/socket.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/EMS_server.dir/src/socket.cpp.o"
   )

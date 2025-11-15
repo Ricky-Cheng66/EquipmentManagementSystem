@@ -21,16 +21,19 @@ public:
     bool success;
   };
 
-public:
+  // 打包消息：添加4字节长度头（网络字节序）
+  static std::vector<char> pack_message(const std::string &body);
+
   // 解析设备消息
   static ParseResult parse_message(const std::string &data);
 
   // 构建控制消息
-  static std::string build_control_message(const std::string &equipment_id,
-                                           const std::string &command);
+  static std::vector<char>
+  build_control_message(const std::string &equipment_id,
+                        const std::string &command);
 
   // 构建注册响应
-  static std::string build_register_response(bool success);
+  static std::vector<char> build_register_response(bool success);
 
   // 构建心跳响应
   static std::string build_heartbeat_response();

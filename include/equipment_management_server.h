@@ -4,6 +4,7 @@
 #include "database_manager.h"
 #include "epoll.h"
 #include "equipment_manager.h"
+#include "message_buffer.h"
 #include "protocol_parser.h"
 
 #include <memory>
@@ -22,9 +23,11 @@ public:
   bool initialize_database();
   bool process_events(int nfds, struct epoll_event *evs);
   void handle_client_data(int fd);
+  void process_single_message(int fd, const std::string &message);
   bool accept_new_connection();
   void handle_connection_close(int fd);
   void perform_maintenance_tasks();
+  MessageBuffer *get_message_buffer(int fd);
 
 private:
   //消息处理函数
@@ -45,4 +48,5 @@ private:
   std::unique_ptr<ConnectionManager> connections_manager_;
   std::unique_ptr<ProtocolParser> protocol_parser_;
   std::unique_ptr<DatabaseManager> db_manager_;
+  std::unordered_map<int, std::unique_ptr<MessageBuffer>> message_buffers_;
 };

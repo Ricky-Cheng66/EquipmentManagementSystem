@@ -110,6 +110,17 @@ bool EquipmentManagementServer::initialize_database() {
   return true;
 }
 
+MessageBuffer *EquipmentManagementServer::get_message_buffer(int fd) {
+  auto it = message_buffers_.find(fd);
+  if (it == message_buffers_.end()) {
+    //为新连接创建缓冲区
+    auto buffer = std::make_unique<MessageBuffer>();
+    auto result = message_buffers_.emplace(fd, std::move(buffer));
+    return result.first->second.get();
+  }
+  return it->second.get();
+}
+
 bool EquipmentManagementServer::process_events(int nfds,
                                                struct epoll_event *evs) {
   for (int i = 0; i < nfds; i++) {
@@ -141,42 +152,64 @@ bool EquipmentManagementServer::process_events(int nfds,
 }
 
 void EquipmentManagementServer::handle_client_data(int fd) {
-  // 在handleClientData中的处理流程：
-  // 1. 接收数据 → ProtocolParser解析
-  // 2. 根据消息类型调用不同处理函数
-  // 3. 设备注册 → DeviceManager注册设备
-  // 4. 状态更新 → DeviceManager更新状态
-  // 5. 控制指令 → DeviceManager发送控制
-  char buffer[1024];
+  char recv_buffer[2048]; // 系统级接收缓冲区
 
-  // 1.接受数据
-  int bytes_received = recv(fd, buffer, sizeof(buffer) - 1, 0);
+  // 一直收：能读多少读多少
+  while (true) {
+    int bytes_received = recv(fd, recv_buffer, sizeof(recv_buffer), 0);
 
-  if (bytes_received <= 0) {
-    //连接关闭或错误
-    if (bytes_received == 0) {
-      std::cout << "客户端断开连接: fd= " << fd << std::endl;
+    if (bytes_received > 0) {
+      // 追加到应用层缓冲区
+      MessageBuffer *msg_buffer = get_message_buffer(fd);
+      msg_buffer->append_data(recv_buffer, bytes_received);
+
+      // 循环解析：尝试提取所有完整消息
+      std::vector<std::string> complete_messages;
+      size_t extracted_count = msg_buffer->extract_messages(complete_messages);
+
+      // 处理所有完整消息
+      for (const auto &message : complete_messages) {
+        process_single_message(fd, message);
+      }
+
+      // 检查缓冲区是否异常
+      if (msg_buffer->is_too_large()) {
+        std::cerr << "连接 " << fd << " 缓冲区异常，关闭连接" << std::endl;
+        handle_connection_close(fd);
+        return;
+      }
+
+    } else if (bytes_received == 0) {
+      // 连接正常关闭
+      std::cout << "客户端主动关闭连接: fd=" << fd << std::endl;
+      handle_connection_close(fd);
+      return;
     } else {
-      std::cout << "接收数据错误: fd= " << fd << std::endl;
+      // 错误处理
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        // 非阻塞模式下没有更多数据可读，正常退出循环
+        break;
+      } else {
+        // 真正的错误
+        std::cerr << "接收数据错误: fd=" << fd << std::endl;
+        handle_connection_close(fd);
+        return;
+      }
     }
-    connections_manager_->remove_connection(fd);
-    close(fd);
-    return;
   }
+}
 
-  //确保字符串以null结尾
-  buffer[bytes_received] = '\0';
-  std::string received_data(buffer);
-  std::cout << "收到数据: " << received_data << " from fd=" << fd << std::endl;
+void EquipmentManagementServer::process_single_message(
+    int fd, const std::string &message) {
+  // 使用你原有的消息解析逻辑
+  auto parse_result = ProtocolParser::parse_message(message);
 
-  // 2.ProtocolParse解析
-  auto parse_result = ProtocolParser::parse_message(received_data);
   if (!parse_result.success) {
-    std::cout << "协议解析失败" << received_data << std::endl;
+    std::cout << "协议解析失败: " << message << std::endl;
     return;
   }
 
-  // 3.根据消息类型调用不同处理函数
+  // 根据消息类型分发处理
   switch (parse_result.type) {
   case ProtocolParser::EQUIPMENT_REGISTER:
     handle_equipment_register(fd, parse_result.equipment_id,
@@ -192,8 +225,7 @@ void EquipmentManagementServer::handle_client_data(int fd) {
     handle_heartbeat(fd, parse_result.equipment_id);
     break;
   default:
-    std::cout << "收到数据: " << received_data << " from fd=" << fd
-              << std::endl;
+    std::cout << "收到数据: " << message << " from fd=" << fd << std::endl;
   }
 }
 
@@ -265,8 +297,8 @@ void EquipmentManagementServer::handle_equipment_register(
     }
   }
   // 发送响应
-  std::string response = ProtocolParser::build_register_response(success);
-  send(fd, response.c_str(), response.length(), 0);
+  std::vector<char> response = ProtocolParser::build_register_response(success);
+  send(fd, response.data(), response.size(), 0);
 
   std::cout << "设备注册" << (success ? "成功" : "失败") << ": " << equipment_id
             << std::endl;
@@ -400,7 +432,8 @@ bool EquipmentManagementServer::accept_new_connection() {
 }
 
 void EquipmentManagementServer::handle_connection_close(int fd) {
-  std::cout << "连接关闭: fd=" << fd << std::endl;
+  //清理消息缓冲区
+  message_buffers_.erase(fd);
 
   // 从连接管理中移除
   auto equipment = connections_manager_->get_equipment_by_fd(fd);
@@ -413,6 +446,7 @@ void EquipmentManagementServer::handle_connection_close(int fd) {
 
   connections_manager_->remove_connection(fd);
   close(fd);
+  std::cout << "fd : " << fd << "已关闭" << std::endl;
 }
 
 void EquipmentManagementServer::perform_maintenance_tasks() {

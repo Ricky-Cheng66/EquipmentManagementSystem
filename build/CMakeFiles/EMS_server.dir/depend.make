@@ -21,6 +21,7 @@ CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../include/epol
 CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../include/equipment.h
 CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../include/equipment_management_server.h
 CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../include/equipment_manager.h
+CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../include/message_buffer.h
 CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../include/protocol_parser.h
 CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../include/socket.h
 CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../src/equipment_management_server.cpp
@@ -35,8 +36,12 @@ CMakeFiles/EMS_server.dir/src/main.cpp.o: ../include/epoll.h
 CMakeFiles/EMS_server.dir/src/main.cpp.o: ../include/equipment.h
 CMakeFiles/EMS_server.dir/src/main.cpp.o: ../include/equipment_management_server.h
 CMakeFiles/EMS_server.dir/src/main.cpp.o: ../include/equipment_manager.h
+CMakeFiles/EMS_server.dir/src/main.cpp.o: ../include/message_buffer.h
 CMakeFiles/EMS_server.dir/src/main.cpp.o: ../include/protocol_parser.h
 CMakeFiles/EMS_server.dir/src/main.cpp.o: ../src/main.cpp
+
+CMakeFiles/EMS_server.dir/src/message_buffer.cpp.o: ../include/message_buffer.h
+CMakeFiles/EMS_server.dir/src/message_buffer.cpp.o: ../src/message_buffer.cpp
 
 CMakeFiles/EMS_server.dir/src/protocol_parse.cpp.o: ../include/protocol_parser.h
 CMakeFiles/EMS_server.dir/src/protocol_parse.cpp.o: ../src/protocol_parse.cpp

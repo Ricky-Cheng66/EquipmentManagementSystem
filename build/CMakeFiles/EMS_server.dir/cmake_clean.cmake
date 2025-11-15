@@ -6,6 +6,7 @@ file(REMOVE_RECURSE
   "CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o"
   "CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o"
   "CMakeFiles/EMS_server.dir/src/main.cpp.o"
+  "CMakeFiles/EMS_server.dir/src/message_buffer.cpp.o"
   "CMakeFiles/EMS_server.dir/src/protocol_parse.cpp.o"
   "CMakeFiles/EMS_server.dir/src/socket.cpp.o"
   "EMS_server"
