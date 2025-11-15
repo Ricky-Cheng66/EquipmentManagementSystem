@@ -29,6 +29,22 @@ public:
                             const std::string &status,
                             const std::string &power_state,
                             const std::string &additional_data = "");
+  //预约相关操作
+  bool add_reservation(const std::string &equipment_id, int user_id,
+                       const std::string &purpose,
+                       const std::string &start_time,
+                       const std::string &end_time);
+
+  bool update_reservation_status(int reservation_id, const std::string &status);
+
+  std::vector<std::vector<std::string>>
+  get_reservations_by_equipment(const std::string &equipment_id);
+
+  std::vector<std::vector<std::string>> get_all_reservations();
+
+  bool check_reservation_conflict(const std::string &equipment_id,
+                                  const std::string &start_time,
+                                  const std::string &end_time);
 
   // 查询操作
   std::vector<std::vector<std::string>> execute_query(const std::string &query);

@@ -126,20 +126,14 @@ iostream
 system_error
 -
 
-/home/liuliuqiu/EquipmentManagementSystem/src/message_buffer.cpp
-../include/message_buffer.h
-/home/liuliuqiu/EquipmentManagementSystem/include/message_buffer.h
-arpa/inet.h
--
-cstring
--
-
 /home/liuliuqiu/EquipmentManagementSystem/src/protocol_parse.cpp
 ../include/protocol_parser.h
 /home/liuliuqiu/EquipmentManagementSystem/include/protocol_parser.h
 arpa/inet.h
 -
 cstring
+-
+iostream
 -
 sstream
 -

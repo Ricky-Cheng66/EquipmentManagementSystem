@@ -10,7 +10,10 @@ public:
     EQUIPMENT_REGISTER = 1, // 设备注册
     STATUS_UPDATE = 2,      // 状态上报
     CONTROL_CMD = 3,        // 控制指令
-    HEARTBEAT = 4           // 心跳
+    HEARTBEAT = 4,          // 心跳
+    RESERVATION_APPLY = 5,  //预约申请
+    RESERVATION_QUERY = 6,  //预约查询
+    RESERVATION_APPROVE = 7 //预约审批
   };
 
   // 解析结果
@@ -41,4 +44,12 @@ public:
   // 分割字符串
   static std::vector<std::string> split_string(const std::string &str,
                                                char delimiter);
+
+  static std::vector<char>
+  build_reservation_response(bool success, const std::string &message);
+  static std::vector<char>
+  build_reservation_query_response(bool success, const std::string &data);
+
+  static std::vector<char>
+  build_reservation_approve_response(bool success, const std::string &message);
 };

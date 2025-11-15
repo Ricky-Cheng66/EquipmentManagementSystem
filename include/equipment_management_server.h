@@ -29,6 +29,12 @@ public:
   void perform_maintenance_tasks();
   MessageBuffer *get_message_buffer(int fd);
 
+  bool validate_user_exists(int user_id);
+  bool validate_admin_permission(const std::string &admin_id);
+  bool check_reservation_conflict(const std::string &equipment_id,
+                                  const std::string &start_time,
+                                  const std::string &end_time);
+
 private:
   //消息处理函数
   void handle_equipment_register(int fd, const std::string &device_id,
@@ -38,6 +44,14 @@ private:
   void handle_control_command(int fd, const std::string &device_id,
                               const std::string &payload);
   void handle_heartbeat(int fd, const std::string &equipment_id);
+
+  //预约处理函数
+  void handle_reservation_apply(int fd, const std::string &equipment_id,
+                                const std::string &payload);
+  void handle_reservation_query(int fd, const std::string &equipment_id,
+                                const std::string &payload);
+  void handle_reservation_approve(int fd, const std::string &admin_id,
+                                  const std::string &payload);
   void check_heartbeat_timeout();
 
   const int MAXCLIENTFDS = 1024;

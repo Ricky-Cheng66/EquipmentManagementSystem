@@ -224,6 +224,18 @@ void EquipmentManagementServer::process_single_message(
   case ProtocolParser::HEARTBEAT:
     handle_heartbeat(fd, parse_result.equipment_id);
     break;
+  case ProtocolParser::RESERVATION_APPLY:
+    handle_reservation_apply(fd, parse_result.equipment_id,
+                             parse_result.payload);
+    break;
+  case ProtocolParser::RESERVATION_QUERY:
+    handle_reservation_query(fd, parse_result.equipment_id,
+                             parse_result.payload);
+    break;
+  case ProtocolParser::RESERVATION_APPROVE:
+    handle_reservation_approve(fd, parse_result.equipment_id,
+                               parse_result.payload);
+    break;
   default:
     std::cout << "收到数据: " << message << " from fd=" << fd << std::endl;
   }
@@ -463,4 +475,201 @@ void EquipmentManagementServer::perform_maintenance_tasks() {
   // 可选：打印详细连接信息
   connections_manager_->print_connections();
   std::cout << "=================" << std::endl;
+}
+
+void EquipmentManagementServer::handle_reservation_apply(
+    int fd, const std::string &equipment_id, const std::string &payload) {
+  std::cout << "处理预约申请: " << equipment_id << " payload: " << payload
+            << std::endl;
+
+  // 解析payload格式: "user_id|start_time|end_time|purpose"
+  auto parts = ProtocolParser::split_string(payload, '|');
+  if (parts.size() < 4) {
+    std::cout << "预约申请数据格式错误" << std::endl;
+    std::vector<char> response =
+        ProtocolParser::build_reservation_response(false, "数据格式错误");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  std::string user_id_str = parts[0];
+  std::string start_time = parts[1];
+  std::string end_time = parts[2];
+  std::string purpose = parts[3];
+
+  // 验证用户是否存在
+  int user_id = std::stoi(user_id_str);
+  if (!validate_user_exists(user_id)) {
+    std::vector<char> response =
+        ProtocolParser::build_reservation_response(false, "用户不存在");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  // 检查设备是否存在
+  auto equipment = equipment_manager_->get_equipment(equipment_id);
+  if (!equipment) {
+    std::vector<char> response =
+        ProtocolParser::build_reservation_response(false, "设备不存在");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  // 检查时间冲突
+  if (check_reservation_conflict(equipment_id, start_time, end_time)) {
+    std::vector<char> response =
+        ProtocolParser::build_reservation_response(false, "时间冲突");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  // 保存到数据库
+  if (db_manager_->is_connected()) {
+    bool success = db_manager_->add_reservation(equipment_id, user_id, purpose,
+                                                start_time, end_time);
+    if (success) {
+      std::vector<char> response = ProtocolParser::build_reservation_response(
+          true, "预约申请提交成功，等待审批");
+      send(fd, response.data(), response.size(), 0);
+      std::cout << "预约申请成功: " << equipment_id << " by user " << user_id
+                << std::endl;
+    } else {
+      std::vector<char> response =
+          ProtocolParser::build_reservation_response(false, "数据库错误");
+      send(fd, response.data(), response.size(), 0);
+    }
+  } else {
+    std::vector<char> response =
+        ProtocolParser::build_reservation_response(false, "系统错误");
+    send(fd, response.data(), response.size(), 0);
+  }
+}
+
+void EquipmentManagementServer::handle_reservation_query(
+    int fd, const std::string &equipment_id, const std::string &payload) {
+  std::cout << "处理预约查询: " << equipment_id << " payload: " << payload
+            << std::endl;
+
+  if (!db_manager_->is_connected()) {
+    std::vector<char> response =
+        ProtocolParser::build_reservation_response(false, "数据库连接失败");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  std::vector<std::vector<std::string>> reservations;
+
+  if (equipment_id == "all") {
+    // 查询所有预约
+    reservations = db_manager_->get_all_reservations();
+  } else {
+    // 查询指定设备的预约
+    reservations = db_manager_->get_reservations_by_equipment(equipment_id);
+  }
+
+  // 构建响应数据
+  std::string response_data;
+  for (const auto &reservation : reservations) {
+    // 格式:
+    // reservation_id|equipment_id|user_id|purpose|start_time|end_time|status
+    if (reservation.size() >= 7) {
+      if (!response_data.empty())
+        response_data += ";";
+      response_data += reservation[0] + "|" + reservation[1] + "|" +
+                       reservation[2] + "|" + reservation[3] + "|" +
+                       reservation[4] + "|" + reservation[5] + "|" +
+                       reservation[6];
+    }
+  }
+
+  std::vector<char> response =
+      ProtocolParser::build_reservation_query_response(true, response_data);
+  send(fd, response.data(), response.size(), 0);
+  std::cout << "返回预约查询结果: " << reservations.size() << " 条记录"
+            << std::endl;
+}
+
+void EquipmentManagementServer::handle_reservation_approve(
+    int fd, const std::string &admin_id, const std::string &payload) {
+  std::cout << "处理预约审批: admin=" << admin_id << " payload: " << payload
+            << std::endl;
+
+  // 解析payload格式: "reservation_id|action" (action: approve/reject)
+  auto parts = ProtocolParser::split_string(payload, '|');
+  if (parts.size() < 2) {
+    std::cout << "审批数据格式错误" << std::endl;
+    std::vector<char> response =
+        ProtocolParser::build_reservation_response(false, "数据格式错误");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  std::string reservation_id_str = parts[0];
+  std::string action = parts[1];
+
+  // 验证管理员权限
+  if (!validate_admin_permission(admin_id)) {
+    std::vector<char> response =
+        ProtocolParser::build_reservation_response(false, "权限不足");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  int reservation_id = std::stoi(reservation_id_str);
+  std::string new_status;
+
+  if (action == "approve") {
+    new_status = "approved";
+  } else if (action == "reject") {
+    new_status = "rejected";
+  } else {
+    std::vector<char> response =
+        ProtocolParser::build_reservation_response(false, "无效操作");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  // 更新数据库
+  if (db_manager_->is_connected()) {
+    bool success =
+        db_manager_->update_reservation_status(reservation_id, new_status);
+    if (success) {
+      std::vector<char> response =
+          ProtocolParser::build_reservation_response(true, "审批操作成功");
+      send(fd, response.data(), response.size(), 0);
+      std::cout << "预约审批成功: reservation " << reservation_id << " -> "
+                << new_status << std::endl;
+    } else {
+      std::vector<char> response =
+          ProtocolParser::build_reservation_response(false, "数据库错误");
+      send(fd, response.data(), response.size(), 0);
+    }
+  } else {
+    std::vector<char> response =
+        ProtocolParser::build_reservation_response(false, "系统错误");
+    send(fd, response.data(), response.size(), 0);
+  }
+}
+
+bool EquipmentManagementServer::validate_user_exists(int user_id) {
+  // 简化实现，实际应该查询数据库
+  // 这里假设用户ID 1-100存在
+  return user_id > 0 && user_id <= 100;
+}
+
+bool EquipmentManagementServer::validate_admin_permission(
+    const std::string &admin_id) {
+  // 简化实现，实际应该查询数据库验证管理员权限
+  // 这里假设admin_id为"admin"的有权限
+  return admin_id == "admin";
+}
+
+bool EquipmentManagementServer::check_reservation_conflict(
+    const std::string &equipment_id, const std::string &start_time,
+    const std::string &end_time) {
+  if (db_manager_->is_connected()) {
+    return db_manager_->check_reservation_conflict(equipment_id, start_time,
+                                                   end_time);
+  }
+  return false; // 数据库不可用时默认无冲突
 }

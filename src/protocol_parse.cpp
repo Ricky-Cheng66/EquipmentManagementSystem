@@ -1,6 +1,7 @@
 #include "../include/protocol_parser.h"
 #include <arpa/inet.h>
 #include <cstring>
+#include <iostream>
 #include <sstream>
 // 简单协议格式：类型|设备ID|数据
 // 示例：
@@ -36,7 +37,7 @@ ProtocolParser::parse_message(const std::string &data) {
 
   // 解析消息类型
   int type_num = std::stoi(parts[0]);
-  if (type_num < 1 || type_num > 4) {
+  if (type_num < 1 || type_num > 8) {
     return result;
   }
   result.type = static_cast<MessageType>(type_num);
@@ -90,4 +91,28 @@ std::vector<std::string> ProtocolParser::split_string(const std::string &str,
   }
 
   return tokens;
+}
+
+std::vector<char>
+ProtocolParser::build_reservation_response(bool success,
+                                           const std::string &message) {
+  std::string body =
+      "6|response|" + std::string(success ? "success" : "fail") + "|" + message;
+  return pack_message(body);
+}
+
+std::vector<char>
+ProtocolParser::build_reservation_query_response(bool success,
+                                                 const std::string &data) {
+  std::string body =
+      "7|response|" + std::string(success ? "success" : "fail") + "|" + data;
+  return pack_message(body);
+}
+
+std::vector<char>
+ProtocolParser::build_reservation_approve_response(bool success,
+                                                   const std::string &message) {
+  std::string body =
+      "8|response|" + std::string(success ? "success" : "fail") + "|" + message;
+  return pack_message(body);
 }

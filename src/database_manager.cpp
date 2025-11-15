@@ -128,3 +128,66 @@ bool DatabaseManager::initialize_tables() {
 std::string DatabaseManager::get_last_error() const {
   return mysql_error(mysql_conn_);
 }
+
+bool DatabaseManager::add_reservation(const std::string &equipment_id,
+                                      int user_id, const std::string &purpose,
+                                      const std::string &start_time,
+                                      const std::string &end_time) {
+  std::string query = "INSERT INTO reservations (equipment_id, user_id, "
+                      "purpose, start_time, end_time, status) "
+                      "VALUES ('" +
+                      equipment_id + "', " + std::to_string(user_id) + ", '" +
+                      purpose + "', '" + start_time + "', '" + end_time +
+                      "', 'pending')";
+  return execute_update(query);
+}
+
+bool DatabaseManager::update_reservation_status(int reservation_id,
+                                                const std::string &status) {
+  std::string query = "UPDATE reservations SET status = '" + status +
+                      "' WHERE id = " + std::to_string(reservation_id);
+  return execute_update(query);
+}
+
+std::vector<std::vector<std::string>>
+DatabaseManager::get_reservations_by_equipment(
+    const std::string &equipment_id) {
+  std::string query =
+      "SELECT id, equipment_id, user_id, purpose, start_time, end_time, status "
+      "FROM reservations WHERE equipment_id = '" +
+      equipment_id +
+      "' "
+      "ORDER BY start_time";
+  return execute_query(query);
+}
+
+std::vector<std::vector<std::string>> DatabaseManager::get_all_reservations() {
+  std::string query =
+      "SELECT id, equipment_id, user_id, purpose, start_time, end_time, status "
+      "FROM reservations ORDER BY start_time";
+  return execute_query(query);
+}
+
+bool DatabaseManager::check_reservation_conflict(
+    const std::string &equipment_id, const std::string &start_time,
+    const std::string &end_time) {
+  std::string query =
+      "SELECT COUNT(*) FROM reservations WHERE equipment_id = '" +
+      equipment_id +
+      "' "
+      "AND status IN ('pending', 'approved') "
+      "AND ((start_time BETWEEN '" +
+      start_time + "' AND '" + end_time +
+      "') "
+      "OR (end_time BETWEEN '" +
+      start_time + "' AND '" + end_time +
+      "') "
+      "OR (start_time <= '" +
+      start_time + "' AND end_time >= '" + end_time + "'))";
+
+  auto result = execute_query(query);
+  if (!result.empty() && std::stoi(result[0][0]) > 0) {
+    return true; // 存在冲突
+  }
+  return false;
+}
