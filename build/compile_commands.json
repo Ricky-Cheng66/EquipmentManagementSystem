@@ -1,52 +1,52 @@
 [
 {
   "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/shared_components",
-  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include    -o CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/protocol_parse.cpp",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include  -g   -o CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/protocol_parse.cpp",
   "file": "/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/protocol_parse.cpp"
 },
 {
   "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/shared_components",
-  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include    -o CMakeFiles/shared_components.dir/src/equipment.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/equipment.cpp",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include  -g   -o CMakeFiles/shared_components.dir/src/equipment.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/equipment.cpp",
   "file": "/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/equipment.cpp"
 },
 {
   "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/shared_components",
-  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include    -o CMakeFiles/shared_components.dir/src/message_buffer.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/message_buffer.cpp",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include  -g   -o CMakeFiles/shared_components.dir/src/message_buffer.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/message_buffer.cpp",
   "file": "/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/message_buffer.cpp"
 },
 {
   "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/server",
-  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include    -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/connection_manager.cpp",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include  -g   -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/connection_manager.cpp",
   "file": "/home/liuliuqiu/EquipmentManagementSystem/server/src/connection_manager.cpp"
 },
 {
   "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/server",
-  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include    -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/database_manager.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/database_manager.cpp",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include  -g   -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/database_manager.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/database_manager.cpp",
   "file": "/home/liuliuqiu/EquipmentManagementSystem/server/src/database_manager.cpp"
 },
 {
   "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/server",
-  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include    -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/epoll.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/epoll.cpp",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include  -g   -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/epoll.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/epoll.cpp",
   "file": "/home/liuliuqiu/EquipmentManagementSystem/server/src/epoll.cpp"
 },
 {
   "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/server",
-  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include    -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_management_server.cpp",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include  -g   -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_management_server.cpp",
   "file": "/home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_management_server.cpp"
 },
 {
   "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/server",
-  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include    -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_manager.cpp",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include  -g   -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_manager.cpp",
   "file": "/home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_manager.cpp"
 },
 {
   "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/server",
-  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include    -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/main.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/main.cpp",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include  -g   -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/main.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/main.cpp",
   "file": "/home/liuliuqiu/EquipmentManagementSystem/server/src/main.cpp"
 },
 {
   "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/server",
-  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include    -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/socket.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/socket.cpp",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include  -g   -Wall -Wextra -Wpedantic -std=c++2a -o CMakeFiles/EMS_server.dir/src/socket.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/socket.cpp",
   "file": "/home/liuliuqiu/EquipmentManagementSystem/server/src/socket.cpp"
 }
 ]

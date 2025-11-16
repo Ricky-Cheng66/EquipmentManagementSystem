@@ -22,7 +22,7 @@ CMAKE_AR:FILEPATH=/usr/bin/ar
 
 //Choose the type of build, options are: None Debug Release RelWithDebInfo
 // MinSizeRel ...
-CMAKE_BUILD_TYPE:STRING=
+CMAKE_BUILD_TYPE:STRING=Debug
 
 //Enable/Disable color output during build.
 CMAKE_COLOR_MAKEFILE:BOOL=ON
@@ -194,6 +194,12 @@ EquipmentManagementSystem_BINARY_DIR:STATIC=/home/liuliuqiu/EquipmentManagementS
 
 //Value Computed by CMake
 EquipmentManagementSystem_SOURCE_DIR:STATIC=/home/liuliuqiu/EquipmentManagementSystem
+
+//Value Computed by CMake
+EquipmentStimulation_BINARY_DIR:STATIC=/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation
+
+//Value Computed by CMake
+EquipmentStimulation_SOURCE_DIR:STATIC=/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation
 
 //Path to a library.
 MYSQL_LIB:FILEPATH=/usr/lib/x86_64-linux-gnu/libmysqlclient.so

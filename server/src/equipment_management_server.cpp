@@ -259,7 +259,6 @@ void EquipmentManagementServer::handle_equipment_register(
   }
 
   std::cout << "DEBUG: 开始解析payload: " << payload << std::endl;
-  ;
 
   // 解析payload获取设备信息 (格式: "classroom_101|projector")
   auto parts = ProtocolParser::split_string(payload, '|');
