@@ -1,4 +1,5 @@
 /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/rebuild_cache.dir
 /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/edit_cache.dir
-/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/clean-all.dir
-/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/EMS_server.dir
+/home/liuliuqiu/EquipmentManagementSystem/build/server/CMakeFiles/rebuild_cache.dir
+/home/liuliuqiu/EquipmentManagementSystem/build/server/CMakeFiles/edit_cache.dir
+/home/liuliuqiu/EquipmentManagementSystem/build/server/CMakeFiles/EMS_server.dir
