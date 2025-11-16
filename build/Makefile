@@ -111,6 +111,19 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named shared_components
+
+# Build rule for target.
+shared_components: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 shared_components
+.PHONY : shared_components
+
+# fast build rule for target.
+shared_components/fast:
+	$(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/build
+.PHONY : shared_components/fast
+
+#=============================================================================
 # Target rules for targets named EMS_server
 
 # Build rule for target.
@@ -131,6 +144,7 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
+	@echo "... shared_components"
 	@echo "... EMS_server"
 .PHONY : help
 

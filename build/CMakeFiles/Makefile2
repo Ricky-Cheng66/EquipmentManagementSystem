@@ -53,16 +53,19 @@ CMAKE_BINARY_DIR = /home/liuliuqiu/EquipmentManagementSystem/build
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
+all: shared_components/all
 all: server/all
 
 .PHONY : all
 
 # The main recursive "preinstall" target.
+preinstall: shared_components/preinstall
 preinstall: server/preinstall
 
 .PHONY : preinstall
 
 # The main recursive "clean" target.
+clean: shared_components/clean
 clean: server/clean
 
 .PHONY : clean
@@ -86,18 +89,63 @@ server/clean: server/CMakeFiles/EMS_server.dir/clean
 .PHONY : server/clean
 
 #=============================================================================
+# Directory level rules for directory shared_components
+
+# Recursive "all" directory target.
+shared_components/all: shared_components/CMakeFiles/shared_components.dir/all
+
+.PHONY : shared_components/all
+
+# Recursive "preinstall" directory target.
+shared_components/preinstall:
+
+.PHONY : shared_components/preinstall
+
+# Recursive "clean" directory target.
+shared_components/clean: shared_components/CMakeFiles/shared_components.dir/clean
+
+.PHONY : shared_components/clean
+
+#=============================================================================
+# Target rules for target shared_components/CMakeFiles/shared_components.dir
+
+# All Build rule for target.
+shared_components/CMakeFiles/shared_components.dir/all:
+	$(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/depend
+	$(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=9,10,11,12 "Built target shared_components"
+.PHONY : shared_components/CMakeFiles/shared_components.dir/all
+
+# Build rule for subdir invocation for target.
+shared_components/CMakeFiles/shared_components.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 4
+	$(MAKE) -f CMakeFiles/Makefile2 shared_components/CMakeFiles/shared_components.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 0
+.PHONY : shared_components/CMakeFiles/shared_components.dir/rule
+
+# Convenience name for target.
+shared_components: shared_components/CMakeFiles/shared_components.dir/rule
+
+.PHONY : shared_components
+
+# clean rule for target.
+shared_components/CMakeFiles/shared_components.dir/clean:
+	$(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/clean
+.PHONY : shared_components/CMakeFiles/shared_components.dir/clean
+
+#=============================================================================
 # Target rules for target server/CMakeFiles/EMS_server.dir
 
 # All Build rule for target.
-server/CMakeFiles/EMS_server.dir/all:
+server/CMakeFiles/EMS_server.dir/all: shared_components/CMakeFiles/shared_components.dir/all
 	$(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/depend
 	$(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11 "Built target EMS_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8 "Built target EMS_server"
 .PHONY : server/CMakeFiles/EMS_server.dir/all
 
 # Build rule for subdir invocation for target.
 server/CMakeFiles/EMS_server.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 11
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 12
 	$(MAKE) -f CMakeFiles/Makefile2 server/CMakeFiles/EMS_server.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 0
 .PHONY : server/CMakeFiles/EMS_server.dir/rule

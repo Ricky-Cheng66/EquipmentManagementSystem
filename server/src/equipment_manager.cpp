@@ -1,4 +1,4 @@
-#include "../include/equipment_manager.h"
+#include "equipment_manager.h"
 #include <iostream>
 // 设备生命周期管理
 bool EquipmentManager::register_equipment(const std::string &equipment_id,

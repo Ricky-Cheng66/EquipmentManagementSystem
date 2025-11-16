@@ -1,4 +1,4 @@
-#include "../include/database_manager.h"
+#include "database_manager.h"
 #include <iostream>
 
 DatabaseManager::DatabaseManager() : mysql_conn_(nullptr), port_(3306) {

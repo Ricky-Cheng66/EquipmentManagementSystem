@@ -11,10 +11,10 @@
 #include <unistd.h>
 #include <unordered_map>
 
-#include "../include/connection_manager.h"
-#include "../include/epoll.h"
-#include "../include/equipment_management_server.h"
-#include "../include/socket.h"
+#include "connection_manager.h"
+#include "epoll.h"
+#include "equipment_management_server.h"
+#include "socket.h"
 
 bool EquipmentManagementServer::init(int server_port) {
   // socket部分

@@ -6,5 +6,5 @@ CXX_FLAGS =   -Wall -Wextra -Wpedantic -std=c++2a
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/liuliuqiu/EquipmentManagementSystem/server/include 
+CXX_INCLUDES = -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/server/include 
 

@@ -1,5 +1,8 @@
 /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/rebuild_cache.dir
 /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/edit_cache.dir
+/home/liuliuqiu/EquipmentManagementSystem/build/shared_components/CMakeFiles/rebuild_cache.dir
+/home/liuliuqiu/EquipmentManagementSystem/build/shared_components/CMakeFiles/edit_cache.dir
+/home/liuliuqiu/EquipmentManagementSystem/build/shared_components/CMakeFiles/shared_components.dir
 /home/liuliuqiu/EquipmentManagementSystem/build/server/CMakeFiles/rebuild_cache.dir
 /home/liuliuqiu/EquipmentManagementSystem/build/server/CMakeFiles/edit_cache.dir
 /home/liuliuqiu/EquipmentManagementSystem/build/server/CMakeFiles/EMS_server.dir

@@ -206,33 +206,6 @@ src/epoll.cpp.s:
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/epoll.cpp.s
 .PHONY : src/epoll.cpp.s
 
-src/equipment.o: src/equipment.cpp.o
-
-.PHONY : src/equipment.o
-
-# target to build an object file
-src/equipment.cpp.o:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/equipment.cpp.o
-.PHONY : src/equipment.cpp.o
-
-src/equipment.i: src/equipment.cpp.i
-
-.PHONY : src/equipment.i
-
-# target to preprocess a source file
-src/equipment.cpp.i:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/equipment.cpp.i
-.PHONY : src/equipment.cpp.i
-
-src/equipment.s: src/equipment.cpp.s
-
-.PHONY : src/equipment.s
-
-# target to generate assembly for a file
-src/equipment.cpp.s:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/equipment.cpp.s
-.PHONY : src/equipment.cpp.s
-
 src/equipment_management_server.o: src/equipment_management_server.cpp.o
 
 .PHONY : src/equipment_management_server.o
@@ -314,60 +287,6 @@ src/main.cpp.s:
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
-src/message_buffer.o: src/message_buffer.cpp.o
-
-.PHONY : src/message_buffer.o
-
-# target to build an object file
-src/message_buffer.cpp.o:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/message_buffer.cpp.o
-.PHONY : src/message_buffer.cpp.o
-
-src/message_buffer.i: src/message_buffer.cpp.i
-
-.PHONY : src/message_buffer.i
-
-# target to preprocess a source file
-src/message_buffer.cpp.i:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/message_buffer.cpp.i
-.PHONY : src/message_buffer.cpp.i
-
-src/message_buffer.s: src/message_buffer.cpp.s
-
-.PHONY : src/message_buffer.s
-
-# target to generate assembly for a file
-src/message_buffer.cpp.s:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/message_buffer.cpp.s
-.PHONY : src/message_buffer.cpp.s
-
-src/protocol_parse.o: src/protocol_parse.cpp.o
-
-.PHONY : src/protocol_parse.o
-
-# target to build an object file
-src/protocol_parse.cpp.o:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/protocol_parse.cpp.o
-.PHONY : src/protocol_parse.cpp.o
-
-src/protocol_parse.i: src/protocol_parse.cpp.i
-
-.PHONY : src/protocol_parse.i
-
-# target to preprocess a source file
-src/protocol_parse.cpp.i:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/protocol_parse.cpp.i
-.PHONY : src/protocol_parse.cpp.i
-
-src/protocol_parse.s: src/protocol_parse.cpp.s
-
-.PHONY : src/protocol_parse.s
-
-# target to generate assembly for a file
-src/protocol_parse.cpp.s:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/protocol_parse.cpp.s
-.PHONY : src/protocol_parse.cpp.s
-
 src/socket.o: src/socket.cpp.o
 
 .PHONY : src/socket.o
@@ -413,9 +332,6 @@ help:
 	@echo "... src/epoll.o"
 	@echo "... src/epoll.i"
 	@echo "... src/epoll.s"
-	@echo "... src/equipment.o"
-	@echo "... src/equipment.i"
-	@echo "... src/equipment.s"
 	@echo "... src/equipment_management_server.o"
 	@echo "... src/equipment_management_server.i"
 	@echo "... src/equipment_management_server.s"
@@ -425,12 +341,6 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
-	@echo "... src/message_buffer.o"
-	@echo "... src/message_buffer.i"
-	@echo "... src/message_buffer.s"
-	@echo "... src/protocol_parse.o"
-	@echo "... src/protocol_parse.i"
-	@echo "... src/protocol_parse.s"
 	@echo "... src/socket.o"
 	@echo "... src/socket.i"
 	@echo "... src/socket.s"

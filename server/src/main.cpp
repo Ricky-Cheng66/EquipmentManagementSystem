@@ -1,4 +1,4 @@
-#include "../include/equipment_management_server.h"
+#include "equipment_management_server.h"
 #include <iostream>
 #include <system_error>
 int main() {

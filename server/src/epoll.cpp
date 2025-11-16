@@ -1,5 +1,5 @@
-#include "../include/epoll.h"
-#include "../include/socket.h"
+#include "epoll.h"
+#include "socket.h"
 
 #include <iostream>
 #include <sys/epoll.h>
