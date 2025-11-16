@@ -599,7 +599,8 @@ void EquipmentManagementServer::handle_reservation_approve(
   if (parts.size() < 2) {
     std::cout << "审批数据格式错误" << std::endl;
     std::vector<char> response =
-        ProtocolParser::build_reservation_response(false, "数据格式错误");
+        ProtocolParser::build_reservation_approve_response(false,
+                                                           "数据格式错误");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -610,12 +611,23 @@ void EquipmentManagementServer::handle_reservation_approve(
   // 验证管理员权限
   if (!validate_admin_permission(admin_id)) {
     std::vector<char> response =
-        ProtocolParser::build_reservation_response(false, "权限不足");
+        ProtocolParser::build_reservation_approve_response(false, "权限不足");
     send(fd, response.data(), response.size(), 0);
     return;
   }
 
-  int reservation_id = std::stoi(reservation_id_str);
+  int reservation_id;
+  try {
+    reservation_id = std::stoi(reservation_id_str);
+  } catch (const std::exception &e) {
+    std::cout << "预约ID格式错误: " << reservation_id_str << std::endl;
+    std::vector<char> response =
+        ProtocolParser::build_reservation_approve_response(false,
+                                                           "预约ID格式错误");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
   std::string new_status;
 
   if (action == "approve") {
@@ -624,7 +636,7 @@ void EquipmentManagementServer::handle_reservation_approve(
     new_status = "rejected";
   } else {
     std::vector<char> response =
-        ProtocolParser::build_reservation_response(false, "无效操作");
+        ProtocolParser::build_reservation_approve_response(false, "无效操作");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -635,18 +647,20 @@ void EquipmentManagementServer::handle_reservation_approve(
         db_manager_->update_reservation_status(reservation_id, new_status);
     if (success) {
       std::vector<char> response =
-          ProtocolParser::build_reservation_response(true, "审批操作成功");
+          ProtocolParser::build_reservation_approve_response(true,
+                                                             "审批操作成功");
       send(fd, response.data(), response.size(), 0);
       std::cout << "预约审批成功: reservation " << reservation_id << " -> "
                 << new_status << std::endl;
     } else {
       std::vector<char> response =
-          ProtocolParser::build_reservation_response(false, "数据库错误");
+          ProtocolParser::build_reservation_approve_response(false,
+                                                             "数据库错误");
       send(fd, response.data(), response.size(), 0);
     }
   } else {
     std::vector<char> response =
-        ProtocolParser::build_reservation_response(false, "系统错误");
+        ProtocolParser::build_reservation_approve_response(false, "系统错误");
     send(fd, response.data(), response.size(), 0);
   }
 }

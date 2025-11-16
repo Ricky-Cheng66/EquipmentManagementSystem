@@ -97,7 +97,7 @@ std::vector<char>
 ProtocolParser::build_reservation_response(bool success,
                                            const std::string &message) {
   std::string body =
-      "6|response|" + std::string(success ? "success" : "fail") + "|" + message;
+      "5|response|" + std::string(success ? "success" : "fail") + "|" + message;
   return pack_message(body);
 }
 
@@ -105,7 +105,7 @@ std::vector<char>
 ProtocolParser::build_reservation_query_response(bool success,
                                                  const std::string &data) {
   std::string body =
-      "7|response|" + std::string(success ? "success" : "fail") + "|" + data;
+      "6|response|" + std::string(success ? "success" : "fail") + "|" + data;
   return pack_message(body);
 }
 
@@ -113,6 +113,6 @@ std::vector<char>
 ProtocolParser::build_reservation_approve_response(bool success,
                                                    const std::string &message) {
   std::string body =
-      "8|response|" + std::string(success ? "success" : "fail") + "|" + message;
+      "7|response|" + std::string(success ? "success" : "fail") + "|" + message;
   return pack_message(body);
 }
