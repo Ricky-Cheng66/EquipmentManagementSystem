@@ -80,14 +80,14 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles/progress.marks
-	$(MAKE) -f CMakeFiles/Makefile2 all
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation/CMakeFiles/progress.marks
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f CMakeFiles/Makefile2 equipment_simulation/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	$(MAKE) -f CMakeFiles/Makefile2 clean
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f CMakeFiles/Makefile2 equipment_simulation/clean
 .PHONY : clean
 
 # The main clean target
@@ -97,57 +97,60 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	$(MAKE) -f CMakeFiles/Makefile2 preinstall
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f CMakeFiles/Makefile2 equipment_simulation/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	$(MAKE) -f CMakeFiles/Makefile2 preinstall
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f CMakeFiles/Makefile2 equipment_simulation/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	$(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
-#=============================================================================
-# Target rules for targets named shared_components
+# Convenience name for target.
+equipment_simulation/CMakeFiles/equipment_stimulation.dir/rule:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f CMakeFiles/Makefile2 equipment_simulation/CMakeFiles/equipment_stimulation.dir/rule
+.PHONY : equipment_simulation/CMakeFiles/equipment_stimulation.dir/rule
 
-# Build rule for target.
-shared_components: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 shared_components
-.PHONY : shared_components
+# Convenience name for target.
+equipment_stimulation: equipment_simulation/CMakeFiles/equipment_stimulation.dir/rule
 
-# fast build rule for target.
-shared_components/fast:
-	$(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/build
-.PHONY : shared_components/fast
-
-#=============================================================================
-# Target rules for targets named equipment_stimulation
-
-# Build rule for target.
-equipment_stimulation: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 equipment_stimulation
 .PHONY : equipment_stimulation
 
 # fast build rule for target.
 equipment_stimulation/fast:
-	$(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/build
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/build
 .PHONY : equipment_stimulation/fast
 
-#=============================================================================
-# Target rules for targets named EMS_server
+src/equipment_stimulator.o: src/equipment_stimulator.cpp.o
 
-# Build rule for target.
-EMS_server: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 EMS_server
-.PHONY : EMS_server
+.PHONY : src/equipment_stimulator.o
 
-# fast build rule for target.
-EMS_server/fast:
-	$(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/build
-.PHONY : EMS_server/fast
+# target to build an object file
+src/equipment_stimulator.cpp.o:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.o
+.PHONY : src/equipment_stimulator.cpp.o
+
+src/equipment_stimulator.i: src/equipment_stimulator.cpp.i
+
+.PHONY : src/equipment_stimulator.i
+
+# target to preprocess a source file
+src/equipment_stimulator.cpp.i:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.i
+.PHONY : src/equipment_stimulator.cpp.i
+
+src/equipment_stimulator.s: src/equipment_stimulator.cpp.s
+
+.PHONY : src/equipment_stimulator.s
+
+# target to generate assembly for a file
+src/equipment_stimulator.cpp.s:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.s
+.PHONY : src/equipment_stimulator.cpp.s
 
 # Help Target
 help:
@@ -157,9 +160,10 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
-	@echo "... shared_components"
 	@echo "... equipment_stimulation"
-	@echo "... EMS_server"
+	@echo "... src/equipment_stimulator.o"
+	@echo "... src/equipment_stimulator.i"
+	@echo "... src/equipment_stimulator.s"
 .PHONY : help
 
 
@@ -171,6 +175,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	$(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

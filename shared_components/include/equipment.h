@@ -11,6 +11,8 @@ public:
   void update_equipment_power_state(const std::string &new_power_state);
   void update_heartbeat();
   std::string &get_equipment_id() { return equipment_id_; };
+  std::string &get_equipment_type() { return equipment_type_; };
+  std::string &get_location() { return location_; };
   std::string &get_status() { return status_; };
   time_t &get_last_heartbeat() { return last_heartbeat_; };
   bool is_online() const;

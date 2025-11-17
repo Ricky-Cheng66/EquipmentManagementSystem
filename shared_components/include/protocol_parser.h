@@ -35,6 +35,15 @@ public:
   build_control_message(const std::string &equipment_id,
                         const std::string &command);
 
+  //构建注册信息
+  static std::vector<char>
+  build_register_message(const std::string &equipment_id,
+                         const std::string &location,
+                         const std::string &equipment_type);
+
+  //构建心跳信息
+  static std::vector<char>
+  build_heartbeat_message(const std::string &equipment_id);
   // 构建注册响应
   static std::vector<char> build_register_response(bool success);
 

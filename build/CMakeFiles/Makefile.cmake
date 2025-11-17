@@ -10,6 +10,7 @@ set(CMAKE_MAKEFILE_DEPENDS
   "../CMakeLists.txt"
   "CMakeFiles/3.16.3/CMakeCXXCompiler.cmake"
   "CMakeFiles/3.16.3/CMakeSystem.cmake"
+  "../equipment_simulation/CMakeLists.txt"
   "../server/CMakeLists.txt"
   "../shared_components/CMakeLists.txt"
   "/usr/share/cmake-3.16/Modules/CMakeCXXInformation.cmake"
@@ -40,11 +41,13 @@ set(CMAKE_MAKEFILE_OUTPUTS
 set(CMAKE_MAKEFILE_PRODUCTS
   "CMakeFiles/CMakeDirectoryInformation.cmake"
   "shared_components/CMakeFiles/CMakeDirectoryInformation.cmake"
+  "equipment_simulation/CMakeFiles/CMakeDirectoryInformation.cmake"
   "server/CMakeFiles/CMakeDirectoryInformation.cmake"
   )
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "shared_components/CMakeFiles/shared_components.dir/DependInfo.cmake"
+  "equipment_simulation/CMakeFiles/equipment_stimulation.dir/DependInfo.cmake"
   "server/CMakeFiles/EMS_server.dir/DependInfo.cmake"
   )

@@ -13,7 +13,7 @@ add_executable(equipment_stimulation ${SRCS})
 # 头文件路径
 target_include_directories(equipment_stimulation PRIVATE
     ${CMAKE_SOURCE_DIR}/shared_components/include
-    include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 # 链接共享组件库

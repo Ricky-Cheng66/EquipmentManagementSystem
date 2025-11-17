@@ -21,7 +21,7 @@ bool EquipmentManagementServer::init(int server_port) {
   server_port_ = server_port;
   // create server_fd
   Socket server_socket{};
-  server_fd_ = server_socket.create_server_socket();
+  server_fd_ = server_socket.create_socket();
   //设置地址重用
   if (!server_socket.set_socket_option(server_fd_)) {
     std::error_code ec(errno, std::system_category());

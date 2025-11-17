@@ -7,15 +7,29 @@
 #include <sys/socket.h>
 #include <system_error>
 
-int Socket::create_server_socket() {
+int Socket::create_socket() {
   // create server_fd
-  int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-  if (server_fd < 0) {
+  int fd = socket(AF_INET, SOCK_STREAM, 0);
+  if (fd < 0) {
     std::error_code ec(errno, std::system_category());
     std::cerr << "socket failed..." << ec.message() << std::endl;
     return -1;
   }
-  return server_fd;
+  return fd;
+}
+bool connect_to_socket(int fd, std::string address, std::uint16_t port) {
+  int source_fd = fd;
+  struct sockaddr_in destination {};
+  destination.sin_family = AF_INET;
+  destination.sin_port = htons(port);
+  inet_pton(AF_INET, address.c_str(), &destination.sin_addr);
+  socklen_t destination_len = sizeof(destination);
+  if (connect(source_fd, (struct sockaddr *)&destination, destination_len) <
+      0) {
+    std::cout << "connect failed..." << std::endl;
+    return false;
+  }
+  return true;
 }
 
 bool Socket::bind_server_socket(int fd, int port) {

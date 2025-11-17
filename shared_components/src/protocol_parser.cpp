@@ -66,6 +66,22 @@ ProtocolParser::build_control_message(const std::string &equipment_id,
   return pack_message(body);
 }
 
+//构建注册消息:"1|equipment_id|location|equipment_type"
+std::vector<char>
+ProtocolParser::build_register_message(const std::string &equipment_id,
+                                       const std::string &location,
+                                       const std::string &equipment_type) {
+  std::string body{"1|" + equipment_id + "|" + location + "|" + equipment_type};
+  return pack_message(body);
+}
+
+//构建心跳信息:"4|equipment_id"
+std::vector<char>
+ProtocolParser::build_heartbeat_message(const std::string &equipment_id) {
+  std::string body{"4|" + equipment_id};
+  return pack_message(body);
+}
+
 // 构建注册响应: "1|响应|success" 或 "1|响应|fail"
 std::vector<char> ProtocolParser::build_register_response(bool success) {
   std::string body = "1|response|" + std::string(success ? "success" : "fail");
