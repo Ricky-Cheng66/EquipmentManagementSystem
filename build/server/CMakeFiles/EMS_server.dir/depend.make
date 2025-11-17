@@ -8,19 +8,15 @@ server/CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o: ../server/src/con
 server/CMakeFiles/EMS_server.dir/src/database_manager.cpp.o: ../server/include/database_manager.h
 server/CMakeFiles/EMS_server.dir/src/database_manager.cpp.o: ../server/src/database_manager.cpp
 
-server/CMakeFiles/EMS_server.dir/src/epoll.cpp.o: ../server/include/epoll.h
-server/CMakeFiles/EMS_server.dir/src/epoll.cpp.o: ../server/include/socket.h
-server/CMakeFiles/EMS_server.dir/src/epoll.cpp.o: ../server/src/epoll.cpp
-
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../server/include/connection_manager.h
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../server/include/database_manager.h
-server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../server/include/epoll.h
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../server/include/equipment_management_server.h
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../server/include/equipment_manager.h
-server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../server/include/socket.h
+server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../shared_components/include/epoll.h
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../shared_components/include/equipment.h
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../shared_components/include/message_buffer.h
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../shared_components/include/protocol_parser.h
+server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../shared_components/include/socket.h
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../server/src/equipment_management_server.cpp
 
 server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o: ../server/include/equipment_manager.h
@@ -29,14 +25,11 @@ server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o: ../server/src/equi
 
 server/CMakeFiles/EMS_server.dir/src/main.cpp.o: ../server/include/connection_manager.h
 server/CMakeFiles/EMS_server.dir/src/main.cpp.o: ../server/include/database_manager.h
-server/CMakeFiles/EMS_server.dir/src/main.cpp.o: ../server/include/epoll.h
 server/CMakeFiles/EMS_server.dir/src/main.cpp.o: ../server/include/equipment_management_server.h
 server/CMakeFiles/EMS_server.dir/src/main.cpp.o: ../server/include/equipment_manager.h
+server/CMakeFiles/EMS_server.dir/src/main.cpp.o: ../shared_components/include/epoll.h
 server/CMakeFiles/EMS_server.dir/src/main.cpp.o: ../shared_components/include/equipment.h
 server/CMakeFiles/EMS_server.dir/src/main.cpp.o: ../shared_components/include/message_buffer.h
 server/CMakeFiles/EMS_server.dir/src/main.cpp.o: ../shared_components/include/protocol_parser.h
 server/CMakeFiles/EMS_server.dir/src/main.cpp.o: ../server/src/main.cpp
-
-server/CMakeFiles/EMS_server.dir/src/socket.cpp.o: ../server/include/socket.h
-server/CMakeFiles/EMS_server.dir/src/socket.cpp.o: ../server/src/socket.cpp
 

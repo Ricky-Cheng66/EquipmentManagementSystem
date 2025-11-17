@@ -4,9 +4,11 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
+  "/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/epoll.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/shared_components/CMakeFiles/shared_components.dir/src/epoll.cpp.o"
   "/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/equipment.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/shared_components/CMakeFiles/shared_components.dir/src/equipment.cpp.o"
   "/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/message_buffer.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/shared_components/CMakeFiles/shared_components.dir/src/message_buffer.cpp.o"
   "/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/protocol_parse.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o"
+  "/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/socket.cpp" "/home/liuliuqiu/EquipmentManagementSystem/build/shared_components/CMakeFiles/shared_components.dir/src/socket.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 

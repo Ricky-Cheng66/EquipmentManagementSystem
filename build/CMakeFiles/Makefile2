@@ -113,12 +113,12 @@ shared_components/clean: shared_components/CMakeFiles/shared_components.dir/clea
 shared_components/CMakeFiles/shared_components.dir/all:
 	$(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/depend
 	$(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=9,10,11,12 "Built target shared_components"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=7,8,9,10,11,12 "Built target shared_components"
 .PHONY : shared_components/CMakeFiles/shared_components.dir/all
 
 # Build rule for subdir invocation for target.
 shared_components/CMakeFiles/shared_components.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 4
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 6
 	$(MAKE) -f CMakeFiles/Makefile2 shared_components/CMakeFiles/shared_components.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 0
 .PHONY : shared_components/CMakeFiles/shared_components.dir/rule
@@ -140,7 +140,7 @@ shared_components/CMakeFiles/shared_components.dir/clean:
 server/CMakeFiles/EMS_server.dir/all: shared_components/CMakeFiles/shared_components.dir/all
 	$(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/depend
 	$(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8 "Built target EMS_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=1,2,3,4,5,6 "Built target EMS_server"
 .PHONY : server/CMakeFiles/EMS_server.dir/all
 
 # Build rule for subdir invocation for target.

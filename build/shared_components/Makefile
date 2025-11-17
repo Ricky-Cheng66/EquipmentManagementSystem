@@ -125,6 +125,33 @@ shared_components/fast:
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/build
 .PHONY : shared_components/fast
 
+src/epoll.o: src/epoll.cpp.o
+
+.PHONY : src/epoll.o
+
+# target to build an object file
+src/epoll.cpp.o:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/epoll.cpp.o
+.PHONY : src/epoll.cpp.o
+
+src/epoll.i: src/epoll.cpp.i
+
+.PHONY : src/epoll.i
+
+# target to preprocess a source file
+src/epoll.cpp.i:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/epoll.cpp.i
+.PHONY : src/epoll.cpp.i
+
+src/epoll.s: src/epoll.cpp.s
+
+.PHONY : src/epoll.s
+
+# target to generate assembly for a file
+src/epoll.cpp.s:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/epoll.cpp.s
+.PHONY : src/epoll.cpp.s
+
 src/equipment.o: src/equipment.cpp.o
 
 .PHONY : src/equipment.o
@@ -206,6 +233,33 @@ src/protocol_parse.cpp.s:
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.s
 .PHONY : src/protocol_parse.cpp.s
 
+src/socket.o: src/socket.cpp.o
+
+.PHONY : src/socket.o
+
+# target to build an object file
+src/socket.cpp.o:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/socket.cpp.o
+.PHONY : src/socket.cpp.o
+
+src/socket.i: src/socket.cpp.i
+
+.PHONY : src/socket.i
+
+# target to preprocess a source file
+src/socket.cpp.i:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/socket.cpp.i
+.PHONY : src/socket.cpp.i
+
+src/socket.s: src/socket.cpp.s
+
+.PHONY : src/socket.s
+
+# target to generate assembly for a file
+src/socket.cpp.s:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/socket.cpp.s
+.PHONY : src/socket.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -215,6 +269,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... shared_components"
+	@echo "... src/epoll.o"
+	@echo "... src/epoll.i"
+	@echo "... src/epoll.s"
 	@echo "... src/equipment.o"
 	@echo "... src/equipment.i"
 	@echo "... src/equipment.s"
@@ -224,6 +281,9 @@ help:
 	@echo "... src/protocol_parse.o"
 	@echo "... src/protocol_parse.i"
 	@echo "... src/protocol_parse.s"
+	@echo "... src/socket.o"
+	@echo "... src/socket.i"
+	@echo "... src/socket.s"
 .PHONY : help
 
 

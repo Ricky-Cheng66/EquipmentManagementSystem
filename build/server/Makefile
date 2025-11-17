@@ -179,33 +179,6 @@ src/database_manager.cpp.s:
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/database_manager.cpp.s
 .PHONY : src/database_manager.cpp.s
 
-src/epoll.o: src/epoll.cpp.o
-
-.PHONY : src/epoll.o
-
-# target to build an object file
-src/epoll.cpp.o:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/epoll.cpp.o
-.PHONY : src/epoll.cpp.o
-
-src/epoll.i: src/epoll.cpp.i
-
-.PHONY : src/epoll.i
-
-# target to preprocess a source file
-src/epoll.cpp.i:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/epoll.cpp.i
-.PHONY : src/epoll.cpp.i
-
-src/epoll.s: src/epoll.cpp.s
-
-.PHONY : src/epoll.s
-
-# target to generate assembly for a file
-src/epoll.cpp.s:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/epoll.cpp.s
-.PHONY : src/epoll.cpp.s
-
 src/equipment_management_server.o: src/equipment_management_server.cpp.o
 
 .PHONY : src/equipment_management_server.o
@@ -287,33 +260,6 @@ src/main.cpp.s:
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
-src/socket.o: src/socket.cpp.o
-
-.PHONY : src/socket.o
-
-# target to build an object file
-src/socket.cpp.o:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/socket.cpp.o
-.PHONY : src/socket.cpp.o
-
-src/socket.i: src/socket.cpp.i
-
-.PHONY : src/socket.i
-
-# target to preprocess a source file
-src/socket.cpp.i:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/socket.cpp.i
-.PHONY : src/socket.cpp.i
-
-src/socket.s: src/socket.cpp.s
-
-.PHONY : src/socket.s
-
-# target to generate assembly for a file
-src/socket.cpp.s:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f server/CMakeFiles/EMS_server.dir/build.make server/CMakeFiles/EMS_server.dir/src/socket.cpp.s
-.PHONY : src/socket.cpp.s
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -329,9 +275,6 @@ help:
 	@echo "... src/database_manager.o"
 	@echo "... src/database_manager.i"
 	@echo "... src/database_manager.s"
-	@echo "... src/epoll.o"
-	@echo "... src/epoll.i"
-	@echo "... src/epoll.s"
 	@echo "... src/equipment_management_server.o"
 	@echo "... src/equipment_management_server.i"
 	@echo "... src/equipment_management_server.s"
@@ -341,9 +284,6 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
-	@echo "... src/socket.o"
-	@echo "... src/socket.i"
-	@echo "... src/socket.s"
 .PHONY : help
 
 

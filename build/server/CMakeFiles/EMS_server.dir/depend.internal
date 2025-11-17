@@ -8,20 +8,16 @@ server/CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o
 server/CMakeFiles/EMS_server.dir/src/database_manager.cpp.o
  ../server/include/database_manager.h
  /home/liuliuqiu/EquipmentManagementSystem/server/src/database_manager.cpp
-server/CMakeFiles/EMS_server.dir/src/epoll.cpp.o
- ../server/include/epoll.h
- ../server/include/socket.h
- /home/liuliuqiu/EquipmentManagementSystem/server/src/epoll.cpp
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o
  ../server/include/connection_manager.h
  ../server/include/database_manager.h
- ../server/include/epoll.h
  ../server/include/equipment_management_server.h
  ../server/include/equipment_manager.h
- ../server/include/socket.h
+ ../shared_components/include/epoll.h
  ../shared_components/include/equipment.h
  ../shared_components/include/message_buffer.h
  ../shared_components/include/protocol_parser.h
+ ../shared_components/include/socket.h
  /home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_management_server.cpp
 server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o
  ../server/include/equipment_manager.h
@@ -30,13 +26,10 @@ server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o
 server/CMakeFiles/EMS_server.dir/src/main.cpp.o
  ../server/include/connection_manager.h
  ../server/include/database_manager.h
- ../server/include/epoll.h
  ../server/include/equipment_management_server.h
  ../server/include/equipment_manager.h
+ ../shared_components/include/epoll.h
  ../shared_components/include/equipment.h
  ../shared_components/include/message_buffer.h
  ../shared_components/include/protocol_parser.h
  /home/liuliuqiu/EquipmentManagementSystem/server/src/main.cpp
-server/CMakeFiles/EMS_server.dir/src/socket.cpp.o
- ../server/include/socket.h
- /home/liuliuqiu/EquipmentManagementSystem/server/src/socket.cpp

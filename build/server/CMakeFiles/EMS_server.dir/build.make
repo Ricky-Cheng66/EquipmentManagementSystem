@@ -83,22 +83,9 @@ server/CMakeFiles/EMS_server.dir/src/database_manager.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/EMS_server.dir/src/database_manager.cpp.s"
 	cd /home/liuliuqiu/EquipmentManagementSystem/build/server && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/server/src/database_manager.cpp -o CMakeFiles/EMS_server.dir/src/database_manager.cpp.s
 
-server/CMakeFiles/EMS_server.dir/src/epoll.cpp.o: server/CMakeFiles/EMS_server.dir/flags.make
-server/CMakeFiles/EMS_server.dir/src/epoll.cpp.o: ../server/src/epoll.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object server/CMakeFiles/EMS_server.dir/src/epoll.cpp.o"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/server && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/EMS_server.dir/src/epoll.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/epoll.cpp
-
-server/CMakeFiles/EMS_server.dir/src/epoll.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/EMS_server.dir/src/epoll.cpp.i"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/server && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/liuliuqiu/EquipmentManagementSystem/server/src/epoll.cpp > CMakeFiles/EMS_server.dir/src/epoll.cpp.i
-
-server/CMakeFiles/EMS_server.dir/src/epoll.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/EMS_server.dir/src/epoll.cpp.s"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/server && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/server/src/epoll.cpp -o CMakeFiles/EMS_server.dir/src/epoll.cpp.s
-
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: server/CMakeFiles/EMS_server.dir/flags.make
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../server/src/equipment_management_server.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o"
 	cd /home/liuliuqiu/EquipmentManagementSystem/build/server && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_management_server.cpp
 
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.i: cmake_force
@@ -111,7 +98,7 @@ server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.s: cmake_fo
 
 server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o: server/CMakeFiles/EMS_server.dir/flags.make
 server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o: ../server/src/equipment_manager.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o"
 	cd /home/liuliuqiu/EquipmentManagementSystem/build/server && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_manager.cpp
 
 server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.i: cmake_force
@@ -124,7 +111,7 @@ server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.s: cmake_force
 
 server/CMakeFiles/EMS_server.dir/src/main.cpp.o: server/CMakeFiles/EMS_server.dir/flags.make
 server/CMakeFiles/EMS_server.dir/src/main.cpp.o: ../server/src/main.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object server/CMakeFiles/EMS_server.dir/src/main.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object server/CMakeFiles/EMS_server.dir/src/main.cpp.o"
 	cd /home/liuliuqiu/EquipmentManagementSystem/build/server && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/EMS_server.dir/src/main.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/main.cpp
 
 server/CMakeFiles/EMS_server.dir/src/main.cpp.i: cmake_force
@@ -135,44 +122,27 @@ server/CMakeFiles/EMS_server.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/EMS_server.dir/src/main.cpp.s"
 	cd /home/liuliuqiu/EquipmentManagementSystem/build/server && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/server/src/main.cpp -o CMakeFiles/EMS_server.dir/src/main.cpp.s
 
-server/CMakeFiles/EMS_server.dir/src/socket.cpp.o: server/CMakeFiles/EMS_server.dir/flags.make
-server/CMakeFiles/EMS_server.dir/src/socket.cpp.o: ../server/src/socket.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object server/CMakeFiles/EMS_server.dir/src/socket.cpp.o"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/server && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/EMS_server.dir/src/socket.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/server/src/socket.cpp
-
-server/CMakeFiles/EMS_server.dir/src/socket.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/EMS_server.dir/src/socket.cpp.i"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/server && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/liuliuqiu/EquipmentManagementSystem/server/src/socket.cpp > CMakeFiles/EMS_server.dir/src/socket.cpp.i
-
-server/CMakeFiles/EMS_server.dir/src/socket.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/EMS_server.dir/src/socket.cpp.s"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/server && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/server/src/socket.cpp -o CMakeFiles/EMS_server.dir/src/socket.cpp.s
-
 # Object files for target EMS_server
 EMS_server_OBJECTS = \
 "CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o" \
 "CMakeFiles/EMS_server.dir/src/database_manager.cpp.o" \
-"CMakeFiles/EMS_server.dir/src/epoll.cpp.o" \
 "CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o" \
 "CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o" \
-"CMakeFiles/EMS_server.dir/src/main.cpp.o" \
-"CMakeFiles/EMS_server.dir/src/socket.cpp.o"
+"CMakeFiles/EMS_server.dir/src/main.cpp.o"
 
 # External object files for target EMS_server
 EMS_server_EXTERNAL_OBJECTS =
 
 server/EMS_server: server/CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o
 server/EMS_server: server/CMakeFiles/EMS_server.dir/src/database_manager.cpp.o
-server/EMS_server: server/CMakeFiles/EMS_server.dir/src/epoll.cpp.o
 server/EMS_server: server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o
 server/EMS_server: server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o
 server/EMS_server: server/CMakeFiles/EMS_server.dir/src/main.cpp.o
-server/EMS_server: server/CMakeFiles/EMS_server.dir/src/socket.cpp.o
 server/EMS_server: server/CMakeFiles/EMS_server.dir/build.make
 server/EMS_server: shared_components/libshared_components.a
 server/EMS_server: /usr/lib/x86_64-linux-gnu/libmysqlclient.so
 server/EMS_server: server/CMakeFiles/EMS_server.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Linking CXX executable EMS_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX executable EMS_server"
 	cd /home/liuliuqiu/EquipmentManagementSystem/build/server && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/EMS_server.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

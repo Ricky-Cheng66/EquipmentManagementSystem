@@ -96,11 +96,39 @@ shared_components/CMakeFiles/shared_components.dir/src/message_buffer.cpp.s: cma
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/shared_components.dir/src/message_buffer.cpp.s"
 	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/message_buffer.cpp -o CMakeFiles/shared_components.dir/src/message_buffer.cpp.s
 
+shared_components/CMakeFiles/shared_components.dir/src/epoll.cpp.o: shared_components/CMakeFiles/shared_components.dir/flags.make
+shared_components/CMakeFiles/shared_components.dir/src/epoll.cpp.o: ../shared_components/src/epoll.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object shared_components/CMakeFiles/shared_components.dir/src/epoll.cpp.o"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/shared_components.dir/src/epoll.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/epoll.cpp
+
+shared_components/CMakeFiles/shared_components.dir/src/epoll.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/shared_components.dir/src/epoll.cpp.i"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/epoll.cpp > CMakeFiles/shared_components.dir/src/epoll.cpp.i
+
+shared_components/CMakeFiles/shared_components.dir/src/epoll.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/shared_components.dir/src/epoll.cpp.s"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/epoll.cpp -o CMakeFiles/shared_components.dir/src/epoll.cpp.s
+
+shared_components/CMakeFiles/shared_components.dir/src/socket.cpp.o: shared_components/CMakeFiles/shared_components.dir/flags.make
+shared_components/CMakeFiles/shared_components.dir/src/socket.cpp.o: ../shared_components/src/socket.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object shared_components/CMakeFiles/shared_components.dir/src/socket.cpp.o"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/shared_components.dir/src/socket.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/socket.cpp
+
+shared_components/CMakeFiles/shared_components.dir/src/socket.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/shared_components.dir/src/socket.cpp.i"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/socket.cpp > CMakeFiles/shared_components.dir/src/socket.cpp.i
+
+shared_components/CMakeFiles/shared_components.dir/src/socket.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/shared_components.dir/src/socket.cpp.s"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/socket.cpp -o CMakeFiles/shared_components.dir/src/socket.cpp.s
+
 # Object files for target shared_components
 shared_components_OBJECTS = \
 "CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o" \
 "CMakeFiles/shared_components.dir/src/equipment.cpp.o" \
-"CMakeFiles/shared_components.dir/src/message_buffer.cpp.o"
+"CMakeFiles/shared_components.dir/src/message_buffer.cpp.o" \
+"CMakeFiles/shared_components.dir/src/epoll.cpp.o" \
+"CMakeFiles/shared_components.dir/src/socket.cpp.o"
 
 # External object files for target shared_components
 shared_components_EXTERNAL_OBJECTS =
@@ -108,9 +136,11 @@ shared_components_EXTERNAL_OBJECTS =
 shared_components/libshared_components.a: shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o
 shared_components/libshared_components.a: shared_components/CMakeFiles/shared_components.dir/src/equipment.cpp.o
 shared_components/libshared_components.a: shared_components/CMakeFiles/shared_components.dir/src/message_buffer.cpp.o
+shared_components/libshared_components.a: shared_components/CMakeFiles/shared_components.dir/src/epoll.cpp.o
+shared_components/libshared_components.a: shared_components/CMakeFiles/shared_components.dir/src/socket.cpp.o
 shared_components/libshared_components.a: shared_components/CMakeFiles/shared_components.dir/build.make
 shared_components/libshared_components.a: shared_components/CMakeFiles/shared_components.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX static library libshared_components.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX static library libshared_components.a"
 	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && $(CMAKE_COMMAND) -P CMakeFiles/shared_components.dir/cmake_clean_target.cmake
 	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/shared_components.dir/link.txt --verbose=$(VERBOSE)
 

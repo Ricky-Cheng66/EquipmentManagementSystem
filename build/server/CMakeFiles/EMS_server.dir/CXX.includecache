@@ -28,12 +28,6 @@ string
 vector
 -
 
-../server/include/epoll.h
-mutex
--
-sys/epoll.h
--
-
 ../server/include/equipment_management_server.h
 connection_manager.h
 ../server/include/connection_manager.h
@@ -66,7 +60,11 @@ unordered_map
 vector
 -
 
-../server/include/socket.h
+../shared_components/include/epoll.h
+mutex
+-
+sys/epoll.h
+-
 
 ../shared_components/include/equipment.h
 string
@@ -84,33 +82,7 @@ string
 vector
 -
 
-/home/liuliuqiu/EquipmentManagementSystem/server/src/connection_manager.cpp
-connection_manager.h
-/home/liuliuqiu/EquipmentManagementSystem/server/src/connection_manager.h
-iostream
--
-unistd.h
--
-
-/home/liuliuqiu/EquipmentManagementSystem/server/src/database_manager.cpp
-database_manager.h
-/home/liuliuqiu/EquipmentManagementSystem/server/src/database_manager.h
-iostream
--
-
-/home/liuliuqiu/EquipmentManagementSystem/server/src/epoll.cpp
-epoll.h
-/home/liuliuqiu/EquipmentManagementSystem/server/src/epoll.h
-socket.h
-/home/liuliuqiu/EquipmentManagementSystem/server/src/socket.h
-iostream
--
-sys/epoll.h
--
-system_error
--
-unistd.h
--
+../shared_components/include/socket.h
 
 /home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_management_server.cpp
 arpa/inet.h
@@ -146,32 +118,10 @@ equipment_management_server.h
 socket.h
 /home/liuliuqiu/EquipmentManagementSystem/server/src/socket.h
 
-/home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_manager.cpp
-equipment_manager.h
-/home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_manager.h
-iostream
--
-
 /home/liuliuqiu/EquipmentManagementSystem/server/src/main.cpp
 equipment_management_server.h
 /home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_management_server.h
 iostream
--
-system_error
--
-
-/home/liuliuqiu/EquipmentManagementSystem/server/src/socket.cpp
-socket.h
-/home/liuliuqiu/EquipmentManagementSystem/server/src/socket.h
-arpa/inet.h
--
-fcntl.h
--
-iostream
--
-netinet/in.h
--
-sys/socket.h
 -
 system_error
 -
