@@ -83,6 +83,8 @@ vector
 -
 
 ../shared_components/include/socket.h
+iostream
+-
 
 /home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_management_server.cpp
 arpa/inet.h
@@ -117,12 +119,4 @@ equipment_management_server.h
 /home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_management_server.h
 socket.h
 /home/liuliuqiu/EquipmentManagementSystem/server/src/socket.h
-
-/home/liuliuqiu/EquipmentManagementSystem/server/src/main.cpp
-equipment_management_server.h
-/home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_management_server.h
-iostream
--
-system_error
--
 

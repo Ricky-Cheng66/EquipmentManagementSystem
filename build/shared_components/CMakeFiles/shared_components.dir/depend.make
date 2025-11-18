@@ -11,8 +11,8 @@ shared_components/CMakeFiles/shared_components.dir/src/equipment.cpp.o: ../share
 shared_components/CMakeFiles/shared_components.dir/src/message_buffer.cpp.o: ../shared_components/include/message_buffer.h
 shared_components/CMakeFiles/shared_components.dir/src/message_buffer.cpp.o: ../shared_components/src/message_buffer.cpp
 
-shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o: ../shared_components/include/protocol_parser.h
-shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o: ../shared_components/src/protocol_parse.cpp
+shared_components/CMakeFiles/shared_components.dir/src/protocol_parser.cpp.o: ../shared_components/include/protocol_parser.h
+shared_components/CMakeFiles/shared_components.dir/src/protocol_parser.cpp.o: ../shared_components/src/protocol_parser.cpp
 
 shared_components/CMakeFiles/shared_components.dir/src/socket.cpp.o: ../shared_components/include/socket.h
 shared_components/CMakeFiles/shared_components.dir/src/socket.cpp.o: ../shared_components/src/socket.cpp

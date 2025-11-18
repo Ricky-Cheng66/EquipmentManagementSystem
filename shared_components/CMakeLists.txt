@@ -1,6 +1,6 @@
 # shared_components/CMakeLists.txt
 add_library(shared_components STATIC
-    src/protocol_parse.cpp
+    src/protocol_parser.cpp
     src/equipment.cpp
     src/message_buffer.cpp
     src/epoll.cpp

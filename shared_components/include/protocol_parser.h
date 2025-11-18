@@ -44,6 +44,10 @@ public:
   //构建心跳信息
   static std::vector<char>
   build_heartbeat_message(const std::string &equipment_id);
+  //构建状态更新信息
+  static std::vector<char> build_status_update_message(
+      const std::string &equipment_id, const std::string status,
+      const std::string power_state, const std::string more_data);
   // 构建注册响应
   static std::vector<char> build_register_response(bool success);
 

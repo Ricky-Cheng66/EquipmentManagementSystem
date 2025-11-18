@@ -206,32 +206,32 @@ src/message_buffer.cpp.s:
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/message_buffer.cpp.s
 .PHONY : src/message_buffer.cpp.s
 
-src/protocol_parse.o: src/protocol_parse.cpp.o
+src/protocol_parser.o: src/protocol_parser.cpp.o
 
-.PHONY : src/protocol_parse.o
+.PHONY : src/protocol_parser.o
 
 # target to build an object file
-src/protocol_parse.cpp.o:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o
-.PHONY : src/protocol_parse.cpp.o
+src/protocol_parser.cpp.o:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/protocol_parser.cpp.o
+.PHONY : src/protocol_parser.cpp.o
 
-src/protocol_parse.i: src/protocol_parse.cpp.i
+src/protocol_parser.i: src/protocol_parser.cpp.i
 
-.PHONY : src/protocol_parse.i
+.PHONY : src/protocol_parser.i
 
 # target to preprocess a source file
-src/protocol_parse.cpp.i:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.i
-.PHONY : src/protocol_parse.cpp.i
+src/protocol_parser.cpp.i:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/protocol_parser.cpp.i
+.PHONY : src/protocol_parser.cpp.i
 
-src/protocol_parse.s: src/protocol_parse.cpp.s
+src/protocol_parser.s: src/protocol_parser.cpp.s
 
-.PHONY : src/protocol_parse.s
+.PHONY : src/protocol_parser.s
 
 # target to generate assembly for a file
-src/protocol_parse.cpp.s:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.s
-.PHONY : src/protocol_parse.cpp.s
+src/protocol_parser.cpp.s:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/src/protocol_parser.cpp.s
+.PHONY : src/protocol_parser.cpp.s
 
 src/socket.o: src/socket.cpp.o
 
@@ -278,9 +278,9 @@ help:
 	@echo "... src/message_buffer.o"
 	@echo "... src/message_buffer.i"
 	@echo "... src/message_buffer.s"
-	@echo "... src/protocol_parse.o"
-	@echo "... src/protocol_parse.i"
-	@echo "... src/protocol_parse.s"
+	@echo "... src/protocol_parser.o"
+	@echo "... src/protocol_parser.i"
+	@echo "... src/protocol_parser.s"
 	@echo "... src/socket.o"
 	@echo "... src/socket.i"
 	@echo "... src/socket.s"

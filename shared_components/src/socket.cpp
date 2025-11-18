@@ -17,7 +17,8 @@ int Socket::create_socket() {
   }
   return fd;
 }
-bool connect_to_socket(int fd, std::string address, std::uint16_t port) {
+bool Socket::connect_to_socket(int fd, std::string address,
+                               std::uint16_t port) {
   int source_fd = fd;
   struct sockaddr_in destination {};
   destination.sin_family = AF_INET;

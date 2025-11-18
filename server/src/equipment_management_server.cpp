@@ -131,7 +131,7 @@ bool EquipmentManagementServer::process_events(int nfds,
               << events << std::dec << std::endl;
     //检查错误事件
     if (events & (EPOLLERR | EPOLLHUP)) {
-      std::cerr << "连接错误或挂起，关闭fd: " << event_fd << std::endl;
+      std::cerr << "连接错误或挂起,关闭fd: " << event_fd << std::endl;
       handle_connection_close(event_fd);
       continue;
     }

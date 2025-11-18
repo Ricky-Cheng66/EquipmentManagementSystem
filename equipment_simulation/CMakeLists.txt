@@ -17,7 +17,7 @@ target_include_directories(equipment_stimulation PRIVATE
 )
 
 # 链接共享组件库
-target_link_libraries(equipment_stimulation shared_components)
+target_link_libraries(equipment_stimulation shared_components pthread)
 
 # 编译选项
 target_compile_options(equipment_stimulation PRIVATE

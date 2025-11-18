@@ -6,26 +6,8 @@
 
 #IncludeRegexTransform: 
 
-../shared_components/include/epoll.h
-mutex
--
-sys/epoll.h
--
-
 ../shared_components/include/socket.h
-
-/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/epoll.cpp
-epoll.h
-/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/epoll.h
-socket.h
-/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/socket.h
 iostream
--
-sys/epoll.h
--
-system_error
--
-unistd.h
 -
 
 /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/socket.cpp

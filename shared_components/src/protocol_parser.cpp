@@ -82,6 +82,14 @@ ProtocolParser::build_heartbeat_message(const std::string &equipment_id) {
   return pack_message(body);
 }
 
+//构建状态更新信息:"状态上报: "2|projector_101|online|on|额外信息"
+std::vector<char> ProtocolParser::build_status_update_message(
+    const std::string &equipment_id, const std::string status,
+    const std::string power_state, const std::string more_data) {
+  std::string body{"2|" + equipment_id + "|" + status + "|" + power_state +
+                   "|" + more_data};
+  return pack_message(body);
+}
 // 构建注册响应: "1|响应|success" 或 "1|响应|fail"
 std::vector<char> ProtocolParser::build_register_response(bool success) {
   std::string body = "1|response|" + std::string(success ? "success" : "fail");

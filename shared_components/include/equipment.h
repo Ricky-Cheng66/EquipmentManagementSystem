@@ -14,6 +14,7 @@ public:
   std::string &get_equipment_type() { return equipment_type_; };
   std::string &get_location() { return location_; };
   std::string &get_status() { return status_; };
+  std::string &get_power_state() { return power_state_; };
   time_t &get_last_heartbeat() { return last_heartbeat_; };
   bool is_online() const;
 

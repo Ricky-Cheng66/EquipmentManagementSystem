@@ -1,1 +1,1 @@
-/usr/bin/c++  -g   CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.o  -o equipment_stimulation  ../shared_components/libshared_components.a 
+/usr/bin/c++  -g   CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.o CMakeFiles/equipment_stimulation.dir/src/main.cpp.o  -o equipment_stimulation  ../shared_components/libshared_components.a -lpthread 

@@ -152,6 +152,33 @@ src/equipment_stimulator.cpp.s:
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.s
 .PHONY : src/equipment_stimulator.cpp.s
 
+src/main.o: src/main.cpp.o
+
+.PHONY : src/main.o
+
+# target to build an object file
+src/main.cpp.o:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/main.cpp.o
+.PHONY : src/main.cpp.o
+
+src/main.i: src/main.cpp.i
+
+.PHONY : src/main.i
+
+# target to preprocess a source file
+src/main.cpp.i:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/main.cpp.i
+.PHONY : src/main.cpp.i
+
+src/main.s: src/main.cpp.s
+
+.PHONY : src/main.s
+
+# target to generate assembly for a file
+src/main.cpp.s:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/main.cpp.s
+.PHONY : src/main.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -164,6 +191,9 @@ help:
 	@echo "... src/equipment_stimulator.o"
 	@echo "... src/equipment_stimulator.i"
 	@echo "... src/equipment_stimulator.s"
+	@echo "... src/main.o"
+	@echo "... src/main.i"
+	@echo "... src/main.s"
 .PHONY : help
 
 

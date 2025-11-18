@@ -1,5 +1,6 @@
 file(REMOVE_RECURSE
   "CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.o"
+  "CMakeFiles/equipment_stimulation.dir/src/main.cpp.o"
   "equipment_stimulation"
   "equipment_stimulation.pdb"
 )

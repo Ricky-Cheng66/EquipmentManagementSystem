@@ -57,18 +57,18 @@ include shared_components/CMakeFiles/shared_components.dir/progress.make
 # Include the compile flags for this target's objects.
 include shared_components/CMakeFiles/shared_components.dir/flags.make
 
-shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o: shared_components/CMakeFiles/shared_components.dir/flags.make
-shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o: ../shared_components/src/protocol_parse.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/protocol_parse.cpp
+shared_components/CMakeFiles/shared_components.dir/src/protocol_parser.cpp.o: shared_components/CMakeFiles/shared_components.dir/flags.make
+shared_components/CMakeFiles/shared_components.dir/src/protocol_parser.cpp.o: ../shared_components/src/protocol_parser.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object shared_components/CMakeFiles/shared_components.dir/src/protocol_parser.cpp.o"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/shared_components.dir/src/protocol_parser.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/protocol_parser.cpp
 
-shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/shared_components.dir/src/protocol_parse.cpp.i"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/protocol_parse.cpp > CMakeFiles/shared_components.dir/src/protocol_parse.cpp.i
+shared_components/CMakeFiles/shared_components.dir/src/protocol_parser.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/shared_components.dir/src/protocol_parser.cpp.i"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/protocol_parser.cpp > CMakeFiles/shared_components.dir/src/protocol_parser.cpp.i
 
-shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/shared_components.dir/src/protocol_parse.cpp.s"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/protocol_parse.cpp -o CMakeFiles/shared_components.dir/src/protocol_parse.cpp.s
+shared_components/CMakeFiles/shared_components.dir/src/protocol_parser.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/shared_components.dir/src/protocol_parser.cpp.s"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/shared_components && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/shared_components/src/protocol_parser.cpp -o CMakeFiles/shared_components.dir/src/protocol_parser.cpp.s
 
 shared_components/CMakeFiles/shared_components.dir/src/equipment.cpp.o: shared_components/CMakeFiles/shared_components.dir/flags.make
 shared_components/CMakeFiles/shared_components.dir/src/equipment.cpp.o: ../shared_components/src/equipment.cpp
@@ -124,7 +124,7 @@ shared_components/CMakeFiles/shared_components.dir/src/socket.cpp.s: cmake_force
 
 # Object files for target shared_components
 shared_components_OBJECTS = \
-"CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o" \
+"CMakeFiles/shared_components.dir/src/protocol_parser.cpp.o" \
 "CMakeFiles/shared_components.dir/src/equipment.cpp.o" \
 "CMakeFiles/shared_components.dir/src/message_buffer.cpp.o" \
 "CMakeFiles/shared_components.dir/src/epoll.cpp.o" \
@@ -133,7 +133,7 @@ shared_components_OBJECTS = \
 # External object files for target shared_components
 shared_components_EXTERNAL_OBJECTS =
 
-shared_components/libshared_components.a: shared_components/CMakeFiles/shared_components.dir/src/protocol_parse.cpp.o
+shared_components/libshared_components.a: shared_components/CMakeFiles/shared_components.dir/src/protocol_parser.cpp.o
 shared_components/libshared_components.a: shared_components/CMakeFiles/shared_components.dir/src/equipment.cpp.o
 shared_components/libshared_components.a: shared_components/CMakeFiles/shared_components.dir/src/message_buffer.cpp.o
 shared_components/libshared_components.a: shared_components/CMakeFiles/shared_components.dir/src/epoll.cpp.o
