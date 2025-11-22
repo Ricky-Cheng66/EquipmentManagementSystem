@@ -16,8 +16,18 @@ target_include_directories(equipment_stimulation PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# 查找 MySQL 库
+find_library(MYSQL_LIB mysqlclient)
+
+if(NOT MYSQL_LIB)
+    message(FATAL_ERROR "MySQL client library not found")
+endif()
+
 # 链接共享组件库
-target_link_libraries(equipment_stimulation shared_components pthread)
+target_link_libraries(equipment_stimulation
+    shared_components
+    ${MYSQL_LIB}
+)
 
 # 编译选项
 target_compile_options(equipment_stimulation PRIVATE

@@ -57,46 +57,62 @@ include equipment_simulation/CMakeFiles/equipment_stimulation.dir/progress.make
 # Include the compile flags for this target's objects.
 include equipment_simulation/CMakeFiles/equipment_stimulation.dir/flags.make
 
-equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.o: equipment_simulation/CMakeFiles/equipment_stimulation.dir/flags.make
-equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.o: ../equipment_simulation/src/equipment_stimulator.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.o"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/equipment_stimulator.cpp
+equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.o: equipment_simulation/CMakeFiles/equipment_stimulation.dir/flags.make
+equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.o: ../equipment_simulation/src/simulator_connections.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.o"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulator_connections.cpp
 
-equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.i"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/equipment_stimulator.cpp > CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.i
+equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.i"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulator_connections.cpp > CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.i
 
-equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.s"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/equipment_stimulator.cpp -o CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.s
+equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.s"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulator_connections.cpp -o CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.s
 
-equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/main.cpp.o: equipment_simulation/CMakeFiles/equipment_stimulation.dir/flags.make
-equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/main.cpp.o: ../equipment_simulation/src/main.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/main.cpp.o"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/equipment_stimulation.dir/src/main.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/main.cpp
+equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.o: equipment_simulation/CMakeFiles/equipment_stimulation.dir/flags.make
+equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.o: ../equipment_simulation/src/simulator_database_reader.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.o"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulator_database_reader.cpp
 
-equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/main.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/equipment_stimulation.dir/src/main.cpp.i"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/main.cpp > CMakeFiles/equipment_stimulation.dir/src/main.cpp.i
+equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.i"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulator_database_reader.cpp > CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.i
 
-equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/main.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/equipment_stimulation.dir/src/main.cpp.s"
-	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/main.cpp -o CMakeFiles/equipment_stimulation.dir/src/main.cpp.s
+equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.s"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulator_database_reader.cpp -o CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.s
+
+equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.o: equipment_simulation/CMakeFiles/equipment_stimulation.dir/flags.make
+equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.o: ../equipment_simulation/src/test_simulator_connections.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.o"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/test_simulator_connections.cpp
+
+equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.i"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/test_simulator_connections.cpp > CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.i
+
+equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.s"
+	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/test_simulator_connections.cpp -o CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.s
 
 # Object files for target equipment_stimulation
 equipment_stimulation_OBJECTS = \
-"CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.o" \
-"CMakeFiles/equipment_stimulation.dir/src/main.cpp.o"
+"CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.o" \
+"CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.o" \
+"CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.o"
 
 # External object files for target equipment_stimulation
 equipment_stimulation_EXTERNAL_OBJECTS =
 
-equipment_simulation/equipment_stimulation: equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.o
-equipment_simulation/equipment_stimulation: equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/main.cpp.o
+equipment_simulation/equipment_stimulation: equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.o
+equipment_simulation/equipment_stimulation: equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.o
+equipment_simulation/equipment_stimulation: equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.o
 equipment_simulation/equipment_stimulation: equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make
 equipment_simulation/equipment_stimulation: shared_components/libshared_components.a
+equipment_simulation/equipment_stimulation: /usr/lib/x86_64-linux-gnu/libmysqlclient.so
 equipment_simulation/equipment_stimulation: equipment_simulation/CMakeFiles/equipment_stimulation.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable equipment_stimulation"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX executable equipment_stimulation"
 	cd /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/equipment_stimulation.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

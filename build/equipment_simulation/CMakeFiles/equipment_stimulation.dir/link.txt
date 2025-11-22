@@ -1,1 +1,1 @@
-/usr/bin/c++  -g   CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.o CMakeFiles/equipment_stimulation.dir/src/main.cpp.o  -o equipment_stimulation  ../shared_components/libshared_components.a -lpthread 
+/usr/bin/c++  -g   CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.o CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.o CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.o  -o equipment_stimulation  ../shared_components/libshared_components.a /usr/lib/x86_64-linux-gnu/libmysqlclient.so 

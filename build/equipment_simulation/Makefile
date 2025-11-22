@@ -125,59 +125,86 @@ equipment_stimulation/fast:
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/build
 .PHONY : equipment_stimulation/fast
 
-src/equipment_stimulator.o: src/equipment_stimulator.cpp.o
+src/simulator_connections.o: src/simulator_connections.cpp.o
 
-.PHONY : src/equipment_stimulator.o
-
-# target to build an object file
-src/equipment_stimulator.cpp.o:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.o
-.PHONY : src/equipment_stimulator.cpp.o
-
-src/equipment_stimulator.i: src/equipment_stimulator.cpp.i
-
-.PHONY : src/equipment_stimulator.i
-
-# target to preprocess a source file
-src/equipment_stimulator.cpp.i:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.i
-.PHONY : src/equipment_stimulator.cpp.i
-
-src/equipment_stimulator.s: src/equipment_stimulator.cpp.s
-
-.PHONY : src/equipment_stimulator.s
-
-# target to generate assembly for a file
-src/equipment_stimulator.cpp.s:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/equipment_stimulator.cpp.s
-.PHONY : src/equipment_stimulator.cpp.s
-
-src/main.o: src/main.cpp.o
-
-.PHONY : src/main.o
+.PHONY : src/simulator_connections.o
 
 # target to build an object file
-src/main.cpp.o:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/main.cpp.o
-.PHONY : src/main.cpp.o
+src/simulator_connections.cpp.o:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.o
+.PHONY : src/simulator_connections.cpp.o
 
-src/main.i: src/main.cpp.i
+src/simulator_connections.i: src/simulator_connections.cpp.i
 
-.PHONY : src/main.i
+.PHONY : src/simulator_connections.i
 
 # target to preprocess a source file
-src/main.cpp.i:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/main.cpp.i
-.PHONY : src/main.cpp.i
+src/simulator_connections.cpp.i:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.i
+.PHONY : src/simulator_connections.cpp.i
 
-src/main.s: src/main.cpp.s
+src/simulator_connections.s: src/simulator_connections.cpp.s
 
-.PHONY : src/main.s
+.PHONY : src/simulator_connections.s
 
 # target to generate assembly for a file
-src/main.cpp.s:
-	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/main.cpp.s
-.PHONY : src/main.cpp.s
+src/simulator_connections.cpp.s:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_connections.cpp.s
+.PHONY : src/simulator_connections.cpp.s
+
+src/simulator_database_reader.o: src/simulator_database_reader.cpp.o
+
+.PHONY : src/simulator_database_reader.o
+
+# target to build an object file
+src/simulator_database_reader.cpp.o:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.o
+.PHONY : src/simulator_database_reader.cpp.o
+
+src/simulator_database_reader.i: src/simulator_database_reader.cpp.i
+
+.PHONY : src/simulator_database_reader.i
+
+# target to preprocess a source file
+src/simulator_database_reader.cpp.i:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.i
+.PHONY : src/simulator_database_reader.cpp.i
+
+src/simulator_database_reader.s: src/simulator_database_reader.cpp.s
+
+.PHONY : src/simulator_database_reader.s
+
+# target to generate assembly for a file
+src/simulator_database_reader.cpp.s:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/simulator_database_reader.cpp.s
+.PHONY : src/simulator_database_reader.cpp.s
+
+src/test_simulator_connections.o: src/test_simulator_connections.cpp.o
+
+.PHONY : src/test_simulator_connections.o
+
+# target to build an object file
+src/test_simulator_connections.cpp.o:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.o
+.PHONY : src/test_simulator_connections.cpp.o
+
+src/test_simulator_connections.i: src/test_simulator_connections.cpp.i
+
+.PHONY : src/test_simulator_connections.i
+
+# target to preprocess a source file
+src/test_simulator_connections.cpp.i:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.i
+.PHONY : src/test_simulator_connections.cpp.i
+
+src/test_simulator_connections.s: src/test_simulator_connections.cpp.s
+
+.PHONY : src/test_simulator_connections.s
+
+# target to generate assembly for a file
+src/test_simulator_connections.cpp.s:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/src/test_simulator_connections.cpp.s
+.PHONY : src/test_simulator_connections.cpp.s
 
 # Help Target
 help:
@@ -188,12 +215,15 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... equipment_stimulation"
-	@echo "... src/equipment_stimulator.o"
-	@echo "... src/equipment_stimulator.i"
-	@echo "... src/equipment_stimulator.s"
-	@echo "... src/main.o"
-	@echo "... src/main.i"
-	@echo "... src/main.s"
+	@echo "... src/simulator_connections.o"
+	@echo "... src/simulator_connections.i"
+	@echo "... src/simulator_connections.s"
+	@echo "... src/simulator_database_reader.o"
+	@echo "... src/simulator_database_reader.i"
+	@echo "... src/simulator_database_reader.s"
+	@echo "... src/test_simulator_connections.o"
+	@echo "... src/test_simulator_connections.i"
+	@echo "... src/test_simulator_connections.s"
 .PHONY : help
 
 

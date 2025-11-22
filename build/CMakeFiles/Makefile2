@@ -134,7 +134,7 @@ shared_components/clean: shared_components/CMakeFiles/shared_components.dir/clea
 shared_components/CMakeFiles/shared_components.dir/all:
 	$(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/depend
 	$(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=10,11,12,13,14,15 "Built target shared_components"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=11,12,13,14,15,16 "Built target shared_components"
 .PHONY : shared_components/CMakeFiles/shared_components.dir/all
 
 # Build rule for subdir invocation for target.
@@ -161,12 +161,12 @@ shared_components/CMakeFiles/shared_components.dir/clean:
 equipment_simulation/CMakeFiles/equipment_stimulation.dir/all: shared_components/CMakeFiles/shared_components.dir/all
 	$(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/depend
 	$(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=7,8,9 "Built target equipment_stimulation"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=7,8,9,10 "Built target equipment_stimulation"
 .PHONY : equipment_simulation/CMakeFiles/equipment_stimulation.dir/all
 
 # Build rule for subdir invocation for target.
 equipment_simulation/CMakeFiles/equipment_stimulation.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 9
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 10
 	$(MAKE) -f CMakeFiles/Makefile2 equipment_simulation/CMakeFiles/equipment_stimulation.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 0
 .PHONY : equipment_simulation/CMakeFiles/equipment_stimulation.dir/rule
