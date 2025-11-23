@@ -29,6 +29,13 @@ public:
   void remove_connection_by_equipment_id(const std::string &equipment_id);
   bool has_connection(int fd) const;
   bool is_equipment_connected(const std::string &equipment_id) const;
+  // 连接生命周期管理
+  void close_connection(int fd);
+  void close_connection_by_equipment_id(const std::string &equipment_id);
+  void close_all_connections();
+
+  // 连接状态检查
+  bool is_connection_valid(int fd) const;
 
   // 设备查找
   std::shared_ptr<Equipment> get_equipment_by_fd(int fd);

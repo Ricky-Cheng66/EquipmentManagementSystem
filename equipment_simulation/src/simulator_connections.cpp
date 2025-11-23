@@ -1,6 +1,8 @@
 #include "simulator_connections.h"
 #include <algorithm>
+#include <fcntl.h>
 #include <iostream>
+#include <unistd.h>
 
 SimulatorConnections::SimulatorConnections()
     : db_reader_(std::make_unique<SimulatorDatabaseReader>()) {
@@ -140,6 +142,84 @@ void SimulatorConnections::remove_connection_by_equipment_id(
   } else {
     std::cout << "设备未连接: " << equipment_id << std::endl;
   }
+}
+
+// 在原有实现中添加以下方法：
+
+void SimulatorConnections::close_connection(int fd) {
+  std::unique_lock lock(connections_rw_lock_);
+
+  auto it = fd_to_equipment_.find(fd);
+  if (it != fd_to_equipment_.end()) {
+    std::string equipment_id = it->second->get_equipment_id();
+
+    // 从映射中移除
+    fd_to_equipment_.erase(it);
+    equipment_to_fd_.erase(equipment_id);
+
+    // 关闭文件描述符
+    if (fd > 0) {
+      close(fd);
+    }
+
+    std::cout << "关闭连接: fd=" << fd << " (" << equipment_id << ")"
+              << std::endl;
+  } else {
+    std::cout << "连接不存在，无法关闭: fd=" << fd << std::endl;
+  }
+}
+
+void SimulatorConnections::close_connection_by_equipment_id(
+    const std::string &equipment_id) {
+  std::unique_lock lock(connections_rw_lock_);
+
+  auto it = equipment_to_fd_.find(equipment_id);
+  if (it != equipment_to_fd_.end()) {
+    int fd = it->second;
+
+    // 从映射中移除
+    equipment_to_fd_.erase(it);
+    fd_to_equipment_.erase(fd);
+
+    // 关闭文件描述符
+    if (fd > 0) {
+      close(fd);
+    }
+
+    std::cout << "关闭连接: " << equipment_id << " (fd=" << fd << ")"
+              << std::endl;
+  } else {
+    std::cout << "设备未连接，无法关闭: " << equipment_id << std::endl;
+  }
+}
+
+void SimulatorConnections::close_all_connections() {
+  std::unique_lock lock(connections_rw_lock_);
+
+  std::cout << "关闭所有连接，共 " << fd_to_equipment_.size() << " 个连接"
+            << std::endl;
+
+  // 关闭所有文件描述符
+  for (const auto &[fd, equipment] : fd_to_equipment_) {
+    if (fd > 0) {
+      close(fd);
+    }
+  }
+
+  // 清空映射
+  fd_to_equipment_.clear();
+  equipment_to_fd_.clear();
+}
+
+bool SimulatorConnections::is_connection_valid(int fd) const {
+  std::shared_lock lock(connections_rw_lock_);
+
+  if (fd_to_equipment_.find(fd) == fd_to_equipment_.end()) {
+    return false;
+  }
+
+  // 检查文件描述符是否仍然有效
+  return fcntl(fd, F_GETFD) != -1 || errno != EBADF;
 }
 
 bool SimulatorConnections::has_connection(int fd) const {
