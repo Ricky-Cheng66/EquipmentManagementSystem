@@ -5,8 +5,8 @@ public:
   Socket() = default;
   ~Socket() = default;
   static int create_socket();
-  static bool connect_to_socket(int fd, std::string address,
-                                std::uint16_t port);
+  static bool connect_to_socket(int fd, std::string address, std::uint16_t port,
+                                int timeout_ms = 5000);
   bool bind_server_socket(int fd, int port);
   int accept_socket(int server_fd);
   bool listen_socket(int fd);

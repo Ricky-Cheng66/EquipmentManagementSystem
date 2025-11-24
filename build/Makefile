@@ -124,17 +124,56 @@ shared_components/fast:
 .PHONY : shared_components/fast
 
 #=============================================================================
-# Target rules for targets named equipment_stimulation
+# Target rules for targets named test_simulator_connections
 
 # Build rule for target.
-equipment_stimulation: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 equipment_stimulation
-.PHONY : equipment_stimulation
+test_simulator_connections: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 test_simulator_connections
+.PHONY : test_simulator_connections
 
 # fast build rule for target.
-equipment_stimulation/fast:
-	$(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/build
-.PHONY : equipment_stimulation/fast
+test_simulator_connections/fast:
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_simulator_connections.dir/build.make equipment_simulation/CMakeFiles/test_simulator_connections.dir/build
+.PHONY : test_simulator_connections/fast
+
+#=============================================================================
+# Target rules for targets named test_performance
+
+# Build rule for target.
+test_performance: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 test_performance
+.PHONY : test_performance
+
+# fast build rule for target.
+test_performance/fast:
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_performance.dir/build.make equipment_simulation/CMakeFiles/test_performance.dir/build
+.PHONY : test_performance/fast
+
+#=============================================================================
+# Target rules for targets named test_integration
+
+# Build rule for target.
+test_integration: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 test_integration
+.PHONY : test_integration
+
+# fast build rule for target.
+test_integration/fast:
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_integration.dir/build.make equipment_simulation/CMakeFiles/test_integration.dir/build
+.PHONY : test_integration/fast
+
+#=============================================================================
+# Target rules for targets named test_simulation_manager
+
+# Build rule for target.
+test_simulation_manager: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 test_simulation_manager
+.PHONY : test_simulation_manager
+
+# fast build rule for target.
+test_simulation_manager/fast:
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_simulation_manager.dir/build.make equipment_simulation/CMakeFiles/test_simulation_manager.dir/build
+.PHONY : test_simulation_manager/fast
 
 #=============================================================================
 # Target rules for targets named EMS_server
@@ -158,7 +197,10 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... shared_components"
-	@echo "... equipment_stimulation"
+	@echo "... test_simulator_connections"
+	@echo "... test_performance"
+	@echo "... test_integration"
+	@echo "... test_simulation_manager"
 	@echo "... EMS_server"
 .PHONY : help
 

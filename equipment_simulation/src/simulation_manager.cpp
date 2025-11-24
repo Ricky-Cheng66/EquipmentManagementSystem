@@ -1,7 +1,9 @@
 #include "simulation_manager.h"
+#include <cstring>
 #include <fcntl.h>
 #include <iostream>
 #include <sys/epoll.h>
+#include <sys/socket.h>
 #include <system_error>
 #include <unistd.h>
 
@@ -70,10 +72,17 @@ void SimulationManager::stop() {
     return;
   }
 
+  std::cout << "正在停止模拟器..." << std::endl;
   is_running_ = false;
+
   if (event_loop_thread_.joinable()) {
+    std::cout << "等待事件循环线程结束..." << std::endl;
     event_loop_thread_.join();
+    std::cout << "事件循环线程已结束" << std::endl;
   }
+
+  // 断开所有设备连接
+  disconnect_all_equipments();
 
   std::cout << "模拟器已停止" << std::endl;
 }
@@ -87,17 +96,37 @@ bool SimulationManager::connect_all_equipments() {
   int success_count = 0;
   int total_count = registered_equipments.size() + pending_equipments.size();
 
+  std::cout << "DEBUG: 找到 " << total_count << " 个设备需要连接" << std::endl;
+  std::cout << "DEBUG: 已注册设备: " << registered_equipments.size() << " 个"
+            << std::endl;
+  std::cout << "DEBUG: 待注册设备: " << pending_equipments.size() << " 个"
+            << std::endl;
+
   // 连接已注册设备
   for (const auto &equipment : registered_equipments) {
+    std::cout << "DEBUG: 尝试连接已注册设备: " << equipment->get_equipment_id()
+              << std::endl;
     if (connect_equipment(equipment->get_equipment_id())) {
       success_count++;
+      std::cout << "DEBUG: ✅ 设备连接成功: " << equipment->get_equipment_id()
+                << std::endl;
+    } else {
+      std::cout << "DEBUG: ❌ 设备连接失败: " << equipment->get_equipment_id()
+                << std::endl;
     }
   }
 
   // 连接待注册设备
   for (const auto &equipment : pending_equipments) {
+    std::cout << "DEBUG: 尝试连接待注册设备: " << equipment->get_equipment_id()
+              << std::endl;
     if (connect_equipment(equipment->get_equipment_id())) {
       success_count++;
+      std::cout << "DEBUG: ✅ 设备连接成功: " << equipment->get_equipment_id()
+                << std::endl;
+    } else {
+      std::cout << "DEBUG: ❌ 设备连接失败: " << equipment->get_equipment_id()
+                << std::endl;
     }
   }
 
@@ -107,13 +136,20 @@ bool SimulationManager::connect_all_equipments() {
 }
 
 bool SimulationManager::connect_equipment(const std::string &equipment_id) {
+  std::cout << "DEBUG connect_equipment: 开始连接设备 " << equipment_id
+            << std::endl;
+
   // 检查设备是否已连接
   if (connections_->is_equipment_connected(equipment_id)) {
-    std::cout << "设备已连接: " << equipment_id << std::endl;
+    std::cout << "DEBUG: 设备已连接: " << equipment_id << std::endl;
     return true;
   }
 
-  return create_equipment_connection(equipment_id);
+  std::cout << "DEBUG: 设备未连接，开始创建连接..." << std::endl;
+  bool result = create_equipment_connection(equipment_id);
+  std::cout << "DEBUG connect_equipment: 设备 " << equipment_id
+            << " 连接结果: " << (result ? "成功" : "失败") << std::endl;
+  return result;
 }
 
 void SimulationManager::disconnect_equipment(const std::string &equipment_id) {
@@ -126,41 +162,51 @@ void SimulationManager::disconnect_all_equipments() {
 
 bool SimulationManager::create_equipment_connection(
     const std::string &equipment_id) {
+  std::cout << "DEBUG create_equipment_connection: 开始为设备 " << equipment_id
+            << " 创建连接" << std::endl;
+
   // 创建socket
   int fd = Socket::create_socket();
   if (fd < 0) {
-    std::cerr << "创建socket失败: " << equipment_id << std::endl;
+    std::cerr << "DEBUG: ❌ 创建socket失败: " << equipment_id << std::endl;
     return false;
   }
+  std::cout << "DEBUG: ✅ 创建socket成功, fd=" << fd << std::endl;
 
   // 设置非阻塞
   if (!Socket::set_nonblock(fd)) {
-    std::cerr << "设置非阻塞失败: " << equipment_id << std::endl;
+    std::cerr << "DEBUG: ❌ 设置非阻塞失败: " << equipment_id << std::endl;
     close(fd);
     return false;
   }
+  std::cout << "DEBUG: ✅ 设置非阻塞成功" << std::endl;
 
   // 连接服务器
+  std::cout << "DEBUG: 开始连接到服务器 " << server_ip_ << ":" << server_port_
+            << std::endl;
   if (!Socket::connect_to_socket(fd, server_ip_, server_port_)) {
-    std::cerr << "连接服务器失败: " << equipment_id << std::endl;
+    std::cerr << "DEBUG: ❌ 连接服务器失败: " << equipment_id << std::endl;
     close(fd);
     return false;
   }
+  std::cout << "DEBUG: ✅ 连接服务器成功" << std::endl;
 
   // 添加到Epoll
   if (!add_to_epoll(fd)) {
-    std::cerr << "添加到Epoll失败: " << equipment_id << std::endl;
+    std::cerr << "DEBUG: ❌ 添加到Epoll失败: " << equipment_id << std::endl;
     close(fd);
     return false;
   }
+  std::cout << "DEBUG: ✅ 添加到Epoll成功" << std::endl;
 
   // 添加到连接管理
   if (!connections_->add_connection(fd, equipment_id)) {
-    std::cerr << "添加到连接管理失败: " << equipment_id << std::endl;
+    std::cerr << "DEBUG: ❌ 添加到连接管理失败: " << equipment_id << std::endl;
     Epoll::get_instance().delete_epoll(fd);
     close(fd);
     return false;
   }
+  std::cout << "DEBUG: ✅ 添加到连接管理成功" << std::endl;
 
   std::cout << "设备连接成功: " << equipment_id << " (fd=" << fd << ")"
             << std::endl;
@@ -170,10 +216,13 @@ bool SimulationManager::create_equipment_connection(
 
   return true;
 }
-
 bool SimulationManager::add_to_epoll(int fd) {
+  std::cout << "DEBUG add_to_epoll: 添加fd=" << fd << "到epoll" << std::endl;
   Epoll &epoll = Epoll::get_instance();
-  return epoll.add_epoll(fd, EPOLLIN | EPOLLET | EPOLLRDHUP);
+  bool result = epoll.add_epoll(fd, EPOLLIN | EPOLLET | EPOLLRDHUP);
+  std::cout << "DEBUG add_to_epoll: 结果=" << (result ? "成功" : "失败")
+            << std::endl;
+  return result;
 }
 
 void SimulationManager::event_loop() {
@@ -184,16 +233,28 @@ void SimulationManager::event_loop() {
   struct epoll_event *events = new epoll_event[max_events];
 
   while (is_running_) {
-    int nfds = epoll.wait_events(events, 1000); // 1秒超时
+    // 使用较短的超时时间（100ms），便于及时检查退出条件
+    int nfds = epoll.wait_events(events, 100);
 
     if (nfds > 0) {
       if (!process_events(nfds, events)) {
         std::cerr << "事件处理失败" << std::endl;
         break;
       }
-    } else if (nfds < 0 && errno != EINTR) {
-      std::cerr << "epoll_wait 错误" << std::endl;
-      break;
+    } else if (nfds == 0) {
+      // 超时，继续检查运行状态
+      continue;
+    } else {
+      // 错误处理
+      if (errno == EINTR) {
+        // 被信号中断，检查是否需要退出
+        if (!is_running_)
+          break;
+        continue;
+      } else {
+        std::cerr << "epoll_wait 错误: " << strerror(errno) << std::endl;
+        break;
+      }
     }
 
     // 定期执行维护任务
@@ -211,7 +272,7 @@ bool SimulationManager::process_events(int nfds, struct epoll_event *events) {
 
     // 检查错误事件
     if (event_mask & (EPOLLERR | EPOLLHUP)) {
-      std::cerr << "连接错误或挂起，关闭fd: " << fd << std::endl;
+      std::cerr << "连接错误或挂起,关闭fd: " << fd << std::endl;
       handle_connection_close(fd);
       continue;
     }
@@ -342,7 +403,7 @@ void SimulationManager::handle_register_response(
     std::cout << "设备注册成功: " << equipment_id << std::endl;
     // 更新设备状态为在线
     connections_->update_equipment_status(equipment_id, "online");
-    connections_->update_equipment_power_state(equipment_id, "on");
+    // connections_->update_equipment_power_state(equipment_id, "on");
   } else {
     std::cout << "设备注册失败: " << equipment_id << std::endl;
     connections_->update_equipment_status(equipment_id, "offline");
@@ -416,7 +477,11 @@ void SimulationManager::send_status_updates() {
   }
 }
 
-void SimulationManager::send_pending_registrations() {
+void SimulationManager::
+    send_pending_registrations() { // 如果已经请求停止，不进行重连
+  if (!is_running_) {
+    return;
+  }
   auto pending_equipments = connections_->get_pending_equipments();
   for (const auto &equipment : pending_equipments) {
     std::string equipment_id = equipment->get_equipment_id();
@@ -427,6 +492,8 @@ void SimulationManager::send_pending_registrations() {
       // 如果已连接但未注册，发送注册消息
       send_register_message(equipment_id);
     }
+    // 短暂延迟，避免过于频繁的重连
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 }
 

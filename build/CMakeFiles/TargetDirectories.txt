@@ -3,9 +3,12 @@
 /home/liuliuqiu/EquipmentManagementSystem/build/shared_components/CMakeFiles/rebuild_cache.dir
 /home/liuliuqiu/EquipmentManagementSystem/build/shared_components/CMakeFiles/edit_cache.dir
 /home/liuliuqiu/EquipmentManagementSystem/build/shared_components/CMakeFiles/shared_components.dir
-/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation/CMakeFiles/rebuild_cache.dir
 /home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation/CMakeFiles/edit_cache.dir
-/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation/CMakeFiles/equipment_stimulation.dir
+/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation/CMakeFiles/test_simulator_connections.dir
+/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation/CMakeFiles/test_performance.dir
+/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation/CMakeFiles/rebuild_cache.dir
+/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation/CMakeFiles/test_integration.dir
+/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation/CMakeFiles/test_simulation_manager.dir
 /home/liuliuqiu/EquipmentManagementSystem/build/server/CMakeFiles/rebuild_cache.dir
 /home/liuliuqiu/EquipmentManagementSystem/build/server/CMakeFiles/edit_cache.dir
 /home/liuliuqiu/EquipmentManagementSystem/build/server/CMakeFiles/EMS_server.dir

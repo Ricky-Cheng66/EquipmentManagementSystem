@@ -77,7 +77,10 @@ clean: server/clean
 # Directory level rules for directory equipment_simulation
 
 # Recursive "all" directory target.
-equipment_simulation/all: equipment_simulation/CMakeFiles/equipment_stimulation.dir/all
+equipment_simulation/all: equipment_simulation/CMakeFiles/test_simulator_connections.dir/all
+equipment_simulation/all: equipment_simulation/CMakeFiles/test_performance.dir/all
+equipment_simulation/all: equipment_simulation/CMakeFiles/test_integration.dir/all
+equipment_simulation/all: equipment_simulation/CMakeFiles/test_simulation_manager.dir/all
 
 .PHONY : equipment_simulation/all
 
@@ -87,7 +90,10 @@ equipment_simulation/preinstall:
 .PHONY : equipment_simulation/preinstall
 
 # Recursive "clean" directory target.
-equipment_simulation/clean: equipment_simulation/CMakeFiles/equipment_stimulation.dir/clean
+equipment_simulation/clean: equipment_simulation/CMakeFiles/test_simulator_connections.dir/clean
+equipment_simulation/clean: equipment_simulation/CMakeFiles/test_performance.dir/clean
+equipment_simulation/clean: equipment_simulation/CMakeFiles/test_integration.dir/clean
+equipment_simulation/clean: equipment_simulation/CMakeFiles/test_simulation_manager.dir/clean
 
 .PHONY : equipment_simulation/clean
 
@@ -134,7 +140,7 @@ shared_components/clean: shared_components/CMakeFiles/shared_components.dir/clea
 shared_components/CMakeFiles/shared_components.dir/all:
 	$(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/depend
 	$(MAKE) -f shared_components/CMakeFiles/shared_components.dir/build.make shared_components/CMakeFiles/shared_components.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=11,12,13,14,15,16 "Built target shared_components"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=7,8,9,10,11,12 "Built target shared_components"
 .PHONY : shared_components/CMakeFiles/shared_components.dir/all
 
 # Build rule for subdir invocation for target.
@@ -155,31 +161,112 @@ shared_components/CMakeFiles/shared_components.dir/clean:
 .PHONY : shared_components/CMakeFiles/shared_components.dir/clean
 
 #=============================================================================
-# Target rules for target equipment_simulation/CMakeFiles/equipment_stimulation.dir
+# Target rules for target equipment_simulation/CMakeFiles/test_simulator_connections.dir
 
 # All Build rule for target.
-equipment_simulation/CMakeFiles/equipment_stimulation.dir/all: shared_components/CMakeFiles/shared_components.dir/all
-	$(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/depend
-	$(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=7,8,9,10 "Built target equipment_stimulation"
-.PHONY : equipment_simulation/CMakeFiles/equipment_stimulation.dir/all
+equipment_simulation/CMakeFiles/test_simulator_connections.dir/all: shared_components/CMakeFiles/shared_components.dir/all
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_simulator_connections.dir/build.make equipment_simulation/CMakeFiles/test_simulator_connections.dir/depend
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_simulator_connections.dir/build.make equipment_simulation/CMakeFiles/test_simulator_connections.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=28,29,30,31,32 "Built target test_simulator_connections"
+.PHONY : equipment_simulation/CMakeFiles/test_simulator_connections.dir/all
 
 # Build rule for subdir invocation for target.
-equipment_simulation/CMakeFiles/equipment_stimulation.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 10
-	$(MAKE) -f CMakeFiles/Makefile2 equipment_simulation/CMakeFiles/equipment_stimulation.dir/all
+equipment_simulation/CMakeFiles/test_simulator_connections.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 11
+	$(MAKE) -f CMakeFiles/Makefile2 equipment_simulation/CMakeFiles/test_simulator_connections.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 0
-.PHONY : equipment_simulation/CMakeFiles/equipment_stimulation.dir/rule
+.PHONY : equipment_simulation/CMakeFiles/test_simulator_connections.dir/rule
 
 # Convenience name for target.
-equipment_stimulation: equipment_simulation/CMakeFiles/equipment_stimulation.dir/rule
+test_simulator_connections: equipment_simulation/CMakeFiles/test_simulator_connections.dir/rule
 
-.PHONY : equipment_stimulation
+.PHONY : test_simulator_connections
 
 # clean rule for target.
-equipment_simulation/CMakeFiles/equipment_stimulation.dir/clean:
-	$(MAKE) -f equipment_simulation/CMakeFiles/equipment_stimulation.dir/build.make equipment_simulation/CMakeFiles/equipment_stimulation.dir/clean
-.PHONY : equipment_simulation/CMakeFiles/equipment_stimulation.dir/clean
+equipment_simulation/CMakeFiles/test_simulator_connections.dir/clean:
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_simulator_connections.dir/build.make equipment_simulation/CMakeFiles/test_simulator_connections.dir/clean
+.PHONY : equipment_simulation/CMakeFiles/test_simulator_connections.dir/clean
+
+#=============================================================================
+# Target rules for target equipment_simulation/CMakeFiles/test_performance.dir
+
+# All Build rule for target.
+equipment_simulation/CMakeFiles/test_performance.dir/all: shared_components/CMakeFiles/shared_components.dir/all
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_performance.dir/build.make equipment_simulation/CMakeFiles/test_performance.dir/depend
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_performance.dir/build.make equipment_simulation/CMakeFiles/test_performance.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=18,19,20,21,22 "Built target test_performance"
+.PHONY : equipment_simulation/CMakeFiles/test_performance.dir/all
+
+# Build rule for subdir invocation for target.
+equipment_simulation/CMakeFiles/test_performance.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 11
+	$(MAKE) -f CMakeFiles/Makefile2 equipment_simulation/CMakeFiles/test_performance.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 0
+.PHONY : equipment_simulation/CMakeFiles/test_performance.dir/rule
+
+# Convenience name for target.
+test_performance: equipment_simulation/CMakeFiles/test_performance.dir/rule
+
+.PHONY : test_performance
+
+# clean rule for target.
+equipment_simulation/CMakeFiles/test_performance.dir/clean:
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_performance.dir/build.make equipment_simulation/CMakeFiles/test_performance.dir/clean
+.PHONY : equipment_simulation/CMakeFiles/test_performance.dir/clean
+
+#=============================================================================
+# Target rules for target equipment_simulation/CMakeFiles/test_integration.dir
+
+# All Build rule for target.
+equipment_simulation/CMakeFiles/test_integration.dir/all: shared_components/CMakeFiles/shared_components.dir/all
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_integration.dir/build.make equipment_simulation/CMakeFiles/test_integration.dir/depend
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_integration.dir/build.make equipment_simulation/CMakeFiles/test_integration.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=13,14,15,16,17 "Built target test_integration"
+.PHONY : equipment_simulation/CMakeFiles/test_integration.dir/all
+
+# Build rule for subdir invocation for target.
+equipment_simulation/CMakeFiles/test_integration.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 11
+	$(MAKE) -f CMakeFiles/Makefile2 equipment_simulation/CMakeFiles/test_integration.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 0
+.PHONY : equipment_simulation/CMakeFiles/test_integration.dir/rule
+
+# Convenience name for target.
+test_integration: equipment_simulation/CMakeFiles/test_integration.dir/rule
+
+.PHONY : test_integration
+
+# clean rule for target.
+equipment_simulation/CMakeFiles/test_integration.dir/clean:
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_integration.dir/build.make equipment_simulation/CMakeFiles/test_integration.dir/clean
+.PHONY : equipment_simulation/CMakeFiles/test_integration.dir/clean
+
+#=============================================================================
+# Target rules for target equipment_simulation/CMakeFiles/test_simulation_manager.dir
+
+# All Build rule for target.
+equipment_simulation/CMakeFiles/test_simulation_manager.dir/all: shared_components/CMakeFiles/shared_components.dir/all
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_simulation_manager.dir/build.make equipment_simulation/CMakeFiles/test_simulation_manager.dir/depend
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_simulation_manager.dir/build.make equipment_simulation/CMakeFiles/test_simulation_manager.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles --progress-num=23,24,25,26,27 "Built target test_simulation_manager"
+.PHONY : equipment_simulation/CMakeFiles/test_simulation_manager.dir/all
+
+# Build rule for subdir invocation for target.
+equipment_simulation/CMakeFiles/test_simulation_manager.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 11
+	$(MAKE) -f CMakeFiles/Makefile2 equipment_simulation/CMakeFiles/test_simulation_manager.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/liuliuqiu/EquipmentManagementSystem/build/CMakeFiles 0
+.PHONY : equipment_simulation/CMakeFiles/test_simulation_manager.dir/rule
+
+# Convenience name for target.
+test_simulation_manager: equipment_simulation/CMakeFiles/test_simulation_manager.dir/rule
+
+.PHONY : test_simulation_manager
+
+# clean rule for target.
+equipment_simulation/CMakeFiles/test_simulation_manager.dir/clean:
+	$(MAKE) -f equipment_simulation/CMakeFiles/test_simulation_manager.dir/build.make equipment_simulation/CMakeFiles/test_simulation_manager.dir/clean
+.PHONY : equipment_simulation/CMakeFiles/test_simulation_manager.dir/clean
 
 #=============================================================================
 # Target rules for target server/CMakeFiles/EMS_server.dir
