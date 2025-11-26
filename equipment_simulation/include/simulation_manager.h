@@ -57,7 +57,16 @@ private:
   void handle_heartbeat_response(int fd, const std::string &equipment_id);
   void handle_control_command(int fd, const std::string &equipment_id,
                               const std::string &command);
+  // 新增：发送控制响应
+  void send_control_response(int fd, const std::string &equipment_id,
+                             bool success, const std::string &message);
 
+  //设备模拟操作
+  bool simulate_turn_on(const std::string &equipment_id);
+  bool simulate_turn_off(const std::string &equipment_id);
+  bool simulate_restart(const std::string &equipment_id);
+  bool simulate_adjust_settings(const std::string &equipment_id,
+                                const std::string &parameters);
   // 定时任务
   void perform_maintenance_tasks();
   void send_heartbeats();
@@ -73,6 +82,7 @@ private:
   // 工具函数
   MessageBuffer *get_message_buffer(int fd);
   bool add_to_epoll(int fd);
+  std::string get_command_name(ProtocolParser::ControlCommandType command_type);
 
   // 成员变量
   std::unique_ptr<SimulatorConnections> connections_;

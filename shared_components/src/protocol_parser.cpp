@@ -82,33 +82,51 @@ ProtocolParser::build_heartbeat_message(const std::string &equipment_id) {
   return pack_message(body);
 }
 
-//构建状态更新信息:"状态上报: "2|projector_101|online|on|额外信息"
+//构建状态查询（服务器→设备）
 std::vector<char> ProtocolParser::build_status_update_message(
     const std::string &equipment_id, const std::string status,
     const std::string power_state, const std::string more_data) {
-  std::string body{"2|" + equipment_id + "|" + status + "|" + power_state +
-                   "|" + more_data};
+  std::string body = std::to_string(STATUS_QUERY) + "|" + equipment_id;
   return pack_message(body);
 }
 
-// 构建控制命令消息（服务器发送给设备）
+// 构建状态查询（服务器→设备）
+std::vector<char>
+ProtocolParser::build_status_query(const std::string &equipment_id) {
+
+  std::string body = std::to_string(STATUS_QUERY) + "|" + equipment_id;
+  return pack_message(body);
+}
+
+// 构建状态响应（设备→服务器）
+std::vector<char>
+ProtocolParser::build_status_response(const std::string &equipment_id,
+                                      const std::string &status,
+                                      const std::string &power_state) {
+
+  std::string body = std::to_string(STATUS_RESPONSE) + "|" + equipment_id +
+                     "|" + status + "|" + power_state;
+  return pack_message(body);
+}
+
+// 构建控制命令消息（服务器→设备）
 std::vector<char>
 ProtocolParser::build_control_command(const std::string &equipment_id,
                                       ControlCommandType command_type,
                                       const std::string &parameters) {
 
-  std::string body = "3|" + equipment_id + "|" +
-                     std::to_string(static_cast<int>(command_type)) + "|" +
-                     parameters;
+  std::string body = std::to_string(CONTROL_COMMAND) + "|" + equipment_id +
+                     "|" + std::to_string(static_cast<int>(command_type)) +
+                     "|" + parameters;
   return pack_message(body);
 }
 
-// 构建控制响应消息
+// 构建控制响应消息（设备→服务器）
 std::vector<char> ProtocolParser::build_control_response(
     const std::string &equipment_id, bool success, const std::string &message) {
 
-  std::string body = "8|" + equipment_id + "|" +
-                     (success ? "success" : "fail") + "|" + message;
+  std::string body = std::to_string(CONTROL_RESPONSE) + "|" + equipment_id +
+                     "|" + (success ? "success" : "fail") + "|" + message;
   return pack_message(body);
 }
 

@@ -219,9 +219,9 @@ void EquipmentManagementServer::process_single_message(
   case ProtocolParser::STATUS_UPDATE:
     handle_status_update(fd, parse_result.equipment_id, parse_result.payload);
     break;
-  case ProtocolParser::CONTROL_CMD:
-    handle_client_control_command(fd, parse_result.equipment_id,
-                                  parse_result.payload);
+  case ProtocolParser::CONTROL_RESPONSE:
+    handle_control_response(fd, parse_result.equipment_id,
+                            parse_result.payload);
     break;
   case ProtocolParser::HEARTBEAT:
     handle_heartbeat(fd, parse_result.equipment_id);
@@ -239,8 +239,94 @@ void EquipmentManagementServer::process_single_message(
                                parse_result.payload);
     break;
   default:
-    std::cout << "收到数据: " << message << " from fd=" << fd << std::endl;
+    std::cout << "未知消息类型: " << parse_result.type << " from fd=" << fd
+              << std::endl;
   }
+}
+
+// 新增：处理设备控制响应
+void EquipmentManagementServer::handle_control_response(
+    int fd, const std::string &equipment_id, const std::string &payload) {
+  std::cout << "收到设备控制响应: " << equipment_id << " -> " << payload
+            << std::endl;
+
+  // 解析响应 (格式: "success|turn_on" 或 "fail|turn_off|reason")
+  auto parts = ProtocolParser::split_string(payload, '|');
+  if (parts.size() < 2) {
+    std::cout << "控制响应格式错误: " << payload << std::endl;
+    return;
+  }
+
+  bool success = (parts[0] == "success");
+  std::string command = parts[1];
+
+  if (success) {
+    // 控制成功，更新设备状态
+    if (command == "turn_on") {
+      equipment_manager_->update_equipment_power_from_simulator(equipment_id,
+                                                                "on");
+      equipment_manager_->update_equipment_status_from_simulator(equipment_id,
+                                                                 "online");
+    } else if (command == "turn_off") {
+      equipment_manager_->update_equipment_power_from_simulator(equipment_id,
+                                                                "off");
+      equipment_manager_->update_equipment_status_from_simulator(equipment_id,
+                                                                 "offline");
+    } else if (command == "restart") {
+      equipment_manager_->update_equipment_power_from_simulator(equipment_id,
+                                                                "on");
+      equipment_manager_->update_equipment_status_from_simulator(equipment_id,
+                                                                 "online");
+    }
+
+    // 记录到数据库
+    if (db_manager_->is_connected()) {
+      auto equipment = equipment_manager_->get_equipment(equipment_id);
+      if (equipment) {
+        db_manager_->update_equipment_status(equipment_id,
+                                             equipment->get_status(),
+                                             equipment->get_power_state());
+
+        // 记录控制日志
+        db_manager_->log_equipment_status(equipment_id, equipment->get_status(),
+                                          equipment->get_power_state(),
+                                          "control_success:" + command);
+      }
+    }
+
+    std::cout << "控制命令执行成功: " << equipment_id << " -> " << command
+              << std::endl;
+  } else {
+    std::cout << "控制命令执行失败: " << equipment_id << " -> " << command
+              << std::endl;
+    if (parts.size() > 2) {
+      std::cout << "失败原因: " << parts[2] << std::endl;
+    }
+  }
+
+  // 这里可以添加通知Qt客户端的逻辑
+  // notify_qt_control_result(equipment_id, success, command);
+}
+
+// Qt客户端接口实现
+bool EquipmentManagementServer::handle_qt_control_request(
+    const std::string &equipment_id,
+    ProtocolParser::ControlCommandType command_type,
+    const std::string &parameters) {
+
+  std::cout << "处理Qt控制请求: " << equipment_id
+            << " 命令: " << static_cast<int>(command_type)
+            << " 参数: " << parameters << std::endl;
+
+  // 通过ConnectionManager转发给设备
+  return connections_manager_->send_control_to_simulator(
+      equipment_id, command_type, parameters);
+}
+
+std::shared_ptr<Equipment> EquipmentManagementServer::handle_qt_status_query(
+    const std::string &equipment_id) {
+
+  return equipment_manager_->get_equipment(equipment_id);
 }
 
 //处理设备注册

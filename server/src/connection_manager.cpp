@@ -1,23 +1,28 @@
 #include "connection_manager.h"
 #include <iostream>
+#include <sys/socket.h>
 #include <unistd.h>
 // 连接管理
 void ConnectionManager::add_connection(int fd,
-                                       std::shared_ptr<Equipment> Equipment) {
+                                       std::shared_ptr<Equipment> equipment) {
   std::unique_lock lock(connection_rw_lock_);
   auto it1 = connections_.find(fd);
   if (fd < 0) {
     std::cout << "fd invalid..." << std::endl;
+    return;
   } else if (it1 != connections_.end()) {
     std::cout << "fd already in connections_..." << std::endl;
+    return;
   } else {
-    auto [it2, inserted2] = connections_.emplace(fd, Equipment);
+    //添加到映射
+    auto [it2, inserted2] = connections_.emplace(fd, equipment);
     if (inserted2) {
       std::cout << "connections_ insert sucess... quipement_id is" << fd
                 << std::endl;
     } else {
       std::cout << "connections_ insert failed..." << std::endl;
     }
+
     auto [it3, inserted3] = heartbeat_times_.emplace(fd, time(nullptr));
     if (inserted3) {
       std::cout << "heartbeat_times_ insert sucess... quipement_id is" << fd
@@ -25,7 +30,19 @@ void ConnectionManager::add_connection(int fd,
     } else {
       std::cout << "heartbeat_times_ insert failed..." << std::endl;
     }
+
+    auto [it4, inserted4] =
+        equipment_to_fd_.emplace(equipment->get_equipment_id(), fd);
+    if (inserted4) {
+      std::cout << "equipment_to_fd_ insert sucess... quipement_id is" << fd
+                << std::endl;
+    } else {
+      std::cout << "equipment_to_fd_ insert failed..." << std::endl;
+    }
   }
+
+  std::cout << "连接添加成功: fd=" << fd << " -> "
+            << equipment->get_equipment_id() << std::endl;
 }
 void ConnectionManager::remove_connection(int fd) {
   std::unique_lock lock(connection_rw_lock_);
@@ -33,12 +50,25 @@ void ConnectionManager::remove_connection(int fd) {
   if (fd < 0) {
     std::cout << "fd invalid..." << std::endl;
   } else if (it != connections_.end()) {
+    //从所有映射中移除
     connections_.erase(it);
     heartbeat_times_.erase(fd);
+    equipment_to_fd_.erase(it->second->get_equipment_id());
     close(fd);
+    std::cout << "连接移除: fd=" << fd << " -> "
+              << it->second->get_equipment_id() << std::endl;
   } else {
     std::cout << "fd not in connections_..." << std::endl;
   }
+}
+
+int ConnectionManager::get_fd_by_equipment_id(const std::string &equipment_id) {
+  std::shared_lock lock(connection_rw_lock_);
+  auto it = equipment_to_fd_.find(equipment_id);
+  if (it != equipment_to_fd_.end()) {
+    return it->second;
+  }
+  return -1;
 }
 std::shared_ptr<Equipment> ConnectionManager::get_equipment_by_fd(int fd) {
   std::shared_lock lock(connection_rw_lock_);
@@ -134,4 +164,36 @@ void ConnectionManager::print_connections() const {
     std::cout << "fd=" << k << ", 设备=" << equipment->get_equipment_id()
               << ", 状态=" << equipment->get_status() << std::endl;
   }
+}
+
+bool ConnectionManager::send_control_to_simulator(
+    const std::string &equipment_id,
+    ProtocolParser::ControlCommandType command_type,
+    const std::string &parameters) {
+  std::shared_lock lock(connection_rw_lock_);
+
+  // 查找设备对应的fd
+  auto fd_it = equipment_to_fd_.find(equipment_id);
+  if (fd_it == equipment_to_fd_.end()) {
+    std::cout << "设备未连接: " << equipment_id << std::endl;
+    return false;
+  }
+
+  int fd = fd_it->second;
+
+  // 构建控制命令
+  std::vector<char> control_msg = ProtocolParser::build_control_command(
+      equipment_id, command_type, parameters);
+
+  // 发送给设备
+  ssize_t bytes_sent = send(fd, control_msg.data(), control_msg.size(), 0);
+  if (bytes_sent <= 0) {
+    std::cout << "控制命令发送失败: " << equipment_id << std::endl;
+    return false;
+  }
+
+  std::cout << "控制命令已发送: " << equipment_id
+            << " 命令: " << static_cast<int>(command_type)
+            << " 参数: " << parameters << std::endl;
+  return true;
 }

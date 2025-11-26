@@ -355,25 +355,152 @@ void SimulationManager::process_single_message(int fd,
 
   switch (parse_result.type) {
   case ProtocolParser::EQUIPMENT_REGISTER:
-    // 注册响应
     handle_register_response(fd, equipment_id,
                              parse_result.payload == "success");
     break;
-
-  case ProtocolParser::HEARTBEAT:
-    // 心跳响应
+  case ProtocolParser::HEARTBEAT_RESPONSE:
     handle_heartbeat_response(fd, equipment_id);
     break;
-
-  case ProtocolParser::CONTROL_CMD:
-    // 控制命令
+  case ProtocolParser::CONTROL_COMMAND: // 新增：处理控制命令
     handle_control_command(fd, equipment_id, parse_result.payload);
     break;
-
+  case ProtocolParser::STATUS_QUERY: // 新增：处理状态查询
+    handle_status_query(fd, equipment_id);
+    break;
   default:
     std::cout << "未知消息类型: " << parse_result.type << " from "
               << equipment_id << std::endl;
     break;
+  }
+}
+
+// 新增：处理控制命令
+void SimulationManager::handle_control_command(int fd,
+                                               const std::string &equipment_id,
+                                               const std::string &payload) {
+  std::cout << "执行控制命令: " << equipment_id << " -> " << payload
+            << std::endl;
+
+  // 解析控制命令 (格式: "command_type|parameters")
+  auto parts = ProtocolParser::split_string(payload, '|');
+  if (parts.size() < 1) {
+    std::cout << "控制命令格式错误: " << payload << std::endl;
+    send_control_response(fd, equipment_id, false, "format_error");
+    return;
+  }
+
+  int command_type;
+  try {
+    command_type = std::stoi(parts[0]);
+  } catch (const std::exception &e) {
+    std::cout << "控制命令类型解析错误: " << parts[0] << std::endl;
+    send_control_response(fd, equipment_id, false, "invalid_command_type");
+    return;
+  }
+
+  std::string parameters = parts.size() > 1 ? parts[1] : "";
+  bool success = false;
+  std::string result_message = "";
+
+  // 执行控制命令
+  switch (static_cast<ProtocolParser::ControlCommandType>(command_type)) {
+  case ProtocolParser::TURN_ON:
+    success = simulate_turn_on(equipment_id);
+    result_message = success ? "设备已开启" : "设备开启失败";
+    break;
+  case ProtocolParser::TURN_OFF:
+    success = simulate_turn_off(equipment_id);
+    result_message = success ? "设备已关闭" : "设备关闭失败";
+    break;
+  case ProtocolParser::RESTART:
+    success = simulate_restart(equipment_id);
+    result_message = success ? "设备已重启" : "设备重启失败";
+    break;
+  case ProtocolParser::ADJUST_SETTINGS:
+    success = simulate_adjust_settings(equipment_id, parameters);
+    result_message = success ? "设置已调整" : "设置调整失败";
+    break;
+  default:
+    result_message = "未知控制命令";
+    break;
+  }
+
+  // 发送控制响应
+  send_control_response(
+      fd, equipment_id, success,
+      get_command_name(
+          static_cast<ProtocolParser::ControlCommandType>(command_type)) +
+          (success ? "" : "|" + result_message));
+}
+
+// 新增：发送控制响应
+void SimulationManager::send_control_response(int fd,
+                                              const std::string &equipment_id,
+                                              bool success,
+                                              const std::string &message) {
+  std::vector<char> response =
+      ProtocolParser::build_control_response(equipment_id, success, message);
+
+  if (send_message(fd, response)) {
+    std::cout << "控制响应已发送: " << equipment_id
+              << " 结果: " << (success ? "成功" : "失败") << std::endl;
+  } else {
+    std::cout << "控制响应发送失败: " << equipment_id << std::endl;
+  }
+}
+
+// 模拟设备操作
+bool SimulationManager::simulate_turn_on(const std::string &equipment_id) {
+  std::cout << "模拟开启设备: " << equipment_id << std::endl;
+  // 这里可以添加设备特定的开启逻辑
+  connections_->update_equipment_power_state(equipment_id, "on");
+  connections_->update_equipment_status(equipment_id, "online");
+  return true;
+}
+
+bool SimulationManager::simulate_turn_off(const std::string &equipment_id) {
+  std::cout << "模拟关闭设备: " << equipment_id << std::endl;
+  connections_->update_equipment_power_state(equipment_id, "off");
+  connections_->update_equipment_status(equipment_id, "offline");
+  return true;
+}
+
+bool SimulationManager::simulate_restart(const std::string &equipment_id) {
+  std::cout << "模拟重启设备: " << equipment_id << std::endl;
+  // 模拟重启过程：先关后开
+  connections_->update_equipment_power_state(equipment_id, "off");
+  connections_->update_equipment_status(equipment_id, "restarting");
+
+  // 模拟重启延迟
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+
+  connections_->update_equipment_power_state(equipment_id, "on");
+  connections_->update_equipment_status(equipment_id, "online");
+  return true;
+}
+
+bool SimulationManager::simulate_adjust_settings(
+    const std::string &equipment_id, const std::string &parameters) {
+  std::cout << "模拟调整设备设置: " << equipment_id << " 参数: " << parameters
+            << std::endl;
+  // 这里可以解析参数并执行具体的设置调整
+  return true;
+}
+
+// 工具函数：获取命令名称
+std::string SimulationManager::get_command_name(
+    ProtocolParser::ControlCommandType command_type) {
+  switch (command_type) {
+  case ProtocolParser::TURN_ON:
+    return "turn_on";
+  case ProtocolParser::TURN_OFF:
+    return "turn_off";
+  case ProtocolParser::RESTART:
+    return "restart";
+  case ProtocolParser::ADJUST_SETTINGS:
+    return "adjust_settings";
+  default:
+    return "unknown";
   }
 }
 
@@ -416,29 +543,30 @@ void SimulationManager::handle_heartbeat_response(
   std::cout << "收到心跳响应: " << equipment_id << std::endl;
 }
 
-void SimulationManager::handle_control_command(int fd,
-                                               const std::string &equipment_id,
-                                               const std::string &command) {
-  std::cout << "执行控制命令: " << equipment_id << " -> " << command
-            << std::endl;
+// void SimulationManager::handle_control_command(int fd,
+//                                                const std::string
+//                                                &equipment_id, const
+//                                                std::string &command) {
+//   std::cout << "执行控制命令: " << equipment_id << " -> " << command
+//             << std::endl;
 
-  if (command == "turn_on") {
-    connections_->update_equipment_power_state(equipment_id, "on");
-    std::cout << "设备已开启: " << equipment_id << std::endl;
-  } else if (command == "turn_off") {
-    connections_->update_equipment_power_state(equipment_id, "off");
-    std::cout << "设备已关闭: " << equipment_id << std::endl;
-  } else if (command == "restart") {
-    connections_->update_equipment_power_state(equipment_id, "off");
-    // 模拟重启延迟
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    connections_->update_equipment_power_state(equipment_id, "on");
-    std::cout << "设备已重启: " << equipment_id << std::endl;
-  }
+//   if (command == "turn_on") {
+//     connections_->update_equipment_power_state(equipment_id, "on");
+//     std::cout << "设备已开启: " << equipment_id << std::endl;
+//   } else if (command == "turn_off") {
+//     connections_->update_equipment_power_state(equipment_id, "off");
+//     std::cout << "设备已关闭: " << equipment_id << std::endl;
+//   } else if (command == "restart") {
+//     connections_->update_equipment_power_state(equipment_id, "off");
+//     // 模拟重启延迟
+//     std::this_thread::sleep_for(std::chrono::seconds(2));
+//     connections_->update_equipment_power_state(equipment_id, "on");
+//     std::cout << "设备已重启: " << equipment_id << std::endl;
+//   }
 
-  // 发送状态更新确认
-  send_status_update_message(equipment_id);
-}
+//   // 发送状态更新确认
+//   send_status_update_message(equipment_id);
+// }
 
 void SimulationManager::perform_maintenance_tasks() {
   loop_count_++;
