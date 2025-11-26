@@ -90,6 +90,28 @@ std::vector<char> ProtocolParser::build_status_update_message(
                    "|" + more_data};
   return pack_message(body);
 }
+
+// 构建控制命令消息（服务器发送给设备）
+std::vector<char>
+ProtocolParser::build_control_command(const std::string &equipment_id,
+                                      ControlCommandType command_type,
+                                      const std::string &parameters) {
+
+  std::string body = "3|" + equipment_id + "|" +
+                     std::to_string(static_cast<int>(command_type)) + "|" +
+                     parameters;
+  return pack_message(body);
+}
+
+// 构建控制响应消息
+std::vector<char> ProtocolParser::build_control_response(
+    const std::string &equipment_id, bool success, const std::string &message) {
+
+  std::string body = "8|" + equipment_id + "|" +
+                     (success ? "success" : "fail") + "|" + message;
+  return pack_message(body);
+}
+
 // 构建注册响应: "1|响应|success" 或 "1|响应|fail"
 std::vector<char> ProtocolParser::build_register_response(bool success) {
   std::string body = "1|response|" + std::string(success ? "success" : "fail");

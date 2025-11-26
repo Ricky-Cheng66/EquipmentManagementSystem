@@ -34,8 +34,27 @@ public:
   bool check_reservation_conflict(const std::string &equipment_id,
                                   const std::string &start_time,
                                   const std::string &end_time);
+  // 远程控制接口
+  bool send_control_command(const std::string &equipment_id,
+                            const std::string &command);
+
+  bool
+  send_advanced_control_command(const std::string &equipment_id,
+                                ProtocolParser::ControlCommandType command_type,
+                                const std::string &parameters = "");
+
+  bool
+  send_batch_control_command(const std::vector<std::string> &equipment_ids,
+                             ProtocolParser::ControlCommandType command_type,
+                             const std::string &parameters = "");
+
+  std::vector<std::string>
+  get_equipment_control_capabilities(const std::string &equipment_id);
 
 private:
+  // 处理来自客户端的控制命令
+  void handle_client_control_command(int fd, const std::string &equipment_id,
+                                     const std::string &payload);
   //消息处理函数
   void handle_equipment_register(int fd, const std::string &device_id,
                                  const std::string &payload);

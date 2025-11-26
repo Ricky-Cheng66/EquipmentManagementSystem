@@ -14,6 +14,7 @@
 #include "connection_manager.h"
 #include "epoll.h"
 #include "equipment_management_server.h"
+#include "protocol_parser.h"
 #include "socket.h"
 
 bool EquipmentManagementServer::init(int server_port) {
@@ -219,7 +220,8 @@ void EquipmentManagementServer::process_single_message(
     handle_status_update(fd, parse_result.equipment_id, parse_result.payload);
     break;
   case ProtocolParser::CONTROL_CMD:
-    handle_control_command(fd, parse_result.equipment_id, parse_result.payload);
+    handle_client_control_command(fd, parse_result.equipment_id,
+                                  parse_result.payload);
     break;
   case ProtocolParser::HEARTBEAT:
     handle_heartbeat(fd, parse_result.equipment_id);
@@ -378,6 +380,51 @@ void EquipmentManagementServer::handle_control_command(
   }
   std::cout << "控制响应处理完成: " << equipment_id << " -> " << payload
             << std::endl;
+}
+
+// 处理客户端控制命令
+void EquipmentManagementServer::handle_client_control_command(
+    int fd, const std::string &equipment_id, const std::string &payload) {
+
+  std::cout << "处理控制命令: " << equipment_id << " payload: " << payload
+            << std::endl;
+
+  // 解析控制命令（格式: "command_type|parameters"）
+  auto parts = ProtocolParser::split_string(payload, '|');
+  if (parts.size() < 1) {
+    std::cout << "控制命令格式错误" << std::endl;
+    return;
+  }
+
+  int command_type_num;
+  try {
+    command_type_num = std::stoi(parts[0]);
+  } catch (const std::exception &e) {
+    std::cout << "控制命令类型解析错误: " << parts[0] << std::endl;
+    return;
+  }
+
+  ProtocolParser::ControlCommandType command_type =
+      static_cast<ProtocolParser::ControlCommandType>(command_type_num);
+  std::string parameters = parts.size() > 1 ? parts[1] : "";
+
+  // 执行控制命令
+  bool success = equipment_manager_->send_control_command(
+      equipment_id, command_type, parameters);
+
+  // 发送控制响应
+  std::string response_msg = success ? "命令执行成功" : "命令执行失败";
+  std::vector<char> response = ProtocolParser::build_control_response(
+      equipment_id, success, response_msg);
+
+  send(fd, response.data(), response.size(), 0);
+
+  // 记录到数据库
+  if (db_manager_->is_connected()) {
+    // 这里可以添加控制命令日志记录
+    std::cout << "控制命令已记录: " << equipment_id << " -> "
+              << command_type_num << std::endl;
+  }
 }
 
 // 处理心跳
@@ -685,4 +732,35 @@ bool EquipmentManagementServer::check_reservation_conflict(
                                                    end_time);
   }
   return false; // 数据库不可用时默认无冲突
+}
+
+// 实现公共控制接口
+bool EquipmentManagementServer::send_control_command(
+    const std::string &equipment_id, const std::string &command) {
+  return equipment_manager_->send_control_command(equipment_id, command);
+}
+
+bool EquipmentManagementServer::send_advanced_control_command(
+    const std::string &equipment_id,
+    ProtocolParser::ControlCommandType command_type,
+    const std::string &parameters) {
+
+  return equipment_manager_->send_control_command(equipment_id, command_type,
+                                                  parameters);
+}
+
+bool EquipmentManagementServer::send_batch_control_command(
+    const std::vector<std::string> &equipment_ids,
+    ProtocolParser::ControlCommandType command_type,
+    const std::string &parameters) {
+
+  return equipment_manager_->send_batch_control_commands(
+      equipment_ids, command_type, parameters);
+}
+
+std::vector<std::string>
+EquipmentManagementServer::get_equipment_control_capabilities(
+    const std::string &equipment_id) {
+
+  return equipment_manager_->get_equipment_capabilities(equipment_id);
 }
