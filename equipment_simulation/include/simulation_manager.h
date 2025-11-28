@@ -52,11 +52,14 @@ private:
   void handle_connection_close(int fd);
 
   // 消息处理
-  void handle_register_response(int fd, const std::string &equipment_id,
-                                bool success);
+  void handle_online_response(int fd, const std::string &equipment_id,
+                              bool success);
   void handle_heartbeat_response(int fd, const std::string &equipment_id);
   void handle_control_command(int fd, const std::string &equipment_id,
                               const std::string &command);
+  void
+  handle_status_query(int fd,
+                      const std::string &equipment_id); // 新增：处理状态查询
   // 新增：发送控制响应
   void send_control_response(int fd, const std::string &equipment_id,
                              bool success, const std::string &message);
@@ -71,13 +74,15 @@ private:
   void perform_maintenance_tasks();
   void send_heartbeats();
   void send_status_updates();
-  void send_pending_registrations();
 
   // 消息发送
   bool send_message(int fd, const std::vector<char> &message);
-  bool send_register_message(const std::string &equipment_id);
+  bool send_online_message(
+      const std::string &equipment_id); // 修改：注册消息->上线消息
   bool send_heartbeat_message(const std::string &equipment_id);
   bool send_status_update_message(const std::string &equipment_id);
+  bool
+  send_status_response(const std::string &equipment_id); // 新增：发送状态响应
 
   // 工具函数
   MessageBuffer *get_message_buffer(int fd);

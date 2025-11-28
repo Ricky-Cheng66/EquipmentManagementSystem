@@ -39,6 +39,13 @@ void ConnectionManager::add_connection(int fd,
     } else {
       std::cout << "equipment_to_fd_ insert failed..." << std::endl;
     }
+    auto [it5, inserted5] = connection_healthy_.emplace(fd, true);
+    if (inserted5) {
+      std::cout << "connection_healthy_ insert sucess... quipement_id is" << fd
+                << std::endl;
+    } else {
+      std::cout << "connection_healthy_insert failed..." << std::endl;
+    }
   }
 
   std::cout << "连接添加成功: fd=" << fd << " -> "
@@ -54,6 +61,7 @@ void ConnectionManager::remove_connection(int fd) {
     connections_.erase(it);
     heartbeat_times_.erase(fd);
     equipment_to_fd_.erase(it->second->get_equipment_id());
+    connection_healthy_.erase(fd);
     close(fd);
     std::cout << "连接移除: fd=" << fd << " -> "
               << it->second->get_equipment_id() << std::endl;
@@ -61,14 +69,11 @@ void ConnectionManager::remove_connection(int fd) {
     std::cout << "fd not in connections_..." << std::endl;
   }
 }
-
+// 设备查找
 int ConnectionManager::get_fd_by_equipment_id(const std::string &equipment_id) {
   std::shared_lock lock(connection_rw_lock_);
   auto it = equipment_to_fd_.find(equipment_id);
-  if (it != equipment_to_fd_.end()) {
-    return it->second;
-  }
-  return -1;
+  return (it != equipment_to_fd_.end()) ? it->second : -1;
 }
 std::shared_ptr<Equipment> ConnectionManager::get_equipment_by_fd(int fd) {
   std::shared_lock lock(connection_rw_lock_);
@@ -84,13 +89,12 @@ std::shared_ptr<Equipment> ConnectionManager::get_equipment_by_fd(int fd) {
   }
 }
 
-// 设备查找
 std::shared_ptr<Equipment>
 ConnectionManager::get_equipment_by_id(const std::string &equipment_id) {
   std::shared_lock lock(connection_rw_lock_);
-  for (const auto &[k, v] : connections_) {
-    if (v->get_equipment_id() == equipment_id) {
-      return v;
+  for (const auto &[fd, equipment] : connections_) {
+    if (equipment->get_equipment_id() == equipment_id) {
+      return equipment;
     }
   }
   return nullptr;
@@ -99,8 +103,8 @@ std::vector<std::shared_ptr<Equipment>>
 ConnectionManager::get_all_equipments() {
   std::shared_lock lock(connection_rw_lock_);
   std::vector<std::shared_ptr<Equipment>> all_equipments{};
-  for (const auto &[k, v] : connections_) {
-    all_equipments.emplace_back(v);
+  for (const auto &[fd, equipment] : connections_) {
+    all_equipments.emplace_back(equipment);
   }
   return all_equipments;
 }
@@ -111,10 +115,12 @@ void ConnectionManager::update_heartbeat(int fd) {
   auto it = heartbeat_times_.find(fd);
   if (it != heartbeat_times_.end()) {
     it->second = time(nullptr);
+    // 标记连接为健康
+    connection_healthy_[fd] = true;
     // 同时更新设备的心跳时间
     auto equip_it = connections_.find(fd);
     if (equip_it != connections_.end()) {
-      equip_it->second->get_last_heartbeat() = it->second;
+      equip_it->second->update_heartbeat();
     }
   }
 }
@@ -125,30 +131,46 @@ void ConnectionManager::check_heartbeat_timeout(int timeout_seconds) {
   time_t current_time = time(nullptr);
   std::vector<int> timeout_fds;
 
-  for (const auto &[k, v] : heartbeat_times_) {
-    int fd = k;
-    time_t last_heartbeat = v;
-
+  for (const auto &[fd, last_heartbeat] : heartbeat_times_) {
     if (current_time - last_heartbeat > timeout_seconds) {
       std::cout << "心跳超时: fd=" << fd << ", 最后心跳: " << last_heartbeat
                 << std::endl;
+
+      // 标记连接为不健康，但不立即移除
+      connection_healthy_[fd] = false;
       timeout_fds.push_back(fd);
+
+      // 注意：这里不自动移除连接，由上层逻辑决定是否关闭
+      auto equip_it = connections_.find(fd);
+      if (equip_it != connections_.end()) {
+        std::cout << "连接不健康: " << equip_it->second->get_equipment_id()
+                  << std::endl;
+      }
     }
+    // 这里只记录超时，不自动关闭连接
+    // 连接关闭应该由专门的逻辑处理
+  }
+}
+
+//设备连接状态查询
+bool ConnectionManager::is_equipment_connected(
+    const std::string &equipment_id) const {
+  std::shared_lock lock(connection_rw_lock_);
+  auto it = equipment_to_fd_.find(equipment_id);
+  if (it == equipment_to_fd_.end()) {
+    return false;
   }
 
-  // 移除超时连接
-  for (int fd : timeout_fds) {
-    auto equip_it = connections_.find(fd);
-    if (equip_it != connections_.end()) {
-      // 更新设备状态为离线
-      equip_it->second->get_status() = "offline";
-      std::cout << "设备离线: " << equip_it->second->get_equipment_id()
-                << std::endl;
-    }
-    connections_.erase(fd);
-    heartbeat_times_.erase(fd);
-    close(fd);
-  }
+  int fd = it->second;
+  auto healthy_it = connection_healthy_.find(fd);
+  return (healthy_it != connection_healthy_.end()) ? healthy_it->second : false;
+}
+
+//连接健康状态查询
+bool ConnectionManager::is_connection_alive(int fd) const {
+  std::shared_lock lock(connection_rw_lock_);
+  auto it = connection_healthy_.find(fd);
+  return (it != connection_healthy_.end()) ? it->second : false;
 }
 
 size_t ConnectionManager::get_connection_count() const {
@@ -159,10 +181,11 @@ size_t ConnectionManager::get_connection_count() const {
 void ConnectionManager::print_connections() const {
   std::shared_lock lock(connection_rw_lock_);
   std::cout << "当前连接数: " << connections_.size() << std::endl;
-  for (const auto &[k, v] : connections_) {
-    auto equipment = v;
-    std::cout << "fd=" << k << ", 设备=" << equipment->get_equipment_id()
-              << ", 状态=" << equipment->get_status() << std::endl;
+  for (const auto &[fd, equipment] : connections_) {
+    bool healthy = connection_healthy_.at(fd);
+    std::cout << "fd=" << fd << ", 设备=" << equipment->get_equipment_id()
+              << ", 状态=" << equipment->get_status()
+              << ", 连接健康=" << (healthy ? "是" : "否") << std::endl;
   }
 }
 
@@ -181,6 +204,12 @@ bool ConnectionManager::send_control_to_simulator(
 
   int fd = fd_it->second;
 
+  // 检查连接是否健康
+  if (!connection_healthy_.at(fd)) {
+    std::cout << "连接不健康，无法发送控制命令: " << equipment_id << std::endl;
+    return false;
+  }
+
   // 构建控制命令
   std::vector<char> control_msg = ProtocolParser::build_control_command(
       equipment_id, command_type, parameters);
@@ -189,6 +218,8 @@ bool ConnectionManager::send_control_to_simulator(
   ssize_t bytes_sent = send(fd, control_msg.data(), control_msg.size(), 0);
   if (bytes_sent <= 0) {
     std::cout << "控制命令发送失败: " << equipment_id << std::endl;
+    // 标记连接为不健康
+    connection_healthy_[fd] = false;
     return false;
   }
 
@@ -196,4 +227,45 @@ bool ConnectionManager::send_control_to_simulator(
             << " 命令: " << static_cast<int>(command_type)
             << " 参数: " << parameters << std::endl;
   return true;
+}
+
+// 新增：批量控制命令转发
+bool ConnectionManager::send_batch_control_to_simulator(
+    const std::vector<std::string> &equipment_ids,
+    ProtocolParser::ControlCommandType command_type,
+    const std::string &parameters) {
+
+  std::shared_lock lock(connection_rw_lock_);
+  bool all_success = true;
+
+  for (const auto &equipment_id : equipment_ids) {
+    auto fd_it = equipment_to_fd_.find(equipment_id);
+    if (fd_it == equipment_to_fd_.end()) {
+      std::cout << "设备未连接: " << equipment_id << std::endl;
+      all_success = false;
+      continue;
+    }
+
+    int fd = fd_it->second;
+
+    if (!connection_healthy_.at(fd)) {
+      std::cout << "连接不健康，跳过: " << equipment_id << std::endl;
+      all_success = false;
+      continue;
+    }
+
+    std::vector<char> control_msg = ProtocolParser::build_control_command(
+        equipment_id, command_type, parameters);
+
+    ssize_t bytes_sent = send(fd, control_msg.data(), control_msg.size(), 0);
+    if (bytes_sent <= 0) {
+      std::cout << "控制命令发送失败: " << equipment_id << std::endl;
+      connection_healthy_[fd] = false;
+      all_success = false;
+    } else {
+      std::cout << "控制命令已发送: " << equipment_id << std::endl;
+    }
+  }
+
+  return all_success;
 }

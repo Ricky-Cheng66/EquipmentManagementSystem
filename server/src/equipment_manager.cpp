@@ -37,6 +37,53 @@ bool EquipmentManager::unregister_equipment(const std::string &equipment_id) {
   }
 }
 
+bool EquipmentManager::initialize_from_database(DatabaseManager *db_manager) {
+  if (!db_manager || !db_manager->is_connected()) {
+    std::cerr << "数据库未连接，无法初始化设备管理器" << std::endl;
+    return false;
+  }
+
+  std::unique_lock lock(equipment_rw_lock_);
+  equipments_.clear();
+
+  // 从 equipments 表加载所有设备（因为 equipments 表只包含已注册设备）
+  std::string query =
+      "SELECT equipment_id, equipment_name, equipment_type, location, "
+      "status, power_state FROM equipments";
+
+  auto results = db_manager->execute_query(query);
+
+  int loaded_count = 0;
+  for (const auto &row : results) {
+    if (row.size() >= 6) {
+      std::string equipment_id = row[0];
+      std::string equipment_name = row[1];
+      std::string equipment_type = row[2];
+      std::string location = row[3];
+      std::string status = row[4];
+      std::string power_state = row[5];
+
+      // 创建设备对象
+      auto equipment =
+          std::make_shared<Equipment>(equipment_id, equipment_type, location);
+      equipment->update_status(status);
+      equipment->update_equipment_power_state(power_state);
+
+      // 添加到管理器
+      equipments_.emplace(equipment_id, equipment);
+      loaded_count++;
+
+      std::cout << "加载设备: " << equipment_id << " [" << equipment_type
+                << "] 位置: " << location << " 状态: " << status
+                << " 电源: " << power_state << std::endl;
+    }
+  }
+
+  std::cout << "设备管理器初始化完成，加载 " << loaded_count << " 个已注册设备"
+            << std::endl;
+  return true;
+}
+
 // 设备状态管理
 bool EquipmentManager::update_equipment_status_from_simulator(
     const std::string &equipment_id, const std::string &status) {

@@ -1,4 +1,5 @@
 #pragma once
+#include "database_manager.h"
 #include "equipment.h"
 #include "protocol_parser.h"
 #include <memory>
@@ -12,6 +13,8 @@ public:
                           const std::string &equipment_type,
                           const std::string &location);
   bool unregister_equipment(const std::string &equipment_id);
+
+  bool initialize_from_database(DatabaseManager *db_manager);
 
   // 状态查询（供Qt客户端使用）
   std::shared_ptr<Equipment> get_equipment(const std::string &equipment_id);

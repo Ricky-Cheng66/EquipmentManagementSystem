@@ -39,8 +39,8 @@ private:
   void process_single_message(int fd, const std::string &message);
 
   // 具体消息类型处理
-  void handle_equipment_register(int fd, const std::string &equipment_id,
-                                 const std::string &payload);
+  void handle_equipment_online(int fd, const std::string &equipment_id,
+                               const std::string &payload);
   void handle_status_update(int fd, const std::string &equipment_id,
                             const std::string &payload);
   void

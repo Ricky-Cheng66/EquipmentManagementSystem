@@ -30,7 +30,6 @@ bool SimulatorConnections::initialize_from_database(const std::string &host,
   std::unique_lock lock(equipments_rw_lock_);
   int loaded_count = 0;
   int registered_count = 0;
-  int pending_count = 0;
 
   for (const auto &row : results) {
     if (row.size() < 7)
@@ -44,20 +43,20 @@ bool SimulatorConnections::initialize_from_database(const std::string &host,
     std::string model = row[5];
     std::string register_status = row[6];
 
+    // 只处理已注册的设备
+    if (register_status != "registered") {
+      continue;
+    }
+
     // 添加到设备映射
     bool success =
         add_real_equipment(equipment_id, equipment_name, equipment_type,
                            location, register_status, manufacturer, model);
     if (success) {
       loaded_count++;
-      if (register_status == "registered")
-        registered_count++;
-      else if (register_status == "pending")
-        pending_count++;
-
+      registered_count++;
       std::cout << "加载设备: " << equipment_id << " [" << equipment_type
-                << "] "
-                << "位置: " << location << " 注册状态: " << register_status
+                << "] 位置: " << location << " 注册状态: " << register_status
                 << std::endl;
     }
   }
@@ -65,9 +64,8 @@ bool SimulatorConnections::initialize_from_database(const std::string &host,
   // 读取完成后可以断开数据库连接，因为模拟器不需要持续访问数据库
   db_reader_->disconnect();
 
-  std::cout << "成功加载 " << loaded_count
-            << " 个设备 (已注册: " << registered_count
-            << ", 待注册: " << pending_count << ")" << std::endl;
+  db_reader_->disconnect();
+  std::cout << "成功加载 " << loaded_count << " 个已注册设备" << std::endl;
   return true;
 }
 

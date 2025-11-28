@@ -115,21 +115,6 @@ bool SimulationManager::connect_all_equipments() {
                 << std::endl;
     }
   }
-
-  // 连接待注册设备
-  for (const auto &equipment : pending_equipments) {
-    std::cout << "DEBUG: 尝试连接待注册设备: " << equipment->get_equipment_id()
-              << std::endl;
-    if (connect_equipment(equipment->get_equipment_id())) {
-      success_count++;
-      std::cout << "DEBUG: ✅ 设备连接成功: " << equipment->get_equipment_id()
-                << std::endl;
-    } else {
-      std::cout << "DEBUG: ❌ 设备连接失败: " << equipment->get_equipment_id()
-                << std::endl;
-    }
-  }
-
   std::cout << "设备连接完成: " << success_count << "/" << total_count
             << " 成功" << std::endl;
   return success_count > 0;
@@ -211,11 +196,12 @@ bool SimulationManager::create_equipment_connection(
   std::cout << "设备连接成功: " << equipment_id << " (fd=" << fd << ")"
             << std::endl;
 
-  // 发送注册消息
-  send_register_message(equipment_id);
+  // 发送上线消息（原注册消息）
+  send_online_message(equipment_id);
 
   return true;
 }
+
 bool SimulationManager::add_to_epoll(int fd) {
   std::cout << "DEBUG add_to_epoll: 添加fd=" << fd << "到epoll" << std::endl;
   Epoll &epoll = Epoll::get_instance();
@@ -354,17 +340,16 @@ void SimulationManager::process_single_message(int fd,
             << " payload: " << parse_result.payload << std::endl;
 
   switch (parse_result.type) {
-  case ProtocolParser::EQUIPMENT_REGISTER:
-    handle_register_response(fd, equipment_id,
-                             parse_result.payload == "success");
+  case ProtocolParser::ONLINE_RESPONSE: // 修改：注册响应->上线响应
+    handle_online_response(fd, equipment_id, parse_result.payload == "success");
     break;
   case ProtocolParser::HEARTBEAT_RESPONSE:
     handle_heartbeat_response(fd, equipment_id);
     break;
-  case ProtocolParser::CONTROL_COMMAND: // 新增：处理控制命令
+  case ProtocolParser::CONTROL_COMMAND:
     handle_control_command(fd, equipment_id, parse_result.payload);
     break;
-  case ProtocolParser::STATUS_QUERY: // 新增：处理状态查询
+  case ProtocolParser::STATUS_QUERY:
     handle_status_query(fd, equipment_id);
     break;
   default:
@@ -374,7 +359,27 @@ void SimulationManager::process_single_message(int fd,
   }
 }
 
-// 新增：处理控制命令
+// 修改：处理上线响应（原注册响应）
+void SimulationManager::handle_online_response(int fd,
+                                               const std::string &equipment_id,
+                                               bool success) {
+  if (success) {
+    std::cout << "设备上线成功: " << equipment_id << std::endl;
+    // 更新设备状态为在线
+    connections_->update_equipment_status(equipment_id, "online");
+  } else {
+    std::cout << "设备上线失败: " << equipment_id << std::endl;
+    connections_->update_equipment_status(equipment_id, "offline");
+  }
+}
+
+void SimulationManager::handle_heartbeat_response(
+    int fd, const std::string &equipment_id) {
+  // 心跳响应处理，可以更新最后心跳时间等
+  std::cout << "收到心跳响应: " << equipment_id << std::endl;
+}
+
+// 处理控制命令
 void SimulationManager::handle_control_command(int fd,
                                                const std::string &equipment_id,
                                                const std::string &payload) {
@@ -433,7 +438,14 @@ void SimulationManager::handle_control_command(int fd,
           (success ? "" : "|" + result_message));
 }
 
-// 新增：发送控制响应
+// 新增：处理状态查询
+void SimulationManager::handle_status_query(int fd,
+                                            const std::string &equipment_id) {
+  std::cout << "处理状态查询: " << equipment_id << std::endl;
+  send_status_response(equipment_id);
+}
+
+// 发送控制响应
 void SimulationManager::send_control_response(int fd,
                                               const std::string &equipment_id,
                                               bool success,
@@ -454,14 +466,12 @@ bool SimulationManager::simulate_turn_on(const std::string &equipment_id) {
   std::cout << "模拟开启设备: " << equipment_id << std::endl;
   // 这里可以添加设备特定的开启逻辑
   connections_->update_equipment_power_state(equipment_id, "on");
-  connections_->update_equipment_status(equipment_id, "online");
   return true;
 }
 
 bool SimulationManager::simulate_turn_off(const std::string &equipment_id) {
   std::cout << "模拟关闭设备: " << equipment_id << std::endl;
   connections_->update_equipment_power_state(equipment_id, "off");
-  connections_->update_equipment_status(equipment_id, "offline");
   return true;
 }
 
@@ -524,50 +534,6 @@ void SimulationManager::handle_connection_close(int fd) {
   connections_->close_connection(fd);
 }
 
-void SimulationManager::handle_register_response(
-    int fd, const std::string &equipment_id, bool success) {
-  if (success) {
-    std::cout << "设备注册成功: " << equipment_id << std::endl;
-    // 更新设备状态为在线
-    connections_->update_equipment_status(equipment_id, "online");
-    // connections_->update_equipment_power_state(equipment_id, "on");
-  } else {
-    std::cout << "设备注册失败: " << equipment_id << std::endl;
-    connections_->update_equipment_status(equipment_id, "offline");
-  }
-}
-
-void SimulationManager::handle_heartbeat_response(
-    int fd, const std::string &equipment_id) {
-  // 心跳响应处理，可以更新最后心跳时间等
-  std::cout << "收到心跳响应: " << equipment_id << std::endl;
-}
-
-// void SimulationManager::handle_control_command(int fd,
-//                                                const std::string
-//                                                &equipment_id, const
-//                                                std::string &command) {
-//   std::cout << "执行控制命令: " << equipment_id << " -> " << command
-//             << std::endl;
-
-//   if (command == "turn_on") {
-//     connections_->update_equipment_power_state(equipment_id, "on");
-//     std::cout << "设备已开启: " << equipment_id << std::endl;
-//   } else if (command == "turn_off") {
-//     connections_->update_equipment_power_state(equipment_id, "off");
-//     std::cout << "设备已关闭: " << equipment_id << std::endl;
-//   } else if (command == "restart") {
-//     connections_->update_equipment_power_state(equipment_id, "off");
-//     // 模拟重启延迟
-//     std::this_thread::sleep_for(std::chrono::seconds(2));
-//     connections_->update_equipment_power_state(equipment_id, "on");
-//     std::cout << "设备已重启: " << equipment_id << std::endl;
-//   }
-
-//   // 发送状态更新确认
-//   send_status_update_message(equipment_id);
-// }
-
 void SimulationManager::perform_maintenance_tasks() {
   loop_count_++;
 
@@ -580,9 +546,6 @@ void SimulationManager::perform_maintenance_tasks() {
   if (loop_count_ % STATUS_UPDATE_INTERVAL == 0) {
     send_status_updates();
   }
-
-  // 发送待注册设备的注册消息
-  send_pending_registrations();
 
   // 每30次循环打印一次状态
   if (loop_count_ % 30 == 0) {
@@ -602,26 +565,6 @@ void SimulationManager::send_status_updates() {
   auto connected_equipments = connections_->get_connected_equipments();
   for (const auto &equipment : connected_equipments) {
     send_status_update_message(equipment->get_equipment_id());
-  }
-}
-
-void SimulationManager::
-    send_pending_registrations() { // 如果已经请求停止，不进行重连
-  if (!is_running_) {
-    return;
-  }
-  auto pending_equipments = connections_->get_pending_equipments();
-  for (const auto &equipment : pending_equipments) {
-    std::string equipment_id = equipment->get_equipment_id();
-    // 如果设备未连接，尝试连接
-    if (!connections_->is_equipment_connected(equipment_id)) {
-      connect_equipment(equipment_id);
-    } else {
-      // 如果已连接但未注册，发送注册消息
-      send_register_message(equipment_id);
-    }
-    // 短暂延迟，避免过于频繁的重连
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 }
 
@@ -647,7 +590,8 @@ bool SimulationManager::send_message(int fd, const std::vector<char> &message) {
   return true;
 }
 
-bool SimulationManager::send_register_message(const std::string &equipment_id) {
+// 修改：发送上线消息（原注册消息）
+bool SimulationManager::send_online_message(const std::string &equipment_id) {
   auto equipment = connections_->get_equipment_by_id(equipment_id);
   if (!equipment) {
     return false;
@@ -658,14 +602,14 @@ bool SimulationManager::send_register_message(const std::string &equipment_id) {
     return false;
   }
 
-  std::vector<char> message = ProtocolParser::build_register_message(
+  std::vector<char> message = ProtocolParser::build_online_message(
       equipment_id, equipment->get_location(), equipment->get_equipment_type());
 
   bool success = send_message(fd, message);
   if (success) {
-    std::cout << "发送注册消息: " << equipment_id << std::endl;
+    std::cout << "发送上线消息: " << equipment_id << std::endl;
   } else {
-    std::cout << "发送注册消息失败: " << equipment_id << std::endl;
+    std::cout << "发送上线消息失败: " << equipment_id << std::endl;
   }
 
   return success;
@@ -708,6 +652,29 @@ bool SimulationManager::send_status_update_message(
   bool success = send_message(fd, message);
   if (success) {
     std::cout << "发送状态更新: " << equipment_id << std::endl;
+  }
+
+  return success;
+}
+
+// 新增：发送状态响应
+bool SimulationManager::send_status_response(const std::string &equipment_id) {
+  auto equipment = connections_->get_equipment_by_id(equipment_id);
+  if (!equipment) {
+    return false;
+  }
+
+  int fd = connections_->get_fd_by_equipment_id(equipment_id);
+  if (fd == -1) {
+    return false;
+  }
+
+  std::vector<char> message = ProtocolParser::build_status_response(
+      equipment_id, equipment->get_status(), equipment->get_power_state());
+
+  bool success = send_message(fd, message);
+  if (success) {
+    std::cout << "发送状态响应: " << equipment_id << std::endl;
   }
 
   return success;

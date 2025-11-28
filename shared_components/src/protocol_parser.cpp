@@ -10,6 +10,8 @@
 // 控制指令: "3|projector_101|turn_on"
 // 心跳: "4|projector_101|"
 
+// ============ 基础消息操作实现 ============
+
 std::vector<char> ProtocolParser::pack_message(const std::string &body) {
   uint32_t body_len = body.length();
   uint32_t net_len = htonl(body_len); // 转换为网络字节序
@@ -37,7 +39,7 @@ ProtocolParser::parse_message(const std::string &data) {
 
   // 解析消息类型
   int type_num = std::stoi(parts[0]);
-  if (type_num < 1 || type_num > 8) {
+  if (type_num < 1 || type_num > 16) {
     return result;
   }
   result.type = static_cast<MessageType>(type_num);
@@ -58,98 +60,15 @@ ProtocolParser::parse_message(const std::string &data) {
   return result;
 }
 
-// 构建控制消息: "3|设备ID|命令"
-std::vector<char>
-ProtocolParser::build_control_message(const std::string &equipment_id,
-                                      const std::string &command) {
-  std::string body = "3|" + equipment_id + "|" + command;
-  return pack_message(body);
-}
-
-//构建注册消息:"1|equipment_id|location|equipment_type"
-std::vector<char>
-ProtocolParser::build_register_message(const std::string &equipment_id,
-                                       const std::string &location,
-                                       const std::string &equipment_type) {
-  std::string body{"1|" + equipment_id + "|" + location + "|" + equipment_type};
-  return pack_message(body);
-}
-
-//构建心跳信息:"4|equipment_id"
-std::vector<char>
-ProtocolParser::build_heartbeat_message(const std::string &equipment_id) {
-  std::string body{"4|" + equipment_id};
-  return pack_message(body);
-}
-
-//构建状态查询（服务器→设备）
-std::vector<char> ProtocolParser::build_status_update_message(
-    const std::string &equipment_id, const std::string status,
-    const std::string power_state, const std::string more_data) {
-  std::string body = std::to_string(STATUS_QUERY) + "|" + equipment_id;
-  return pack_message(body);
-}
-
-// 构建状态查询（服务器→设备）
-std::vector<char>
-ProtocolParser::build_status_query(const std::string &equipment_id) {
-
-  std::string body = std::to_string(STATUS_QUERY) + "|" + equipment_id;
-  return pack_message(body);
-}
-
-// 构建状态响应（设备→服务器）
-std::vector<char>
-ProtocolParser::build_status_response(const std::string &equipment_id,
-                                      const std::string &status,
-                                      const std::string &power_state) {
-
-  std::string body = std::to_string(STATUS_RESPONSE) + "|" + equipment_id +
-                     "|" + status + "|" + power_state;
-  return pack_message(body);
-}
-
-// 构建控制命令消息（服务器→设备）
-std::vector<char>
-ProtocolParser::build_control_command(const std::string &equipment_id,
-                                      ControlCommandType command_type,
-                                      const std::string &parameters) {
-
-  std::string body = std::to_string(CONTROL_COMMAND) + "|" + equipment_id +
-                     "|" + std::to_string(static_cast<int>(command_type)) +
-                     "|" + parameters;
-  return pack_message(body);
-}
-
-// 构建控制响应消息（设备→服务器）
-std::vector<char> ProtocolParser::build_control_response(
-    const std::string &equipment_id, bool success, const std::string &message) {
-
-  std::string body = std::to_string(CONTROL_RESPONSE) + "|" + equipment_id +
-                     "|" + (success ? "success" : "fail") + "|" + message;
-  return pack_message(body);
-}
-
-// 构建注册响应: "1|响应|success" 或 "1|响应|fail"
-std::vector<char> ProtocolParser::build_register_response(bool success) {
-  std::string body = "1|response|" + std::string(success ? "success" : "fail");
-  return pack_message(body);
-}
-
-// 构建心跳响应: "4|pong"
-std::string ProtocolParser::build_heartbeat_response() { return "4|pong"; }
-
-// 分割字符串工具函数
 std::vector<std::string> ProtocolParser::split_string(const std::string &str,
                                                       char delimiter) {
   std::vector<std::string> tokens;
-  // 安全检查
   if (str.empty()) {
     return tokens;
   }
+
   std::string token;
   std::istringstream token_stream(str);
-
   while (std::getline(token_stream, token, delimiter)) {
     tokens.push_back(token);
   }
@@ -157,26 +76,126 @@ std::vector<std::string> ProtocolParser::split_string(const std::string &str,
   return tokens;
 }
 
+// ============ 私有工具函数 ============
+
+std::string
+ProtocolParser::build_message_body(MessageType type,
+                                   const std::string &equipment_id,
+                                   const std::vector<std::string> &fields) {
+  std::string body =
+      std::to_string(static_cast<int>(type)) + "|" + equipment_id;
+
+  for (const auto &field : fields) {
+    body += "|" + field;
+  }
+
+  return body;
+}
+
+// ============ 设备上线相关消息实现 ============
+
+std::vector<char>
+ProtocolParser::build_online_message(const std::string &equipment_id,
+                                     const std::string &location,
+                                     const std::string &equipment_type) {
+  std::string body = build_message_body(EQUIPMENT_ONLINE, equipment_id,
+                                        {location, equipment_type});
+  return pack_message(body);
+}
+
+std::vector<char> ProtocolParser::build_online_response(bool success) {
+  std::string body = build_message_body(ONLINE_RESPONSE, "response",
+                                        {success ? "success" : "fail"});
+  return pack_message(body);
+}
+
+// ============ 状态相关消息实现 ============
+
+std::vector<char> ProtocolParser::build_status_update_message(
+    const std::string &equipment_id, const std::string &status,
+    const std::string &power_state, const std::string &more_data) {
+  std::vector<std::string> fields = {status, power_state};
+  if (!more_data.empty()) {
+    fields.push_back(more_data);
+  }
+
+  std::string body = build_message_body(STATUS_UPDATE, equipment_id, fields);
+  return pack_message(body);
+}
+
+std::vector<char>
+ProtocolParser::build_status_query(const std::string &equipment_id) {
+  std::string body = build_message_body(STATUS_QUERY, equipment_id);
+  return pack_message(body);
+}
+
+std::vector<char>
+ProtocolParser::build_status_response(const std::string &equipment_id,
+                                      const std::string &status,
+                                      const std::string &power_state) {
+  std::string body =
+      build_message_body(STATUS_RESPONSE, equipment_id, {status, power_state});
+  return pack_message(body);
+}
+
+// ============ 控制相关消息实现 ============
+
+std::vector<char>
+ProtocolParser::build_control_command(const std::string &equipment_id,
+                                      ControlCommandType command_type,
+                                      const std::string &parameters) {
+  std::vector<std::string> fields = {
+      std::to_string(static_cast<int>(command_type))};
+  if (!parameters.empty()) {
+    fields.push_back(parameters);
+  }
+
+  std::string body = build_message_body(CONTROL_COMMAND, equipment_id, fields);
+  return pack_message(body);
+}
+
+std::vector<char> ProtocolParser::build_control_response(
+    const std::string &equipment_id, bool success, const std::string &message) {
+  std::string body = build_message_body(
+      CONTROL_RESPONSE, equipment_id, {success ? "success" : "fail", message});
+  return pack_message(body);
+}
+
+// ============ 心跳相关消息实现 ============
+
+std::vector<char>
+ProtocolParser::build_heartbeat_message(const std::string &equipment_id) {
+  std::string body = build_message_body(HEARTBEAT, equipment_id);
+  return pack_message(body);
+}
+
+std::vector<char> ProtocolParser::build_heartbeat_response() {
+  std::string body = build_message_body(HEARTBEAT_RESPONSE, "pong");
+  return pack_message(body);
+}
+
+// ============ 预约系统消息实现 ============
+
 std::vector<char>
 ProtocolParser::build_reservation_response(bool success,
                                            const std::string &message) {
-  std::string body =
-      "5|response|" + std::string(success ? "success" : "fail") + "|" + message;
+  std::string body = build_message_body(
+      RESERVATION_APPLY, "response", {success ? "success" : "fail", message});
   return pack_message(body);
 }
 
 std::vector<char>
 ProtocolParser::build_reservation_query_response(bool success,
                                                  const std::string &data) {
-  std::string body =
-      "6|response|" + std::string(success ? "success" : "fail") + "|" + data;
+  std::string body = build_message_body(RESERVATION_QUERY, "response",
+                                        {success ? "success" : "fail", data});
   return pack_message(body);
 }
 
 std::vector<char>
 ProtocolParser::build_reservation_approve_response(bool success,
                                                    const std::string &message) {
-  std::string body =
-      "7|response|" + std::string(success ? "success" : "fail") + "|" + message;
+  std::string body = build_message_body(
+      RESERVATION_APPROVE, "response", {success ? "success" : "fail", message});
   return pack_message(body);
 }

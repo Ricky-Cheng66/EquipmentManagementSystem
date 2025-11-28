@@ -108,6 +108,15 @@ bool EquipmentManagementServer::initialize_database() {
   }
 
   std::cout << "数据库连接成功!" << std::endl;
+
+  // 从数据库初始化设备管理器（从 equipments 表）
+  if (!equipment_manager_->initialize_from_database(db_manager_.get())) {
+    std::cerr << "设备管理器初始化失败!" << std::endl;
+    return false;
+  }
+  std::cout << "设备管理器初始化成功，共 "
+            << equipment_manager_->get_equipment_count() << " 个已注册设备"
+            << std::endl;
   return true;
 }
 
@@ -212,9 +221,9 @@ void EquipmentManagementServer::process_single_message(
 
   // 根据消息类型分发处理
   switch (parse_result.type) {
-  case ProtocolParser::EQUIPMENT_REGISTER:
-    handle_equipment_register(fd, parse_result.equipment_id,
-                              parse_result.payload);
+  case ProtocolParser::EQUIPMENT_ONLINE:
+    handle_equipment_online(fd, parse_result.equipment_id,
+                            parse_result.payload);
     break;
   case ProtocolParser::STATUS_UPDATE:
     handle_status_update(fd, parse_result.equipment_id, parse_result.payload);
@@ -261,22 +270,16 @@ void EquipmentManagementServer::handle_control_response(
   std::string command = parts[1];
 
   if (success) {
-    // 控制成功，更新设备状态
+    // 控制成功，只更新设备电源状态，不改变在线状态
     if (command == "turn_on") {
       equipment_manager_->update_equipment_power_from_simulator(equipment_id,
                                                                 "on");
-      equipment_manager_->update_equipment_status_from_simulator(equipment_id,
-                                                                 "online");
     } else if (command == "turn_off") {
       equipment_manager_->update_equipment_power_from_simulator(equipment_id,
                                                                 "off");
-      equipment_manager_->update_equipment_status_from_simulator(equipment_id,
-                                                                 "offline");
     } else if (command == "restart") {
       equipment_manager_->update_equipment_power_from_simulator(equipment_id,
                                                                 "on");
-      equipment_manager_->update_equipment_status_from_simulator(equipment_id,
-                                                                 "online");
     }
 
     // 记录到数据库
@@ -330,7 +333,7 @@ std::shared_ptr<Equipment> EquipmentManagementServer::handle_qt_status_query(
 }
 
 //处理设备注册
-void EquipmentManagementServer::handle_equipment_register(
+void EquipmentManagementServer::handle_equipment_online(
     int fd, const std::string &equipment_id, const std::string &payload) {
 
   std::cout << "DEBUG: 进入handle_equipment_register" << std::endl;
@@ -357,50 +360,39 @@ void EquipmentManagementServer::handle_equipment_register(
   std::string location = parts[0];
   std::string equipment_type = parts[1];
 
-  //注册到EquipmentManager
-  bool success = equipment_manager_->register_equipment(
-      equipment_id, equipment_type, location);
+  // 检查设备是否在EquipmentManager中（是否已注册）
+  auto equipment = equipment_manager_->get_equipment(equipment_id);
+  if (!equipment) {
+    std::cout << "设备未注册，拒绝上线: " << equipment_id << std::endl;
+    // 发送上线失败响应
+    std::vector<char> response = ProtocolParser::build_online_response(false);
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
 
-  //保存到数据库
-  if (success && db_manager_->is_connected()) {
-    // 先查询设备是否已存在
-    std::string query =
-        "SELECT COUNT(*) FROM equipments WHERE equipment_id = '" +
-        equipment_id + "'";
-    auto result = db_manager_->execute_query(query);
+  // 设备已注册，添加到连接管理
+  connections_manager_->add_connection(fd, equipment);
 
-    if (!result.empty() && std::stoi(result[0][0]) > 0) {
-      // 设备已存在，更新状态
-      bool update_success =
-          db_manager_->update_equipment_status(equipment_id, "online", "on");
-      if (update_success) {
-        std::cout << "设备状态更新成功: " << equipment_id << std::endl;
-      }
+  // 更新设备状态为在线（但不改变电源状态）
+  equipment_manager_->update_equipment_status(equipment_id, "online");
+
+  // 更新数据库中的设备状态
+  if (db_manager_->is_connected()) {
+    bool update_success = db_manager_->update_equipment_status(
+        equipment_id, "online",
+        equipment->get_power_state()); // 保持原有电源状态
+    if (update_success) {
+      std::cout << "设备状态更新到数据库成功: " << equipment_id << std::endl;
     } else {
-      // 设备不存在，插入新设备
-      bool insert_success = db_manager_->add_equipment(
-          equipment_id, equipment_id, equipment_type, location);
-      if (!insert_success) {
-        std::cerr << "设备注册到数据库失败: " << equipment_id << std::endl;
-      } else {
-        std::cout << "设备注册到数据库成功: " << equipment_id << std::endl;
-      }
+      std::cerr << "设备状态更新到数据库失败: " << equipment_id << std::endl;
     }
   }
 
-  //添加到连接管理
-  if (success) {
-    auto equip = equipment_manager_->get_equipment(equipment_id);
-    if (equip) {
-      connections_manager_->add_connection(fd, equip);
-    }
-  }
-  // 发送响应
-  std::vector<char> response = ProtocolParser::build_register_response(success);
+  // 发送上线成功响应
+  std::vector<char> response = ProtocolParser::build_online_response(true);
   send(fd, response.data(), response.size(), 0);
 
-  std::cout << "设备注册" << (success ? "成功" : "失败") << ": " << equipment_id
-            << std::endl;
+  std::cout << "设备上线成功: " << equipment_id << std::endl;
 }
 
 //处理状态更新
@@ -589,7 +581,6 @@ void EquipmentManagementServer::handle_connection_close(int fd) {
   }
 
   connections_manager_->remove_connection(fd);
-  close(fd);
   std::cout << "fd : " << fd << "已关闭" << std::endl;
 }
 
