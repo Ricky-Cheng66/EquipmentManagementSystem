@@ -22,7 +22,8 @@ public:
   // 状态管理
   void update_heartbeat(int fd);
   void check_heartbeat_timeout(int timeout_seconds = 60);
-
+  bool is_connection_healthy(int fd) const;
+  bool is_equipment_connection_healthy(const std::string &equipment_id) const;
   //连接状态查询
   bool is_equipment_connected(const std::string &equipment_id) const;
   bool is_connection_alive(int fd) const;

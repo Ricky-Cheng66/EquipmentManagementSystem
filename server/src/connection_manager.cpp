@@ -152,6 +152,24 @@ void ConnectionManager::check_heartbeat_timeout(int timeout_seconds) {
   }
 }
 
+bool ConnectionManager::is_connection_healthy(int fd) const {
+  std::shared_lock lock(connection_rw_lock_);
+  auto it = connection_healthy_.find(fd);
+  return (it != connection_healthy_.end()) ? it->second : false;
+}
+
+bool ConnectionManager::is_equipment_connection_healthy(
+    const std::string &equipment_id) const {
+  std::shared_lock lock(connection_rw_lock_);
+  auto fd_it = equipment_to_fd_.find(equipment_id);
+  if (fd_it == equipment_to_fd_.end()) {
+    return false;
+  }
+
+  auto healthy_it = connection_healthy_.find(fd_it->second);
+  return (healthy_it != connection_healthy_.end()) ? healthy_it->second : false;
+}
+
 //设备连接状态查询
 bool ConnectionManager::is_equipment_connected(
     const std::string &equipment_id) const {
@@ -205,7 +223,8 @@ bool ConnectionManager::send_control_to_simulator(
   int fd = fd_it->second;
 
   // 检查连接是否健康
-  if (!connection_healthy_.at(fd)) {
+  auto healthy_it = connection_healthy_.find(fd);
+  if (healthy_it == connection_healthy_.end() || !healthy_it->second) {
     std::cout << "连接不健康，无法发送控制命令: " << equipment_id << std::endl;
     return false;
   }
