@@ -2,7 +2,7 @@
 CREATE DATABASE IF NOT EXISTS equipment_management;
 USE equipment_management;
 
--- 1. 设备信息表
+-- 1. 设备信息表（用于系统管理的已投入设备）
 CREATE TABLE IF NOT EXISTS equipments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     equipment_id VARCHAR(50) UNIQUE NOT NULL,
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS energy_logs (
     FOREIGN KEY (equipment_id) REFERENCES equipments(equipment_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- 6. 真实设备信息表（新增）
+-- 6. 真实设备信息表（简化版，去掉pending概念）
 CREATE TABLE IF NOT EXISTS real_equipments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     equipment_id VARCHAR(50) UNIQUE NOT NULL COMMENT '设备唯一标识',
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS real_equipments (
     serial_number VARCHAR(100) COMMENT '序列号',
     purchase_date DATE COMMENT '采购日期',
     warranty_period INT COMMENT '保修期(月)',
-    register_status ENUM('registered', 'pending', 'unregistered') DEFAULT 'unregistered' COMMENT '注册状态',
+    register_status ENUM('registered', 'unregistered') DEFAULT 'unregistered' COMMENT '注册状态: registered=已投入, unregistered=未投入',
     description TEXT COMMENT '设备描述',
     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -86,21 +86,29 @@ CREATE TABLE IF NOT EXISTS real_equipments (
     INDEX idx_equipment_type (equipment_type)
 ) ENGINE=InnoDB;
 
--- 插入测试数据
+-- 插入测试用户数据
 INSERT INTO users (username, password_hash, role, real_name, department) VALUES
 ('admin', 'hashed_password', 'admin', '系统管理员', '信息技术部'),
 ('teacher1', 'hashed_password', 'teacher', '张老师', '计算机学院'),
 ('student1', 'hashed_password', 'student', '李同学', '计算机学院');
 
-INSERT INTO equipments (equipment_id, equipment_name, equipment_type, location, status, power_state) VALUES
-('projector_101', '投影仪101', 'projector', '教学楼101', 'online', 'on'),
-('ac_201', '空调201', 'air_conditioner', '实验室201', 'online', 'cool'),
-('door_301', '门禁301', 'access_control', '行政楼301', 'offline', 'locked');
-
--- 插入一些真实设备测试数据
+-- 插入真实设备数据
 INSERT INTO real_equipments (equipment_id, equipment_name, equipment_type, location, manufacturer, model, register_status) VALUES
-('real_proj_001', '投影仪-001', 'projector', '教学楼101', 'Sony', 'VPL-DX120', 'registered'),
-('real_proj_002', '投影仪-002', 'projector', '教学楼102', 'Epson', 'CB-X49', 'pending'),
-('real_ac_001', '空调-001', 'air_conditioner', '实验室201', 'Gree', 'KFR-35GW', 'registered'),
-('real_door_001', '门禁-001', 'access_control', '行政楼301', 'Hikvision', 'DS-K1T341', 'unregistered'),
-('real_camera_001', '摄像头-001', 'camera', '图书馆大厅', 'Dahua', 'IPC-HFW1230S', 'pending');
+-- 已投入设备（4个，与equipments表保持一致）
+('projector_101', '投影仪101', 'projector', '教学楼101', 'Sony', 'VPL-DX120', 'registered'),
+('ac_201', '空调201', 'air_conditioner', '实验室201', 'Gree', 'KFR-35GW', 'registered'),
+('door_301', '门禁301', 'access_control', '行政楼301', 'Hikvision', 'DS-K1T341', 'registered'),
+('camera_401', '摄像头401', 'camera', '图书馆大厅', 'Dahua', 'IPC-HFW1230S', 'registered'),
+-- 未投入设备（2个，作为摆设）
+('projector_501', '投影仪501', 'projector', '教学楼501', 'Epson', 'CB-X49', 'unregistered'),
+('ac_601', '空调601', 'air_conditioner', '实验室601', 'Midea', 'KFR-26GW', 'unregistered');
+
+-- 插入系统管理设备数据（与real_equipments中的已投入设备对应，状态一致）
+INSERT INTO equipments (equipment_id, equipment_name, equipment_type, location, status, power_state) VALUES
+('projector_101', '投影仪101', 'projector', '教学楼101', 'offline', 'off'),
+('ac_201', '空调201', 'air_conditioner', '实验室201', 'offline', 'off'),
+('door_301', '门禁301', 'access_control', '行政楼301', 'offline', 'off'),
+('camera_401', '摄像头401', 'camera', '图书馆大厅', 'offline', 'off');
+
+-- 注意：这里的状态都设置为offline和off，因为服务器启动时会初始化所有设备状态
+-- 实际运行中，设备上线后状态会被更新
