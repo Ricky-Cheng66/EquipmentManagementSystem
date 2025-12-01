@@ -124,14 +124,24 @@ bool Socket::bind_server_socket(int fd, int port) {
   return true;
 }
 int Socket::accept_socket(int server_fd) {
-  sockaddr_in client_addr{};
+  struct sockaddr_in client_addr {};
   socklen_t client_len = sizeof(client_addr);
-  int client_fd = accept(server_fd, (sockaddr *)&client_addr, &client_len);
+
+  // 非阻塞accept
+  int client_fd =
+      accept4(server_fd, (sockaddr *)&client_addr, &client_len, SOCK_NONBLOCK);
+
   if (client_fd < 0) {
+    // 在非阻塞模式下，EAGAIN/EWOULDBLOCK是正常情况
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      return -1; // 表示没有更多连接
+    }
+
     std::error_code ec(errno, std::system_category());
-    std::cerr << "accept failed..." << ec.message() << std::endl;
+    std::cerr << "accept失败: " << ec.message() << std::endl;
     return -1;
   }
+
   return client_fd;
 }
 bool Socket::listen_socket(int fd) {

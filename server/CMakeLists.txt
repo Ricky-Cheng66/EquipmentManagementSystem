@@ -24,8 +24,12 @@ if(NOT MYSQL_LIB)
     message(FATAL_ERROR "MySQL client library not found")
 endif()
 
+find_package(Threads REQUIRED)
+
 # 链接到目标
-target_link_libraries(EMS_server shared_components ${MYSQL_LIB})
+target_link_libraries(EMS_server shared_components
+    ${MYSQL_LIB}
+    Threads::Threads)
 
 # 可选：常用编译警告/优化
 target_compile_options(EMS_server PRIVATE

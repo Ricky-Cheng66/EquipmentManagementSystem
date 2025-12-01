@@ -4,6 +4,7 @@
 #include <memory>
 #include <netinet/in.h>
 #include <optional>
+#include <string.h>
 #include <string_view>
 #include <sys/epoll.h>
 #include <sys/socket.h>
@@ -447,19 +448,33 @@ void EquipmentManagementServer::handle_equipment_online(
         equipment_id, "online",
         equipment->get_power_state()); // 保持原有电源状态
     if (update_success) {
-      // 记录上线日志
-      db_manager_->log_equipment_status(
+      // 修复：使用普通字符串而不是JSON
+      bool log_success = db_manager_->log_equipment_status(
           equipment_id, "online", equipment->get_power_state(), "设备上线成功");
+
+      if (!log_success) {
+        std::cerr << "设备状态日志记录失败: " << equipment_id << std::endl;
+        // 注意：不返回，继续执行
+      }
+
+      std::cout << "设备状态更新到数据库成功: " << equipment_id << std::endl;
     } else {
       std::cerr << "设备状态更新到数据库失败: " << equipment_id << std::endl;
+      // 注意：不返回，继续执行
     }
   }
 
   // 发送上线成功响应
   std::vector<char> response = ProtocolParser::build_online_response(true);
-  send(fd, response.data(), response.size(), 0);
+  ssize_t bytes_sent = send(fd, response.data(), response.size(), 0);
 
-  std::cout << "设备上线成功: " << equipment_id << std::endl;
+  if (bytes_sent <= 0) {
+    std::cerr << "上线响应发送失败: " << equipment_id << std::endl;
+  } else {
+    std::cout << "上线响应已发送: " << equipment_id << std::endl;
+  }
+
+  std::cout << "设备上线处理完成: " << equipment_id << std::endl;
 }
 
 //处理状态更新
@@ -574,85 +589,116 @@ void EquipmentManagementServer::check_heartbeat_timeout() {
 }
 
 bool EquipmentManagementServer::accept_new_connection() {
-  Socket server_socket{};
-  int client_fd = server_socket.accept_socket(server_fd_);
+  int accepted_count = 0;
+  bool has_error = false;
 
-  if (client_fd < 0) {
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      // 没有更多连接可接受，不是错误
-      return true;
+  // ET模式下必须循环accept，直到没有更多连接
+  while (true) {
+    Socket server_socket{};
+    int client_fd = server_socket.accept_socket(server_fd_);
+
+    if (client_fd < 0) {
+      // 检查是否没有更多连接了
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        // 没有更多连接可接受，正常退出
+        if (accepted_count > 0) {
+          std::cout << "本次循环接受 " << accepted_count << " 个新连接"
+                    << std::endl;
+        }
+        break;
+      }
+
+      // 真正的错误
+      std::cerr << "accept失败: " << strerror(errno) << std::endl;
+      has_error = true;
+      break;
     }
-    std::cerr << "accept失败: " << std::endl;
-    return false;
+
+    accepted_count++;
+
+    // 设置非阻塞
+    Socket client_socket{};
+    if (!client_socket.set_nonblock(client_fd)) {
+      std::cerr << "设置非阻塞失败: " << client_fd << std::endl;
+      close(client_fd);
+      continue; // 继续接受其他连接
+    }
+
+    // 注册到epoll（ET模式）
+    Epoll &ep = Epoll::get_instance();
+    if (!ep.add_epoll(client_fd, EPOLLIN | EPOLLET | EPOLLRDHUP)) {
+      std::cerr << "epoll注册失败: " << client_fd << std::endl;
+      close(client_fd);
+      continue;
+    }
+
+    // 获取客户端信息
+    struct sockaddr_in client_addr;
+    socklen_t client_len = sizeof(client_addr);
+    if (getpeername(client_fd, (struct sockaddr *)&client_addr, &client_len) ==
+        0) {
+      std::cout << "新客户端连接[" << accepted_count << "]: fd=" << client_fd
+                << ", IP=" << inet_ntoa(client_addr.sin_addr)
+                << ", Port=" << ntohs(client_addr.sin_port) << std::endl;
+    } else {
+      std::cout << "新客户端连接[" << accepted_count << "]: fd=" << client_fd
+                << " (无法获取地址)" << std::endl;
+    }
   }
 
-  // 设置非阻塞
-  Socket client_socket{};
-  if (!client_socket.set_nonblock(client_fd)) {
-    std::cerr << "设置非阻塞失败: " << client_fd << std::endl;
-    close(client_fd);
-    return false;
-  }
-
-  // 注册到epoll（ET模式）
-  Epoll &ep = Epoll::get_instance();
-  if (!ep.add_epoll(client_fd, EPOLLIN | EPOLLET | EPOLLRDHUP)) {
-    std::cerr << "epoll注册失败: " << client_fd << std::endl;
-    close(client_fd);
-    return false;
-  }
-
-  // 获取客户端信息
-  struct sockaddr_in client_addr;
-  socklen_t client_len = sizeof(client_addr);
-  if (getpeername(client_fd, (struct sockaddr *)&client_addr, &client_len) ==
-      0) {
-    std::cout << "新客户端连接: fd=" << client_fd
-              << ", IP=" << inet_ntoa(client_addr.sin_addr)
-              << ", Port=" << ntohs(client_addr.sin_port) << std::endl;
-  } else {
-    std::cout << "新客户端连接: fd=" << client_fd << " (无法获取地址)"
-              << std::endl;
-  }
-
-  return true;
+  return !has_error; // 有错误返回false，无错误返回true
 }
 
 void EquipmentManagementServer::handle_connection_close(int fd) {
 
-  // 先从epoll中移除
-  Epoll &ep = Epoll::get_instance();
-  if (ep.is_initialized()) {
-    ep.delete_epoll(fd);
+  // 先检查文件描述符是否有效
+  if (fd <= 0) {
+    std::cout << "无效的文件描述符: " << fd << std::endl;
+    return;
   }
 
-  //清理消息缓冲区
+  // 清理消息缓冲区
   message_buffers_.erase(fd);
 
-  // 更新设备状态为离线
+  // 检查是否为设备连接
   auto equipment = connections_manager_->get_equipment_by_fd(fd);
   if (equipment) {
     std::cout << "设备离线: " << equipment->get_equipment_id() << std::endl;
     // 更新设备状态为离线
     equipment_manager_->update_equipment_status(equipment->get_equipment_id(),
                                                 "offline");
-  }
 
-  // 更新数据库
-  if (db_manager_->is_connected()) {
-    auto eq = equipment_manager_->get_equipment(equipment->get_equipment_id());
-    if (eq) {
-      db_manager_->update_equipment_status(equipment->get_equipment_id(),
-                                           "offline", eq->get_power_state());
-
-      db_manager_->log_equipment_status(equipment->get_equipment_id(),
-                                        "offline", eq->get_power_state(),
-                                        "连接关闭");
+    // 更新数据库
+    if (db_manager_->is_connected()) {
+      auto eq =
+          equipment_manager_->get_equipment(equipment->get_equipment_id());
+      if (eq) {
+        db_manager_->update_equipment_status(equipment->get_equipment_id(),
+                                             "offline", eq->get_power_state());
+        db_manager_->log_equipment_status(equipment->get_equipment_id(),
+                                          "offline", eq->get_power_state(),
+                                          "连接关闭");
+      }
     }
+  } else {
+    std::cout << "普通客户端连接关闭: fd=" << fd << std::endl;
   }
-  // 从连接管理中移除
+
+  // 从ConnectionManager中移除（如果存在）
+  // 注意：remove_connection会自己检查连接是否存在
   connections_manager_->remove_connection(fd);
-  std::cout << "fd : " << fd << "已关闭" << std::endl;
+
+  // 从epoll中移除
+  Epoll &ep = Epoll::get_instance();
+  if (ep.is_initialized()) {
+    ep.delete_epoll(fd);
+  }
+
+  // 关闭文件描述符
+  if (fd > 0) {
+    close(fd);
+  }
+  std::cout << "连接完全清理: fd=" << fd << std::endl;
 }
 
 void EquipmentManagementServer::perform_maintenance_tasks() {

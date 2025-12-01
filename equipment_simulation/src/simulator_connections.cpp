@@ -423,7 +423,6 @@ void SimulatorConnections::print_statistics() const {
   std::cout << "=== 系统统计 ===" << std::endl;
   std::cout << "总设备数: " << real_equipments_.size() << std::endl;
   std::cout << "已注册设备: " << get_registered_count() << std::endl;
-  std::cout << "待注册设备: " << get_pending_count() << std::endl;
   std::cout << "活跃连接: " << fd_to_equipment_.size() << std::endl;
   std::cout << "=================" << std::endl;
 }

@@ -41,6 +41,7 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
   include("/home/liuliuqiu/EquipmentManagementSystem/build/shared_components/cmake_install.cmake")
   include("/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation/cmake_install.cmake")
+  include("/home/liuliuqiu/EquipmentManagementSystem/build/test/cmake_install.cmake")
   include("/home/liuliuqiu/EquipmentManagementSystem/build/server/cmake_install.cmake")
 
 endif()

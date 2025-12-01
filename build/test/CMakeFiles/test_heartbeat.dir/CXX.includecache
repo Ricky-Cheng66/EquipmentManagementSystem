@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/liuliuqiu/EquipmentManagementSystem/test/src/test_heartbeat.cpp
+chrono
+-
+cstdlib
+-
+ctime
+-
+iostream
+-
+thread
+-
+

@@ -124,6 +124,19 @@ shared_components/fast:
 .PHONY : shared_components/fast
 
 #=============================================================================
+# Target rules for targets named equipment_simulation
+
+# Build rule for target.
+equipment_simulation: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 equipment_simulation
+.PHONY : equipment_simulation
+
+# fast build rule for target.
+equipment_simulation/fast:
+	$(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/build
+.PHONY : equipment_simulation/fast
+
+#=============================================================================
 # Target rules for targets named test_simulator_connections
 
 # Build rule for target.
@@ -176,6 +189,19 @@ test_simulation_manager/fast:
 .PHONY : test_simulation_manager/fast
 
 #=============================================================================
+# Target rules for targets named test_heartbeat
+
+# Build rule for target.
+test_heartbeat: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 test_heartbeat
+.PHONY : test_heartbeat
+
+# fast build rule for target.
+test_heartbeat/fast:
+	$(MAKE) -f test/CMakeFiles/test_heartbeat.dir/build.make test/CMakeFiles/test_heartbeat.dir/build
+.PHONY : test_heartbeat/fast
+
+#=============================================================================
 # Target rules for targets named EMS_server
 
 # Build rule for target.
@@ -197,10 +223,12 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... shared_components"
+	@echo "... equipment_simulation"
 	@echo "... test_simulator_connections"
 	@echo "... test_performance"
 	@echo "... test_integration"
 	@echo "... test_simulation_manager"
+	@echo "... test_heartbeat"
 	@echo "... EMS_server"
 .PHONY : help
 

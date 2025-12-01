@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS equipment_status_logs (
     equipment_id VARCHAR(50) NOT NULL,
     status VARCHAR(20) NOT NULL,
     power_state VARCHAR(20),
-    additional_data JSON,
+    additional_data TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_equipment_time (equipment_id, timestamp),
     FOREIGN KEY (equipment_id) REFERENCES equipments(equipment_id) ON DELETE CASCADE

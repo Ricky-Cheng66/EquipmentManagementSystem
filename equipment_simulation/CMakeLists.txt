@@ -103,6 +103,19 @@ while(${CURRENT_INDEX} LESS ${TARGET_COUNT})
     target_compile_options(${TEST_NAME} PRIVATE ${PUBLIC_COMPILE_OPTIONS})
 endwhile()
 
+# 1. 主程序可执行文件
+add_executable(equipment_simulation
+    src/main.cpp # 入口
+    src/simulation_manager.cpp # 以下与测试程序共用的实现
+    src/simulator_connections.cpp
+    src/simulator_database_reader.cpp
+)
+
+# 2. 主程序用同样的头文件/库/编译选项
+target_include_directories(equipment_simulation PRIVATE ${PUBLIC_INCLUDE_DIRS})
+target_link_libraries(equipment_simulation PRIVATE ${PUBLIC_LIBS})
+target_compile_options(equipment_simulation PRIVATE ${PUBLIC_COMPILE_OPTIONS})
+
 # -------------------------- （可选优化）公共代码提取为静态库（推荐） --------------------------
 # 若编译慢，可启用此优化，替换上面的源文件配置：
 # add_library(sim_core STATIC

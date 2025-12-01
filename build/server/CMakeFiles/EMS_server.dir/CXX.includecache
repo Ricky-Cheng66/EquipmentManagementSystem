@@ -9,6 +9,8 @@
 ../server/include/connection_manager.h
 equipment.h
 ../server/include/equipment.h
+protocol_parser.h
+../server/include/protocol_parser.h
 memory
 -
 shared_mutex
@@ -45,12 +47,18 @@ memory
 -
 string
 -
+thread
+-
 unordered_map
 -
 
 ../server/include/equipment_manager.h
+database_manager.h
+../server/include/database_manager.h
 equipment.h
 ../server/include/equipment.h
+protocol_parser.h
+../server/include/protocol_parser.h
 memory
 -
 shared_mutex
@@ -99,6 +107,8 @@ netinet/in.h
 -
 optional
 -
+string.h
+-
 string_view
 -
 sys/epoll.h
@@ -117,6 +127,8 @@ epoll.h
 /home/liuliuqiu/EquipmentManagementSystem/server/src/epoll.h
 equipment_management_server.h
 /home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_management_server.h
+protocol_parser.h
+/home/liuliuqiu/EquipmentManagementSystem/server/src/protocol_parser.h
 socket.h
 /home/liuliuqiu/EquipmentManagementSystem/server/src/socket.h
 

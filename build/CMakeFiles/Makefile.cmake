@@ -13,6 +13,7 @@ set(CMAKE_MAKEFILE_DEPENDS
   "../equipment_simulation/CMakeLists.txt"
   "../server/CMakeLists.txt"
   "../shared_components/CMakeLists.txt"
+  "../test/CMakeLists.txt"
   "/usr/share/cmake-3.16/Modules/CMakeCXXInformation.cmake"
   "/usr/share/cmake-3.16/Modules/CMakeCheckCompilerFlagCommonPatterns.cmake"
   "/usr/share/cmake-3.16/Modules/CMakeCommonLanguageInclude.cmake"
@@ -48,15 +49,18 @@ set(CMAKE_MAKEFILE_PRODUCTS
   "CMakeFiles/CMakeDirectoryInformation.cmake"
   "shared_components/CMakeFiles/CMakeDirectoryInformation.cmake"
   "equipment_simulation/CMakeFiles/CMakeDirectoryInformation.cmake"
+  "test/CMakeFiles/CMakeDirectoryInformation.cmake"
   "server/CMakeFiles/CMakeDirectoryInformation.cmake"
   )
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "shared_components/CMakeFiles/shared_components.dir/DependInfo.cmake"
+  "equipment_simulation/CMakeFiles/equipment_simulation.dir/DependInfo.cmake"
   "equipment_simulation/CMakeFiles/test_simulator_connections.dir/DependInfo.cmake"
   "equipment_simulation/CMakeFiles/test_performance.dir/DependInfo.cmake"
   "equipment_simulation/CMakeFiles/test_integration.dir/DependInfo.cmake"
   "equipment_simulation/CMakeFiles/test_simulation_manager.dir/DependInfo.cmake"
+  "test/CMakeFiles/test_heartbeat.dir/DependInfo.cmake"
   "server/CMakeFiles/EMS_server.dir/DependInfo.cmake"
   )

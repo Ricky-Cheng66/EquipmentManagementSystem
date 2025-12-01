@@ -3,6 +3,7 @@
 
 server/CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o: ../server/include/connection_manager.h
 server/CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o: ../shared_components/include/equipment.h
+server/CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o: ../shared_components/include/protocol_parser.h
 server/CMakeFiles/EMS_server.dir/src/connection_manager.cpp.o: ../server/src/connection_manager.cpp
 
 server/CMakeFiles/EMS_server.dir/src/database_manager.cpp.o: ../server/include/database_manager.h
@@ -19,8 +20,10 @@ server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../share
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../shared_components/include/socket.h
 server/CMakeFiles/EMS_server.dir/src/equipment_management_server.cpp.o: ../server/src/equipment_management_server.cpp
 
+server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o: ../server/include/database_manager.h
 server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o: ../server/include/equipment_manager.h
 server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o: ../shared_components/include/equipment.h
+server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o: ../shared_components/include/protocol_parser.h
 server/CMakeFiles/EMS_server.dir/src/equipment_manager.cpp.o: ../server/src/equipment_manager.cpp
 
 server/CMakeFiles/EMS_server.dir/src/main.cpp.o: ../server/include/connection_manager.h

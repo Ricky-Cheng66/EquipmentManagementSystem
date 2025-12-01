@@ -111,6 +111,21 @@ depend:
 .PHONY : depend
 
 # Convenience name for target.
+equipment_simulation/CMakeFiles/equipment_simulation.dir/rule:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f CMakeFiles/Makefile2 equipment_simulation/CMakeFiles/equipment_simulation.dir/rule
+.PHONY : equipment_simulation/CMakeFiles/equipment_simulation.dir/rule
+
+# Convenience name for target.
+equipment_simulation: equipment_simulation/CMakeFiles/equipment_simulation.dir/rule
+
+.PHONY : equipment_simulation
+
+# fast build rule for target.
+equipment_simulation/fast:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/build
+.PHONY : equipment_simulation/fast
+
+# Convenience name for target.
 equipment_simulation/CMakeFiles/test_simulator_connections.dir/rule:
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f CMakeFiles/Makefile2 equipment_simulation/CMakeFiles/test_simulator_connections.dir/rule
 .PHONY : equipment_simulation/CMakeFiles/test_simulator_connections.dir/rule
@@ -170,12 +185,40 @@ test_simulation_manager/fast:
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_simulation_manager.dir/build.make equipment_simulation/CMakeFiles/test_simulation_manager.dir/build
 .PHONY : test_simulation_manager/fast
 
+src/main.o: src/main.cpp.o
+
+.PHONY : src/main.o
+
+# target to build an object file
+src/main.cpp.o:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/src/main.cpp.o
+.PHONY : src/main.cpp.o
+
+src/main.i: src/main.cpp.i
+
+.PHONY : src/main.i
+
+# target to preprocess a source file
+src/main.cpp.i:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/src/main.cpp.i
+.PHONY : src/main.cpp.i
+
+src/main.s: src/main.cpp.s
+
+.PHONY : src/main.s
+
+# target to generate assembly for a file
+src/main.cpp.s:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/src/main.cpp.s
+.PHONY : src/main.cpp.s
+
 src/simulation_manager.o: src/simulation_manager.cpp.o
 
 .PHONY : src/simulation_manager.o
 
 # target to build an object file
 src/simulation_manager.cpp.o:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/src/simulation_manager.cpp.o
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_simulator_connections.dir/build.make equipment_simulation/CMakeFiles/test_simulator_connections.dir/src/simulation_manager.cpp.o
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_performance.dir/build.make equipment_simulation/CMakeFiles/test_performance.dir/src/simulation_manager.cpp.o
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_integration.dir/build.make equipment_simulation/CMakeFiles/test_integration.dir/src/simulation_manager.cpp.o
@@ -188,6 +231,7 @@ src/simulation_manager.i: src/simulation_manager.cpp.i
 
 # target to preprocess a source file
 src/simulation_manager.cpp.i:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/src/simulation_manager.cpp.i
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_simulator_connections.dir/build.make equipment_simulation/CMakeFiles/test_simulator_connections.dir/src/simulation_manager.cpp.i
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_performance.dir/build.make equipment_simulation/CMakeFiles/test_performance.dir/src/simulation_manager.cpp.i
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_integration.dir/build.make equipment_simulation/CMakeFiles/test_integration.dir/src/simulation_manager.cpp.i
@@ -200,6 +244,7 @@ src/simulation_manager.s: src/simulation_manager.cpp.s
 
 # target to generate assembly for a file
 src/simulation_manager.cpp.s:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/src/simulation_manager.cpp.s
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_simulator_connections.dir/build.make equipment_simulation/CMakeFiles/test_simulator_connections.dir/src/simulation_manager.cpp.s
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_performance.dir/build.make equipment_simulation/CMakeFiles/test_performance.dir/src/simulation_manager.cpp.s
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_integration.dir/build.make equipment_simulation/CMakeFiles/test_integration.dir/src/simulation_manager.cpp.s
@@ -212,6 +257,7 @@ src/simulator_connections.o: src/simulator_connections.cpp.o
 
 # target to build an object file
 src/simulator_connections.cpp.o:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/src/simulator_connections.cpp.o
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_simulator_connections.dir/build.make equipment_simulation/CMakeFiles/test_simulator_connections.dir/src/simulator_connections.cpp.o
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_performance.dir/build.make equipment_simulation/CMakeFiles/test_performance.dir/src/simulator_connections.cpp.o
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_integration.dir/build.make equipment_simulation/CMakeFiles/test_integration.dir/src/simulator_connections.cpp.o
@@ -224,6 +270,7 @@ src/simulator_connections.i: src/simulator_connections.cpp.i
 
 # target to preprocess a source file
 src/simulator_connections.cpp.i:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/src/simulator_connections.cpp.i
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_simulator_connections.dir/build.make equipment_simulation/CMakeFiles/test_simulator_connections.dir/src/simulator_connections.cpp.i
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_performance.dir/build.make equipment_simulation/CMakeFiles/test_performance.dir/src/simulator_connections.cpp.i
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_integration.dir/build.make equipment_simulation/CMakeFiles/test_integration.dir/src/simulator_connections.cpp.i
@@ -236,6 +283,7 @@ src/simulator_connections.s: src/simulator_connections.cpp.s
 
 # target to generate assembly for a file
 src/simulator_connections.cpp.s:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/src/simulator_connections.cpp.s
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_simulator_connections.dir/build.make equipment_simulation/CMakeFiles/test_simulator_connections.dir/src/simulator_connections.cpp.s
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_performance.dir/build.make equipment_simulation/CMakeFiles/test_performance.dir/src/simulator_connections.cpp.s
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_integration.dir/build.make equipment_simulation/CMakeFiles/test_integration.dir/src/simulator_connections.cpp.s
@@ -248,6 +296,7 @@ src/simulator_database_reader.o: src/simulator_database_reader.cpp.o
 
 # target to build an object file
 src/simulator_database_reader.cpp.o:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/src/simulator_database_reader.cpp.o
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_simulator_connections.dir/build.make equipment_simulation/CMakeFiles/test_simulator_connections.dir/src/simulator_database_reader.cpp.o
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_performance.dir/build.make equipment_simulation/CMakeFiles/test_performance.dir/src/simulator_database_reader.cpp.o
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_integration.dir/build.make equipment_simulation/CMakeFiles/test_integration.dir/src/simulator_database_reader.cpp.o
@@ -260,6 +309,7 @@ src/simulator_database_reader.i: src/simulator_database_reader.cpp.i
 
 # target to preprocess a source file
 src/simulator_database_reader.cpp.i:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/src/simulator_database_reader.cpp.i
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_simulator_connections.dir/build.make equipment_simulation/CMakeFiles/test_simulator_connections.dir/src/simulator_database_reader.cpp.i
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_performance.dir/build.make equipment_simulation/CMakeFiles/test_performance.dir/src/simulator_database_reader.cpp.i
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_integration.dir/build.make equipment_simulation/CMakeFiles/test_integration.dir/src/simulator_database_reader.cpp.i
@@ -272,6 +322,7 @@ src/simulator_database_reader.s: src/simulator_database_reader.cpp.s
 
 # target to generate assembly for a file
 src/simulator_database_reader.cpp.s:
+	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/equipment_simulation.dir/build.make equipment_simulation/CMakeFiles/equipment_simulation.dir/src/simulator_database_reader.cpp.s
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_simulator_connections.dir/build.make equipment_simulation/CMakeFiles/test_simulator_connections.dir/src/simulator_database_reader.cpp.s
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_performance.dir/build.make equipment_simulation/CMakeFiles/test_performance.dir/src/simulator_database_reader.cpp.s
 	cd /home/liuliuqiu/EquipmentManagementSystem/build && $(MAKE) -f equipment_simulation/CMakeFiles/test_integration.dir/build.make equipment_simulation/CMakeFiles/test_integration.dir/src/simulator_database_reader.cpp.s
@@ -393,11 +444,15 @@ help:
 	@echo "... clean"
 	@echo "... depend"
 	@echo "... edit_cache"
+	@echo "... equipment_simulation"
 	@echo "... test_simulator_connections"
 	@echo "... test_performance"
 	@echo "... rebuild_cache"
 	@echo "... test_integration"
 	@echo "... test_simulation_manager"
+	@echo "... src/main.o"
+	@echo "... src/main.i"
+	@echo "... src/main.s"
 	@echo "... src/simulation_manager.o"
 	@echo "... src/simulation_manager.i"
 	@echo "... src/simulation_manager.s"

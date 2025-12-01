@@ -75,9 +75,17 @@ bool DatabaseManager::log_equipment_status(const std::string &equipment_id,
   if (additional_data.empty()) {
     query += "NULL)";
   } else {
-    query += "'" + additional_data + "')";
+    // 转义单引号，防止SQL注入
+    std::string escaped_data = additional_data;
+    // 简单的转义：将单引号替换为两个单引号
+    size_t pos = 0;
+    while ((pos = escaped_data.find("'", pos)) != std::string::npos) {
+      escaped_data.replace(pos, 1, "''");
+      pos += 2;
+    }
+    query += "'" + escaped_data + "')";
   }
-
+  std::cout << "DEBUG: 执行日志SQL: " << query << std::endl;
   return execute_update(query);
 }
 

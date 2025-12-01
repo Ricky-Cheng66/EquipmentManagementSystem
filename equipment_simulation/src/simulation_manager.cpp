@@ -91,15 +91,11 @@ bool SimulationManager::connect_all_equipments() {
   std::cout << "开始连接所有设备到服务器..." << std::endl;
 
   auto registered_equipments = connections_->get_registered_equipments();
-  auto pending_equipments = connections_->get_pending_equipments();
-
   int success_count = 0;
-  int total_count = registered_equipments.size() + pending_equipments.size();
+  int total_count = registered_equipments.size();
 
   std::cout << "DEBUG: 找到 " << total_count << " 个设备需要连接" << std::endl;
   std::cout << "DEBUG: 已注册设备: " << registered_equipments.size() << " 个"
-            << std::endl;
-  std::cout << "DEBUG: 待注册设备: " << pending_equipments.size() << " 个"
             << std::endl;
 
   // 连接已注册设备
@@ -367,9 +363,16 @@ void SimulationManager::handle_online_response(int fd,
     std::cout << "设备上线成功: " << equipment_id << std::endl;
     // 更新设备状态为在线
     connections_->update_equipment_status(equipment_id, "online");
+    // 添加：记录连接状态
+    std::cout << "设备 " << equipment_id << " 已成功上线并保持连接"
+              << std::endl;
   } else {
     std::cout << "设备上线失败: " << equipment_id << std::endl;
     connections_->update_equipment_status(equipment_id, "offline");
+    // 如果上线失败，应该重试连接
+    std::cout << "设备上线失败,1秒后重试连接: " << equipment_id << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    connect_equipment(equipment_id);
   }
 }
 

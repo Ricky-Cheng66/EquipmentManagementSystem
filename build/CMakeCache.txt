@@ -196,10 +196,10 @@ EquipmentManagementSystem_BINARY_DIR:STATIC=/home/liuliuqiu/EquipmentManagementS
 EquipmentManagementSystem_SOURCE_DIR:STATIC=/home/liuliuqiu/EquipmentManagementSystem
 
 //Value Computed by CMake
-EquipmentStimulation_BINARY_DIR:STATIC=/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation
+EquipmentStimulation_BINARY_DIR:STATIC=/home/liuliuqiu/EquipmentManagementSystem/build/test
 
 //Value Computed by CMake
-EquipmentStimulation_SOURCE_DIR:STATIC=/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation
+EquipmentStimulation_SOURCE_DIR:STATIC=/home/liuliuqiu/EquipmentManagementSystem/test
 
 //Path to a library.
 MYSQL_LIB:FILEPATH=/usr/lib/x86_64-linux-gnu/libmysqlclient.so
@@ -301,7 +301,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=4
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=5
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP

@@ -26,6 +26,26 @@
 },
 {
   "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/include  -g   -Wall -Wextra -Wpedantic -std=gnu++2a -o CMakeFiles/equipment_simulation.dir/src/main.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/main.cpp",
+  "file": "/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/main.cpp"
+},
+{
+  "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/include  -g   -Wall -Wextra -Wpedantic -std=gnu++2a -o CMakeFiles/equipment_simulation.dir/src/simulation_manager.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulation_manager.cpp",
+  "file": "/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulation_manager.cpp"
+},
+{
+  "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/include  -g   -Wall -Wextra -Wpedantic -std=gnu++2a -o CMakeFiles/equipment_simulation.dir/src/simulator_connections.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulator_connections.cpp",
+  "file": "/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulator_connections.cpp"
+},
+{
+  "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation",
+  "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/include  -g   -Wall -Wextra -Wpedantic -std=gnu++2a -o CMakeFiles/equipment_simulation.dir/src/simulator_database_reader.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulator_database_reader.cpp",
+  "file": "/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulator_database_reader.cpp"
+},
+{
+  "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation",
   "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/include  -g   -Wall -Wextra -Wpedantic -std=gnu++2a -o CMakeFiles/test_simulator_connections.dir/src/test_simulator_connections.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/test_simulator_connections.cpp",
   "file": "/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/test_simulator_connections.cpp"
 },
@@ -103,6 +123,11 @@
   "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/equipment_simulation",
   "command": "/usr/bin/c++   -I/home/liuliuqiu/EquipmentManagementSystem/shared_components/include -I/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/include  -g   -Wall -Wextra -Wpedantic -std=gnu++2a -o CMakeFiles/test_simulation_manager.dir/src/simulator_database_reader.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulator_database_reader.cpp",
   "file": "/home/liuliuqiu/EquipmentManagementSystem/equipment_simulation/src/simulator_database_reader.cpp"
+},
+{
+  "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/test",
+  "command": "/usr/bin/c++    -g   -Wall -Wextra -Wpedantic -std=gnu++2a -o CMakeFiles/test_heartbeat.dir/src/test_heartbeat.cpp.o -c /home/liuliuqiu/EquipmentManagementSystem/test/src/test_heartbeat.cpp",
+  "file": "/home/liuliuqiu/EquipmentManagementSystem/test/src/test_heartbeat.cpp"
 },
 {
   "directory": "/home/liuliuqiu/EquipmentManagementSystem/build/server",
