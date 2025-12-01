@@ -515,6 +515,7 @@ std::string SimulationManager::get_command_name(
 }
 
 void SimulationManager::handle_connection_close(int fd) {
+
   auto equipment = connections_->get_equipment_by_fd(fd);
   if (equipment) {
     std::cout << "设备断开连接: " << equipment->get_equipment_id()

@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <string>
+#include <thread>
 #include <unordered_map>
 
 class EquipmentManagementServer {
@@ -17,9 +18,13 @@ public:
       : equipment_manager_(std::make_unique<EquipmentManager>()),
         connections_manager_(std::make_unique<ConnectionManager>()),
         db_manager_(std::make_unique<DatabaseManager>()) {}
+  ~EquipmentManagementServer();
   //初始化
   bool init(int server_port);
   bool start();
+  void stop();
+  bool is_running() const { return is_running_; }
+  void close_all_connections(); // 关闭所有客户端连接
 
   // Qt客户端接口
   bool
@@ -39,6 +44,10 @@ private:
   void process_single_message(int fd, const std::string &message);
 
   // 具体消息类型处理
+  void update_equipment_status_and_db(const std::string &equipment_id,
+                                      const std::string &status,
+                                      const std::string &power_state,
+                                      const std::string &log_message = "");
   void handle_equipment_online(int fd, const std::string &equipment_id,
                                const std::string &payload);
   void handle_status_update(int fd, const std::string &equipment_id,
@@ -51,6 +60,8 @@ private:
   // 连接管理
   void handle_connection_close(int fd);
   void perform_maintenance_tasks();
+
+  void reset_all_equipment_on_shutdown();
 
   //数据库
   bool initialize_database();
@@ -65,12 +76,8 @@ private:
                                   const std::string &end_time);
   // 远程控制接口
   bool send_control_command(const std::string &equipment_id,
-                            const std::string &command);
-
-  bool
-  send_advanced_control_command(const std::string &equipment_id,
-                                ProtocolParser::ControlCommandType command_type,
-                                const std::string &parameters = "");
+                            ProtocolParser::ControlCommandType command_type,
+                            const std::string &parameters = "");
 
   bool
   send_batch_control_command(const std::vector<std::string> &equipment_ids,
@@ -100,6 +107,8 @@ private:
   const int MAXCLIENTFDS = 1024;
   int server_fd_;
   int server_port_;
+  std::atomic<bool> is_running_{false}; // 添加运行状态标志
+  std::thread server_thread_;           // 添加服务器线程
   std::unique_ptr<EquipmentManager> equipment_manager_;
   std::unique_ptr<ConnectionManager> connections_manager_;
   std::unique_ptr<DatabaseManager> db_manager_;

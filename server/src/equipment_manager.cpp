@@ -12,8 +12,8 @@ bool EquipmentManager::register_equipment(const std::string &equipment_id,
     return false;
   } else {
     auto [it2, inserted] = equipments_.emplace(
-        equipment_id,
-        std::make_shared<Equipment>(equipment_id, equipment_type, location));
+        equipment_id, std::make_shared<Equipment>(equipment_id, equipment_type,
+                                                  location, "offline", "off"));
     if (inserted) {
       std::cout << "register sucess... equipment_id is" << equipment_id
                 << std::endl;
@@ -42,7 +42,6 @@ bool EquipmentManager::initialize_from_database(DatabaseManager *db_manager) {
     std::cerr << "数据库未连接，无法初始化设备管理器" << std::endl;
     return false;
   }
-
   std::unique_lock lock(equipment_rw_lock_);
   equipments_.clear();
 
@@ -85,32 +84,55 @@ bool EquipmentManager::initialize_from_database(DatabaseManager *db_manager) {
 }
 
 // 设备状态管理
-bool EquipmentManager::update_equipment_status_from_simulator(
-    const std::string &equipment_id, const std::string &status) {
-
+// 1. 添加 update_equipment_status 方法（只更新内存）
+bool EquipmentManager::update_equipment_status(const std::string &equipment_id,
+                                               const std::string &status) {
   std::unique_lock lock(equipment_rw_lock_);
+
   auto it = equipments_.find(equipment_id);
-  if (it != equipments_.end()) {
-    it->second->update_status(status);
-    std::cout << "设备状态更新: " << equipment_id << " -> " << status
-              << std::endl;
-    return true;
+  if (it == equipments_.end()) {
+    std::cout << "设备不存在，无法更新状态: " << equipment_id << std::endl;
+    return false;
   }
-  return false;
+
+  // 只更新内存中的设备状态
+  it->second->update_status(status);
+
+  std::cout << "设备状态更新成功（内存）: " << equipment_id << " -> " << status
+            << std::endl;
+  return true;
 }
 
-bool EquipmentManager::update_equipment_power_from_simulator(
+// 2. 添加 update_equipment_power_state 方法（只更新内存）
+bool EquipmentManager::update_equipment_power_state(
     const std::string &equipment_id, const std::string &power_state) {
 
   std::unique_lock lock(equipment_rw_lock_);
+
   auto it = equipments_.find(equipment_id);
-  if (it != equipments_.end()) {
-    it->second->update_equipment_power_state(power_state);
-    std::cout << "设备电源状态更新: " << equipment_id << " -> " << power_state
-              << std::endl;
-    return true;
+  if (it == equipments_.end()) {
+    std::cout << "设备不存在，无法更新电源状态: " << equipment_id << std::endl;
+    return false;
   }
-  return false;
+
+  // 只更新内存中的设备电源状态
+  it->second->update_equipment_power_state(power_state);
+
+  std::cout << "设备电源状态更新成功（内存）: " << equipment_id << " -> "
+            << power_state << std::endl;
+  return true;
+}
+
+// 3. 添加 reset_all_equipment_status 方法（只重置内存状态）
+void EquipmentManager::reset_all_equipment_status() {
+  std::unique_lock lock(equipment_rw_lock_);
+
+  for (auto &[equipment_id, equipment_ptr] : equipments_) {
+    // 重置内存中的状态为离线且电源关闭
+    equipment_ptr->update_status("offline");
+    equipment_ptr->update_equipment_power_state("off");
+    std::cout << "设备状态重置（内存）: " << equipment_id << std::endl;
+  }
 }
 
 // 设备查询

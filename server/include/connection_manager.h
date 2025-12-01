@@ -11,6 +11,7 @@ public:
   // 连接管理
   void add_connection(int fd, std::shared_ptr<Equipment> equipment);
   void remove_connection(int fd);
+  void close_all_connections();
 
   // 设备查找
   std::shared_ptr<Equipment> get_equipment_by_fd(int fd);

@@ -17,6 +17,7 @@
 #include "protocol_parser.h"
 #include "socket.h"
 
+EquipmentManagementServer::~EquipmentManagementServer() { stop(); }
 bool EquipmentManagementServer::init(int server_port) {
   // socket部分
   server_port_ = server_port;
@@ -46,53 +47,94 @@ bool EquipmentManagementServer::init(int server_port) {
 }
 
 bool EquipmentManagementServer::start() {
+  if (is_running_) {
+    std::cout << "服务器已经在运行" << std::endl;
+    return true;
+  }
+
   // 初始化数据库
   if (!initialize_database()) {
     std::cerr << "数据库初始化失败，服务器启动中止" << std::endl;
     return false;
   }
+  // 启动服务器线程
+  is_running_ = true;
+  server_thread_ = std::thread([this]() {
+    // 获取Epoll单例
+    Epoll &ep = Epoll::get_instance();
+    if (!ep.initialize()) {
+      std::cerr << "Epoll初始化失败" << std::endl;
+      return;
+    }
 
-  //获取Epoll单例
-  Epoll &ep = Epoll::get_instance();
-  if (!ep.initialize()) {
-    std::cerr << "Epoll初始化失败" << std::endl;
-    return false;
-  }
+    int max_events = ep.get_epoll_max_events();
+    struct epoll_event *evs = new epoll_event[max_events]{};
+    std::cout << "设备管理服务器启动成功，开始事件循环..." << std::endl;
 
-  int max_events = ep.get_epoll_max_events();
-  struct epoll_event *evs = new epoll_event[max_events]{};
-  std::cout << "设备管理服务器启动成功，开始事件循环..." << std::endl;
+    while (is_running_) {
+      int nfds = ep.wait_events(evs, 100); // 100ms超时
 
-  //主服务器循环
-  while (true) {
-    int nfds = ep.wait_events(evs, -1);
-    std::cout << "DEBUG: epoll_wait returned " << nfds << " events"
-              << std::endl;
-    if (nfds < 0) {
-      if (errno == EINTR) {
-        //被信号中断
-        std::cerr << "epoll_wait 被信号中断" << std::endl;
+      if (nfds < 0) {
+        if (errno == EINTR && is_running_) {
+          continue;
+        }
+        std::cerr << "epoll_wait错误: " << std::endl;
+        break;
+      } else if (nfds == 0) {
+        // 超时，检查运行状态
         continue;
       }
-      std::cerr << "epoll_wait other errors" << std::endl;
-      continue;
+
+      // 处理事件
+      if (!process_events(nfds, evs)) {
+        std::cerr << "事件处理失败..." << std::endl;
+        break;
+      }
+
+      // 定期执行维护任务
+      static int loop_count = 0;
+      if (++loop_count >= 10) {
+        perform_maintenance_tasks();
+        loop_count = 0;
+      }
     }
-    //处理事件
-    if (!process_events(nfds, evs)) {
-      std::cerr << "事件处理失败..." << std::endl;
-      break;
-    }
-    // 定期执行维护任务（每10次循环执行一次）
-    static int loop_count = 0;
-    if (++loop_count >= 10) {
-      perform_maintenance_tasks();
-      loop_count = 0;
-    }
+
+    delete[] evs;
+    std::cout << "服务器线程退出" << std::endl;
+  });
+
+  std::cout << "服务器启动成功" << std::endl;
+  return true;
+}
+
+void EquipmentManagementServer::stop() {
+  if (!is_running_) {
+    return;
   }
 
-  delete[] evs;
-  std::cout << "服务器正常退出" << std::endl;
-  return true;
+  std::cout << "正在停止服务器..." << std::endl;
+  is_running_ = false;
+
+  // 等待服务器线程结束
+  if (server_thread_.joinable()) {
+    server_thread_.join();
+    std::cout << "服务器线程已停止" << std::endl;
+  }
+
+  // 重置所有设备状态
+  reset_all_equipment_on_shutdown();
+
+  // 关闭服务器socket
+  if (server_fd_ > 0) {
+    close(server_fd_);
+    server_fd_ = -1;
+  }
+
+  std::cout << "服务器已完全停止" << std::endl;
+}
+
+void EquipmentManagementServer::close_all_connections() {
+  connections_manager_->close_all_connections();
 }
 
 bool EquipmentManagementServer::initialize_database() {
@@ -272,14 +314,11 @@ void EquipmentManagementServer::handle_control_response(
   if (success) {
     // 控制成功，只更新设备电源状态，不改变在线状态
     if (command == "turn_on") {
-      equipment_manager_->update_equipment_power_from_simulator(equipment_id,
-                                                                "on");
+      equipment_manager_->update_equipment_power_state(equipment_id, "on");
     } else if (command == "turn_off") {
-      equipment_manager_->update_equipment_power_from_simulator(equipment_id,
-                                                                "off");
+      equipment_manager_->update_equipment_power_state(equipment_id, "off");
     } else if (command == "restart") {
-      equipment_manager_->update_equipment_power_from_simulator(equipment_id,
-                                                                "on");
+      equipment_manager_->update_equipment_power_state(equipment_id, "on");
     }
 
     // 记录到数据库
@@ -332,6 +371,32 @@ std::shared_ptr<Equipment> EquipmentManagementServer::handle_qt_status_query(
   return equipment_manager_->get_equipment(equipment_id);
 }
 
+void EquipmentManagementServer::update_equipment_status_and_db(
+    const std::string &equipment_id, const std::string &status,
+    const std::string &power_state, const std::string &log_message) {
+  // 更新内存
+  bool mem_status =
+      equipment_manager_->update_equipment_status(equipment_id, status);
+  bool mem_power = equipment_manager_->update_equipment_power_state(
+      equipment_id, power_state);
+
+  if (!mem_status || !mem_power) {
+    std::cerr << "内存状态更新失败: " << equipment_id << std::endl;
+    return;
+  }
+
+  // 更新数据库
+  if (db_manager_->is_connected()) {
+    bool db_success =
+        db_manager_->update_equipment_status(equipment_id, status, power_state);
+
+    if (db_success && !log_message.empty()) {
+      db_manager_->log_equipment_status(equipment_id, status, power_state,
+                                        log_message);
+    }
+  }
+}
+
 //处理设备注册
 void EquipmentManagementServer::handle_equipment_online(
     int fd, const std::string &equipment_id, const std::string &payload) {
@@ -382,7 +447,9 @@ void EquipmentManagementServer::handle_equipment_online(
         equipment_id, "online",
         equipment->get_power_state()); // 保持原有电源状态
     if (update_success) {
-      std::cout << "设备状态更新到数据库成功: " << equipment_id << std::endl;
+      // 记录上线日志
+      db_manager_->log_equipment_status(
+          equipment_id, "online", equipment->get_power_state(), "设备上线成功");
     } else {
       std::cerr << "设备状态更新到数据库失败: " << equipment_id << std::endl;
     }
@@ -416,24 +483,8 @@ void EquipmentManagementServer::handle_status_update(
     additional_data = parts[2];
   }
 
-  //更新设备状态
-  equipment_manager_->update_equipment_status(equipment_id, status);
-  equipment_manager_->update_equipment_power_state(equipment_id, power_state);
-
-  //更新数据库
-  if (db_manager_->is_connected()) {
-    //更新设备表的状态
-    bool update_success =
-        db_manager_->update_equipment_status(equipment_id, status, power_state);
-
-    //记录状态日志
-    bool log_success = db_manager_->log_equipment_status(
-        equipment_id, status, power_state, additional_data);
-
-    if (!update_success || !log_success) {
-      std::cerr << "状态更新到数据库失败" << equipment_id << std::endl;
-    }
-  }
+  update_equipment_status_and_db(equipment_id, status, power_state,
+                                 "设备主动上报状态");
 
   //更新心跳时间
   connections_manager_->update_heartbeat(fd);
@@ -487,7 +538,7 @@ void EquipmentManagementServer::handle_client_control_command(
   std::string parameters = parts.size() > 1 ? parts[1] : "";
 
   // 执行控制命令
-  bool success = equipment_manager_->send_control_command(
+  bool success = connections_manager_->send_control_to_simulator(
       equipment_id, command_type, parameters);
 
   // 发送控制响应
@@ -512,8 +563,8 @@ void EquipmentManagementServer::handle_heartbeat(
   connections_manager_->update_heartbeat(fd);
 
   //发送心跳响应
-  std::string response = ProtocolParser::build_heartbeat_response();
-  send(fd, response.c_str(), response.length(), 0);
+  std::vector<char> response = ProtocolParser::build_heartbeat_response();
+  send(fd, response.data(), response.size(), 0);
 
   std::cout << "心跳处理: " << equipment_id << " fd=" << fd << std::endl;
 }
@@ -568,10 +619,17 @@ bool EquipmentManagementServer::accept_new_connection() {
 }
 
 void EquipmentManagementServer::handle_connection_close(int fd) {
+
+  // 先从epoll中移除
+  Epoll &ep = Epoll::get_instance();
+  if (ep.is_initialized()) {
+    ep.delete_epoll(fd);
+  }
+
   //清理消息缓冲区
   message_buffers_.erase(fd);
 
-  // 从连接管理中移除
+  // 更新设备状态为离线
   auto equipment = connections_manager_->get_equipment_by_fd(fd);
   if (equipment) {
     std::cout << "设备离线: " << equipment->get_equipment_id() << std::endl;
@@ -580,6 +638,19 @@ void EquipmentManagementServer::handle_connection_close(int fd) {
                                                 "offline");
   }
 
+  // 更新数据库
+  if (db_manager_->is_connected()) {
+    auto eq = equipment_manager_->get_equipment(equipment->get_equipment_id());
+    if (eq) {
+      db_manager_->update_equipment_status(equipment->get_equipment_id(),
+                                           "offline", eq->get_power_state());
+
+      db_manager_->log_equipment_status(equipment->get_equipment_id(),
+                                        "offline", eq->get_power_state(),
+                                        "连接关闭");
+    }
+  }
+  // 从连接管理中移除
   connections_manager_->remove_connection(fd);
   std::cout << "fd : " << fd << "已关闭" << std::endl;
 }
@@ -598,6 +669,37 @@ void EquipmentManagementServer::perform_maintenance_tasks() {
   // 可选：打印详细连接信息
   connections_manager_->print_connections();
   std::cout << "=================" << std::endl;
+}
+
+// 2. 添加服务器停止时的状态重置方法
+void EquipmentManagementServer::reset_all_equipment_on_shutdown() {
+  std::cout << "服务器停止，重置所有设备状态..." << std::endl;
+
+  // 1. 重置内存中的所有设备状态
+  equipment_manager_->reset_all_equipment_status();
+
+  // 2. 更新数据库中所有设备状态为离线且电源关闭
+  if (db_manager_->is_connected()) {
+    // 获取所有设备ID
+    auto all_equipments = equipment_manager_->get_all_equipments();
+
+    for (const auto &equipment : all_equipments) {
+      bool success = db_manager_->update_equipment_status(
+          equipment->get_equipment_id(), "offline", "off");
+
+      if (success) {
+        std::cout << "数据库状态重置成功: " << equipment->get_equipment_id()
+                  << std::endl;
+      } else {
+        std::cerr << "数据库状态重置失败: " << equipment->get_equipment_id()
+                  << std::endl;
+      }
+    }
+  }
+
+  // 3. 关闭所有连接
+  close_all_connections();
+  std::cout << "所有设备状态重置完成" << std::endl;
 }
 
 void EquipmentManagementServer::handle_reservation_apply(
@@ -813,17 +915,12 @@ bool EquipmentManagementServer::check_reservation_conflict(
 
 // 实现公共控制接口
 bool EquipmentManagementServer::send_control_command(
-    const std::string &equipment_id, const std::string &command) {
-  return equipment_manager_->send_control_command(equipment_id, command);
-}
-
-bool EquipmentManagementServer::send_advanced_control_command(
     const std::string &equipment_id,
     ProtocolParser::ControlCommandType command_type,
     const std::string &parameters) {
 
-  return equipment_manager_->send_control_command(equipment_id, command_type,
-                                                  parameters);
+  return connections_manager_->send_control_to_simulator(
+      equipment_id, command_type, parameters);
 }
 
 bool EquipmentManagementServer::send_batch_control_command(
@@ -831,7 +928,7 @@ bool EquipmentManagementServer::send_batch_control_command(
     ProtocolParser::ControlCommandType command_type,
     const std::string &parameters) {
 
-  return equipment_manager_->send_batch_control_commands(
+  return connections_manager_->send_batch_control_to_simulator(
       equipment_ids, command_type, parameters);
 }
 

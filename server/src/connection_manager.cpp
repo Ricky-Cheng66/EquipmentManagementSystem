@@ -69,6 +69,24 @@ void ConnectionManager::remove_connection(int fd) {
     std::cout << "fd not in connections_..." << std::endl;
   }
 }
+
+void ConnectionManager::close_all_connections() {
+  std::unique_lock lock(connection_rw_lock_);
+
+  // 关闭所有文件描述符
+  for (const auto &[fd, equipment] : connections_) {
+    close(fd);
+  }
+
+  // 清空所有映射
+  connections_.clear();
+  heartbeat_times_.clear();
+  equipment_to_fd_.clear();
+  connection_healthy_.clear();
+
+  std::cout << "所有连接已关闭" << std::endl;
+}
+
 // 设备查找
 int ConnectionManager::get_fd_by_equipment_id(const std::string &equipment_id) {
   std::shared_lock lock(connection_rw_lock_);
@@ -229,19 +247,45 @@ bool ConnectionManager::send_control_to_simulator(
     return false;
   }
 
+  // 检查文件描述符是否仍然有效
+  if (fd <= 0) {
+    std::cout << "无效的文件描述符: " << fd << " for " << equipment_id
+              << std::endl;
+    connection_healthy_[fd] = false;
+    return false;
+  }
+
+  // 尝试发送心跳测试连接是否真的可用
+  struct timeval tv;
+  tv.tv_sec = 1;
+  tv.tv_usec = 0;
+
+  if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+    std::cout << "设置socket选项失败: " << equipment_id << std::endl;
+  }
+
   // 构建控制命令
   std::vector<char> control_msg = ProtocolParser::build_control_command(
       equipment_id, command_type, parameters);
 
   // 发送给设备
-  ssize_t bytes_sent = send(fd, control_msg.data(), control_msg.size(), 0);
+  ssize_t bytes_sent =
+      send(fd, control_msg.data(), control_msg.size(), MSG_NOSIGNAL);
+
   if (bytes_sent <= 0) {
     std::cout << "控制命令发送失败: " << equipment_id << std::endl;
+
     // 标记连接为不健康
     connection_healthy_[fd] = false;
+
+    // 如果连接彻底断开，移除连接
+    if (errno == EPIPE || errno == ECONNRESET) {
+      std::cout << "连接已断开，移除: " << equipment_id << std::endl;
+      // 这里不直接移除，由上层调用remove_connection
+      return false;
+    }
     return false;
   }
-
   std::cout << "控制命令已发送: " << equipment_id
             << " 命令: " << static_cast<int>(command_type)
             << " 参数: " << parameters << std::endl;

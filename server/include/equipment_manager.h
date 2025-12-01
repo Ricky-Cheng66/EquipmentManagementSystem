@@ -21,11 +21,6 @@ public:
   std::vector<std::shared_ptr<Equipment>> get_all_equipments();
   size_t get_equipment_count() const;
 
-  // 状态更新（仅用于从设备接收到的状态更新）
-  bool update_equipment_status_from_simulator(const std::string &equipment_id,
-                                              const std::string &status);
-  bool update_equipment_power_from_simulator(const std::string &equipment_id,
-                                             const std::string &power_state);
   // 控制能力查询（供Qt客户端使用）
   std::vector<std::string>
   get_equipment_capabilities(const std::string &equipment_id);
@@ -34,9 +29,10 @@ public:
                                const std::string &status);
   bool update_equipment_power_state(const std::string &equipment_id,
                                     const std::string &power_state);
+  // 服务器停止时的状态重置方法
+  void reset_all_equipment_status();
 
 private:
   mutable std::shared_mutex equipment_rw_lock_;
   std::unordered_map<std::string, std::shared_ptr<Equipment>> equipments_;
-  // DatabaseManager *m_db_manager; // 后续添加数据库管理
 };
