@@ -43,6 +43,7 @@ public:
 private:
   // 事件循环处理
   void event_loop();
+  void heartbeat_loop();
   bool process_events(int nfds, struct epoll_event *events);
   void handle_server_data(int fd);
   void process_single_message(int fd, const std::string &message);
@@ -74,6 +75,8 @@ private:
   void perform_maintenance_tasks();
   void send_heartbeats();
   void send_status_updates();
+
+  std::string get_current_time();
 
   // 消息发送
   bool send_message(int fd, const std::vector<char> &message);
@@ -107,4 +110,14 @@ private:
 
   // 读写锁保护消息缓冲区
   mutable std::shared_mutex buffers_rw_lock_;
+
+  // 定时器相关成员
+  std::atomic<bool> heartbeat_running_{false};
+  std::thread heartbeat_thread_;
+  std::condition_variable heartbeat_cv_;
+  std::mutex heartbeat_mutex_;
+  std::atomic<bool> threads_started_{false};
+
+  // 心跳间隔（秒）
+  const int HEARTBEAT_INTERVAL_SECONDS = 5;
 };

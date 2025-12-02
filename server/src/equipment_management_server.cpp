@@ -577,11 +577,17 @@ void EquipmentManagementServer::handle_heartbeat(
   //更新心跳时间
   connections_manager_->update_heartbeat(fd);
 
-  //发送心跳响应
+  // 发送心跳响应
   std::vector<char> response = ProtocolParser::build_heartbeat_response();
-  send(fd, response.data(), response.size(), 0);
+  ssize_t bytes_sent = send(fd, response.data(), response.size(), 0);
 
-  std::cout << "心跳处理: " << equipment_id << " fd=" << fd << std::endl;
+  if (bytes_sent > 0) {
+    std::cout << "心跳处理: " << equipment_id << " fd=" << fd << " (响应已发送)"
+              << std::endl;
+  } else {
+    std::cout << "心跳处理: " << equipment_id << " fd=" << fd
+              << " (响应发送失败)" << std::endl;
+  }
 }
 
 void EquipmentManagementServer::check_heartbeat_timeout() {

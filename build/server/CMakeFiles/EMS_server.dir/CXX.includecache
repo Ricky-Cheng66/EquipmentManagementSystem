@@ -94,6 +94,16 @@ vector
 iostream
 -
 
+/home/liuliuqiu/EquipmentManagementSystem/server/src/connection_manager.cpp
+connection_manager.h
+/home/liuliuqiu/EquipmentManagementSystem/server/src/connection_manager.h
+iostream
+-
+sys/socket.h
+-
+unistd.h
+-
+
 /home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_management_server.cpp
 arpa/inet.h
 -
@@ -131,4 +141,22 @@ protocol_parser.h
 /home/liuliuqiu/EquipmentManagementSystem/server/src/protocol_parser.h
 socket.h
 /home/liuliuqiu/EquipmentManagementSystem/server/src/socket.h
+
+/home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_manager.cpp
+equipment_manager.h
+/home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_manager.h
+protocol_parser.h
+/home/liuliuqiu/EquipmentManagementSystem/server/src/protocol_parser.h
+iostream
+-
+
+/home/liuliuqiu/EquipmentManagementSystem/server/src/main.cpp
+equipment_management_server.h
+/home/liuliuqiu/EquipmentManagementSystem/server/src/equipment_management_server.h
+iostream
+-
+system_error
+-
+unistd.h
+-
 

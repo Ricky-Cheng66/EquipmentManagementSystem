@@ -3,10 +3,11 @@
 class Equipment {
 public:
   Equipment(const std::string &equipment_id, const std::string &equipment_type,
-            const std::string &location, const std::string &status = "",
-            const std::string &power_state = "")
+            const std::string &location, const std::string &status = "offline",
+            const std::string &power_state = "off")
       : equipment_id_(equipment_id), equipment_type_(equipment_type),
-        location_(location) {}
+        location_(location), status_(status), power_state_(power_state),
+        last_heartbeat_(0) {}
   void update_status(const std::string &new_status);
   void update_equipment_power_state(const std::string &new_power_state);
   void update_heartbeat();

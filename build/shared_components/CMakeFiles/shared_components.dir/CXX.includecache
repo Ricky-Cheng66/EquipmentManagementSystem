@@ -6,25 +6,11 @@
 
 #IncludeRegexTransform: 
 
-../shared_components/include/socket.h
-iostream
+../shared_components/include/equipment.h
+string
 -
 
-/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/socket.cpp
-socket.h
-/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/socket.h
-arpa/inet.h
--
-cstring
--
-fcntl.h
--
-iostream
--
-netinet/in.h
--
-sys/socket.h
--
-system_error
--
+/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/equipment.cpp
+equipment.h
+/home/liuliuqiu/EquipmentManagementSystem/shared_components/src/equipment.h
 

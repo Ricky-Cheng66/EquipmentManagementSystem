@@ -1,7 +1,11 @@
 #include "simulation_manager.h"
+
+#include <chrono>
 #include <cstring>
 #include <fcntl.h>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <system_error>
@@ -14,6 +18,16 @@ SimulationManager::SimulationManager()
 
 SimulationManager::~SimulationManager() {
   stop();
+  // 确保所有线程都已停止
+  if (heartbeat_thread_.joinable()) {
+    heartbeat_thread_.join();
+  }
+
+  if (event_loop_thread_.joinable()) {
+    event_loop_thread_.join();
+  }
+
+  // 现在可以安全地析构其他成员
   disconnect_all_equipments();
 }
 
@@ -54,6 +68,11 @@ bool SimulationManager::start() {
     return true;
   }
 
+  if (threads_started_) {
+    std::cout << "模拟器线程已经启动过，请先停止" << std::endl;
+    return false;
+  }
+
   // 连接所有设备
   if (!connect_all_equipments()) {
     std::cerr << "设备连接失败" << std::endl;
@@ -61,28 +80,84 @@ bool SimulationManager::start() {
   }
 
   is_running_ = true;
-  event_loop_thread_ = std::thread(&SimulationManager::event_loop, this);
+  threads_started_ = true;
+  // 重置心跳运行标志
+  {
+    std::lock_guard<std::mutex> lock(heartbeat_mutex_);
+    heartbeat_running_ = true;
+  }
+  // 先启动事件循环线程
+  try {
+    event_loop_thread_ = std::thread(&SimulationManager::event_loop, this);
+  } catch (const std::exception &e) {
+    std::cerr << "启动事件循环线程失败: " << e.what() << std::endl;
+    is_running_ = false;
+    threads_started_ = false;
+    return false;
+  }
+
+  // 然后启动心跳线程
+  try {
+    heartbeat_thread_ = std::thread(&SimulationManager::heartbeat_loop, this);
+  } catch (const std::exception &e) {
+    std::cerr << "启动心跳线程失败: " << e.what() << std::endl;
+    is_running_ = false;
+    threads_started_ = false;
+
+    // 停止已启动的线程
+    if (event_loop_thread_.joinable()) {
+      event_loop_thread_.join();
+    }
+    return false;
+  }
 
   std::cout << "模拟器启动成功" << std::endl;
   return true;
 }
 
 void SimulationManager::stop() {
-  if (!is_running_) {
+  if (!is_running_ && !threads_started_) {
     return;
   }
 
   std::cout << "正在停止模拟器..." << std::endl;
   is_running_ = false;
 
+  // 停止心跳线程
+  {
+    std::lock_guard<std::mutex> lock(heartbeat_mutex_);
+    heartbeat_running_ = false;
+  }
+  heartbeat_cv_.notify_all(); // 唤醒可能正在等待的心跳线程
+
+  // 先停止心跳线程
+  if (heartbeat_thread_.joinable()) {
+    std::cout << "等待心跳线程结束..." << std::endl;
+    heartbeat_thread_.join();
+    std::cout << "心跳线程已停止" << std::endl;
+  }
+
+  heartbeat_cv_.notify_all(); // 唤醒可能正在等待的心跳线程
+
+  // 先停止心跳线程
+  if (heartbeat_thread_.joinable()) {
+    std::cout << "等待心跳线程结束..." << std::endl;
+    heartbeat_thread_.join();
+    std::cout << "心跳线程已停止" << std::endl;
+  }
+
+  // 然后停止事件循环线程
   if (event_loop_thread_.joinable()) {
     std::cout << "等待事件循环线程结束..." << std::endl;
     event_loop_thread_.join();
-    std::cout << "事件循环线程已结束" << std::endl;
+    std::cout << "事件循环线程已停止" << std::endl;
   }
 
   // 断开所有设备连接
   disconnect_all_equipments();
+
+  // 重置标志
+  threads_started_ = false;
 
   std::cout << "模拟器已停止" << std::endl;
 }
@@ -215,8 +290,8 @@ void SimulationManager::event_loop() {
   struct epoll_event *events = new epoll_event[max_events];
 
   while (is_running_) {
-    // 使用较短的超时时间（100ms），便于及时检查退出条件
-    int nfds = epoll.wait_events(events, 100);
+    // 使用较短的超时时间（10ms），避免长时间阻塞
+    int nfds = epoll.wait_events(events, 10);
 
     if (nfds > 0) {
       if (!process_events(nfds, events)) {
@@ -225,7 +300,7 @@ void SimulationManager::event_loop() {
       }
     } else if (nfds == 0) {
       // 超时，继续检查运行状态
-      continue;
+      // 可以在这里执行一些轻量级的维护任务
     } else {
       // 错误处理
       if (errno == EINTR) {
@@ -245,6 +320,40 @@ void SimulationManager::event_loop() {
 
   delete[] events;
   std::cout << "退出事件循环" << std::endl;
+}
+
+void SimulationManager::heartbeat_loop() {
+  std::cout << "心跳线程启动，间隔: " << HEARTBEAT_INTERVAL_SECONDS << "秒"
+            << std::endl;
+
+  while (true) {
+    // 首先检查是否应该退出
+    {
+      std::unique_lock<std::mutex> lock(heartbeat_mutex_);
+      if (!heartbeat_running_) {
+        break;
+      }
+
+      // 等待指定间隔或被唤醒
+      heartbeat_cv_.wait_for(lock,
+                             std::chrono::seconds(HEARTBEAT_INTERVAL_SECONDS),
+                             [this] { return !heartbeat_running_; });
+    }
+
+    // 再次检查是否应该退出
+    if (!heartbeat_running_) {
+      break;
+    }
+
+    // 发送心跳
+    try {
+      send_heartbeats();
+    } catch (const std::exception &e) {
+      std::cerr << "发送心跳时发生异常: " << e.what() << std::endl;
+    }
+  }
+
+  std::cout << "心跳线程退出" << std::endl;
 }
 
 bool SimulationManager::process_events(int nfds, struct epoll_event *events) {
@@ -363,9 +472,14 @@ void SimulationManager::handle_online_response(int fd,
     std::cout << "设备上线成功: " << equipment_id << std::endl;
     // 更新设备状态为在线
     connections_->update_equipment_status(equipment_id, "online");
+
+    // 设置默认电源状态为关闭
+    connections_->update_equipment_power_state(equipment_id, "off");
     // 添加：记录连接状态
     std::cout << "设备 " << equipment_id << " 已成功上线并保持连接"
               << std::endl;
+    // 立即发送一次状态更新，让服务器知道电源状态
+    send_status_update_message(equipment_id);
   } else {
     std::cout << "设备上线失败: " << equipment_id << std::endl;
     connections_->update_equipment_status(equipment_id, "offline");
@@ -379,7 +493,14 @@ void SimulationManager::handle_online_response(int fd,
 void SimulationManager::handle_heartbeat_response(
     int fd, const std::string &equipment_id) {
   // 心跳响应处理，可以更新最后心跳时间等
-  std::cout << "收到心跳响应: " << equipment_id << std::endl;
+  std::cout << "收到心跳响应: " << equipment_id << " (fd=" << fd << ")"
+            << std::endl;
+
+  // 更新设备心跳时间
+  auto equipment = connections_->get_equipment_by_id(equipment_id);
+  if (equipment) {
+    equipment->update_heartbeat();
+  }
 }
 
 // 处理控制命令
@@ -539,30 +660,63 @@ void SimulationManager::handle_connection_close(int fd) {
 }
 
 void SimulationManager::perform_maintenance_tasks() {
-  loop_count_++;
-
-  // 发送心跳
-  if (loop_count_ % HEARTBEAT_INTERVAL == 0) {
-    send_heartbeats();
-  }
-
-  // 发送状态更新
-  if (loop_count_ % STATUS_UPDATE_INTERVAL == 0) {
-    send_status_updates();
-  }
+  // 不再使用loop_count_来触发心跳
+  // 只处理状态更新打印等任务
 
   // 每30次循环打印一次状态
-  if (loop_count_ % 30 == 0) {
+  static int loop_count = 0;
+  if (++loop_count >= 30) {
     print_status();
-    loop_count_ = 0; // 防止溢出
+    loop_count = 0;
   }
 }
 
 void SimulationManager::send_heartbeats() {
   auto connected_equipments = connections_->get_connected_equipments();
-  for (const auto &equipment : connected_equipments) {
-    send_heartbeat_message(equipment->get_equipment_id());
+
+  if (connected_equipments.empty()) {
+    std::cout << "[" << get_current_time() << "] 没有已连接设备，跳过心跳发送"
+              << std::endl;
+    return;
   }
+
+  std::cout << "[" << get_current_time() << "] 开始发送心跳，共 "
+            << connected_equipments.size() << " 个设备" << std::endl;
+
+  int success_count = 0;
+  int fail_count = 0;
+
+  for (const auto &equipment : connected_equipments) {
+    std::string equipment_id = equipment->get_equipment_id();
+
+    // 检查设备连接是否有效
+    int fd = connections_->get_fd_by_equipment_id(equipment_id);
+    if (fd == -1) {
+      std::cout << "[" << get_current_time() << "] 设备 " << equipment_id
+                << " 文件描述符无效，跳过心跳" << std::endl;
+      fail_count++;
+      continue;
+    }
+
+    // 发送心跳
+    if (send_heartbeat_message(equipment_id)) {
+      success_count++;
+      std::cout << "[" << get_current_time()
+                << "] 心跳发送成功: " << equipment_id << " (fd=" << fd << ")"
+                << std::endl;
+    } else {
+      fail_count++;
+      std::cout << "[" << get_current_time()
+                << "] 心跳发送失败: " << equipment_id << std::endl;
+    }
+
+    // 设备之间添加微小延迟，避免同时发送
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+
+  std::cout << "[" << get_current_time()
+            << "] 心跳发送完成 - 成功: " << success_count
+            << ", 失败: " << fail_count << std::endl;
 }
 
 void SimulationManager::send_status_updates() {
@@ -570,6 +724,20 @@ void SimulationManager::send_status_updates() {
   for (const auto &equipment : connected_equipments) {
     send_status_update_message(equipment->get_equipment_id());
   }
+}
+
+std::string SimulationManager::get_current_time() {
+  auto now = std::chrono::system_clock::now();
+  auto time_t_now = std::chrono::system_clock::to_time_t(now);
+  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                now.time_since_epoch()) %
+            1000;
+
+  std::stringstream ss;
+  ss << std::put_time(std::localtime(&time_t_now), "%H:%M:%S");
+  ss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+
+  return ss.str();
 }
 
 bool SimulationManager::send_message(int fd, const std::vector<char> &message) {
@@ -623,6 +791,7 @@ bool SimulationManager::send_heartbeat_message(
     const std::string &equipment_id) {
   int fd = connections_->get_fd_by_equipment_id(equipment_id);
   if (fd == -1) {
+    std::cout << "无法发送心跳，设备未连接: " << equipment_id << std::endl;
     return false;
   }
 
@@ -632,6 +801,8 @@ bool SimulationManager::send_heartbeat_message(
   bool success = send_message(fd, message);
   if (success) {
     std::cout << "发送心跳消息: " << equipment_id << std::endl;
+  } else {
+    std::cout << "发送心跳消息失败: " << equipment_id << std::endl;
   }
 
   return success;
@@ -649,13 +820,23 @@ bool SimulationManager::send_status_update_message(
     return false;
   }
 
+  std::string power_state = equipment->get_power_state();
+  if (power_state.empty()) {
+    power_state = "off"; // 默认值
+  }
+
   std::vector<char> message = ProtocolParser::build_status_update_message(
       equipment_id, equipment->get_status(), equipment->get_power_state(),
       "simulated_data");
 
   bool success = send_message(fd, message);
   if (success) {
-    std::cout << "发送状态更新: " << equipment_id << std::endl;
+    std::cout << "[" << get_current_time() << "] 发送状态更新: " << equipment_id
+              << " 状态:" << equipment->get_status() << " 电源:" << power_state
+              << std::endl;
+  } else {
+    std::cout << "[" << get_current_time()
+              << "] 状态更新发送失败: " << equipment_id << std::endl;
   }
 
   return success;

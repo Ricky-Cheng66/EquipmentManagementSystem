@@ -5,11 +5,19 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch",
+            "name": "Launch server",
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceRoot}/build/server/EMS_server",
             "args": [],
+            "cwd": "${workspaceRoot}"
+        },
+        {
+            "name": "Launch simulation_client", // 新加的配置
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/equipment_simulation/equipment_simulation",
+            "args": [], // 需要命令行参数就往里写
             "cwd": "${workspaceRoot}"
         }
     ]

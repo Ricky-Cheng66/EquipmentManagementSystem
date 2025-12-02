@@ -7,7 +7,11 @@
 #IncludeRegexTransform: 
 
 /home/liuliuqiu/EquipmentManagementSystem/test/src/test_heartbeat.cpp
+atomic
+-
 chrono
+-
+csignal
 -
 cstdlib
 -
@@ -15,6 +19,10 @@ ctime
 -
 iostream
 -
+sys/wait.h
+-
 thread
+-
+unistd.h
 -
 

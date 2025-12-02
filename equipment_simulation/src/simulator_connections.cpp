@@ -47,6 +47,9 @@ bool SimulatorConnections::initialize_from_database(const std::string &host,
     if (register_status != "registered") {
       continue;
     }
+    std::cout << "DEBUG: 开始添加设备 " << equipment_id
+              << " 类型: " << equipment_type << " 位置: " << location
+              << std::endl;
 
     // 添加到设备映射
     bool success =
@@ -55,9 +58,24 @@ bool SimulatorConnections::initialize_from_database(const std::string &host,
     if (success) {
       loaded_count++;
       registered_count++;
+
+      // 验证设备是否添加成功
+      auto it = real_equipments_.find(equipment_id);
+      if (it != real_equipments_.end() && it->second.equipment) {
+        // 为新添加的设备设置默认电源状态
+        it->second.equipment->update_equipment_power_state("off");
+        std::cout << "DEBUG: 设备 " << equipment_id
+                  << " 添加成功，电源状态已设为off" << std::endl;
+      } else {
+        std::cerr << "ERROR: 设备 " << equipment_id
+                  << " 添加后未找到或equipment指针为空" << std::endl;
+      }
+
       std::cout << "加载设备: " << equipment_id << " [" << equipment_type
                 << "] 位置: " << location << " 注册状态: " << register_status
                 << std::endl;
+    } else {
+      std::cerr << "ERROR: 添加设备失败: " << equipment_id << std::endl;
     }
   }
 
@@ -243,12 +261,27 @@ std::shared_ptr<Equipment> SimulatorConnections::get_equipment_by_fd(int fd) {
 
 std::shared_ptr<Equipment>
 SimulatorConnections::get_equipment_by_id(const std::string &equipment_id) {
-  std::shared_lock lock(equipments_rw_lock_);
+  // 使用try_shared_lock避免死锁
+  std::unique_lock<std::shared_mutex> lock(equipments_rw_lock_,
+                                           std::try_to_lock);
+
+  if (!lock.owns_lock()) {
+    // 获取锁失败，返回空指针
+    std::cerr << "警告: 无法获取equipments_rw_lock_读取锁" << std::endl;
+    return nullptr;
+  }
 
   auto it = real_equipments_.find(equipment_id);
   if (it != real_equipments_.end()) {
-    return it->second.equipment;
+    // 检查shared_ptr是否有效
+    auto equipment = it->second.equipment;
+    if (!equipment) {
+      std::cerr << "警告: 设备 " << equipment_id << " 的shared_ptr为空"
+                << std::endl;
+    }
+    return equipment;
   }
+
   return nullptr;
 }
 
@@ -389,10 +422,15 @@ void SimulatorConnections::print_connections() const {
   std::cout << "活跃连接数: " << fd_to_equipment_.size() << std::endl;
 
   for (const auto &[fd, equipment] : fd_to_equipment_) {
+    std::string power_state = equipment->get_power_state();
+    if (power_state.empty()) {
+      power_state = "off"; // 默认值
+    }
+
     std::cout << "fd=" << fd << " -> " << equipment->get_equipment_id() << " ["
               << equipment->get_equipment_type() << "]"
               << " 状态: " << equipment->get_status()
-              << " 电源: " << equipment->get_power_state() << std::endl;
+              << " 电源: " << power_state << std::endl;
   }
   std::cout << "===================" << std::endl;
 }
@@ -432,17 +470,39 @@ bool SimulatorConnections::add_real_equipment(
     const std::string &equipment_type, const std::string &location,
     const std::string &register_status, const std::string &manufacturer,
     const std::string &model) {
-  // 创建设备对象
-  auto equipment =
-      std::make_shared<Equipment>(equipment_id, equipment_type, location);
+  // 检查设备是否已存在
+  auto it = real_equipments_.find(equipment_id);
+  if (it != real_equipments_.end()) {
+    std::cout << "设备已存在: " << equipment_id << std::endl;
+    return false;
+  }
 
-  // 设置设备信息
-  EquipmentInfo info;
-  info.equipment = equipment;
-  info.register_status = register_status;
-  info.manufacturer = manufacturer;
-  info.model = model;
+  try {
+    // 创建设备对象，初始状态为离线，电源关闭
+    auto equipment =
+        std::make_shared<Equipment>(equipment_id, equipment_type, location,
+                                    "offline", // 初始状态
+                                    "off"      // 初始电源状态
+        );
 
-  real_equipments_[equipment_id] = info;
-  return true;
+    // 设置设备信息
+    EquipmentInfo info;
+    info.equipment = equipment;
+    info.register_status = register_status;
+    info.manufacturer = manufacturer;
+    info.model = model;
+
+    // 添加到映射
+    real_equipments_[equipment_id] = info;
+
+    std::cout << "成功添加设备: " << equipment_id << " 类型: " << equipment_type
+              << " 位置: " << location << std::endl;
+
+    return true;
+
+  } catch (const std::exception &e) {
+    std::cerr << "创建设备对象失败 (" << equipment_id << "): " << e.what()
+              << std::endl;
+    return false;
+  }
 }
