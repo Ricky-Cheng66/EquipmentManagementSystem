@@ -1,0 +1,7 @@
+qt_client/EquipmentManagementClient/build/
+qt_client/EquipmentManagementClient/*.user
+qt_client/EquipmentManagementClient/CMakeLists.txt.user*
+build/
+cmake-build*/
+*.user
+CMakeLists.txt.user*
