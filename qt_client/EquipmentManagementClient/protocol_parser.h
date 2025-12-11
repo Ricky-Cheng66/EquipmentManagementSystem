@@ -34,7 +34,11 @@ public:
     // 预约系统
     RESERVATION_APPLY = 14,
     RESERVATION_QUERY = 15,
-    RESERVATION_APPROVE = 16
+    RESERVATION_APPROVE = 16,
+
+    // ===== Qt客户端专用消息 =====
+    QT_CLIENT_LOGIN = 100,      // Qt客户端 -> 服务器：登录请求
+    QT_LOGIN_RESPONSE = 101   // 服务器 -> Qt客户端：登录响应
   };
 
   // ============ 控制命令类型枚举 ============
@@ -59,6 +63,11 @@ public:
   static ParseResult parse_message(const std::string &data);
   static std::vector<std::string> split_string(const std::string &str,
                                                char delimiter);
+
+  // Qt客户端登录相关
+  static std::vector<char> buildQtLoginMessage(const std::string& username, const std::string& password);
+  static std::vector<char> buildQtLoginResponseMessage(bool success, const std::string& message = "");
+
 
   // ============ 设备上线相关消息构建 ============
   static std::vector<char>

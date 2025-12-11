@@ -20,6 +20,10 @@ set(PROJECT_SOURCES
         mainwindow.ui
 )
 
+set(FORMS
+    logindialog.ui
+)
+
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(EquipmentManagementClient
         MANUAL_FINALIZATION
@@ -27,7 +31,8 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         message_buffer.cpp message_buffer.h protocol_parser.cpp protocol_parser.h
         tcpclient.h tcpclient.cpp
         messagedispatcher.h messagedispatcher.cpp
-        logindialog.h logindialog.cpp logindialog.ui
+        logindialog.h logindialog.cpp
+        ${FORMS}
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET EquipmentManagementClient APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
@@ -49,7 +54,10 @@ endif()
 
 target_link_libraries(EquipmentManagementClient PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
                         Qt6::Network)
-
+# 让源码能找到构建目录里生成的 ui_*.h
+target_include_directories(EquipmentManagementClient PRIVATE
+                        ${CMAKE_CURRENT_BINARY_DIR}/EquipmentManagementClient_autogen/include
+)
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.

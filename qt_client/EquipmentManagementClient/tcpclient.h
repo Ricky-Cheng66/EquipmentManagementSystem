@@ -6,7 +6,6 @@
 #include <QHostAddress>
 #include "protocol_parser.h"
 #include "message_buffer.h"
-
 class TcpClient : public QObject
 {
     Q_OBJECT
