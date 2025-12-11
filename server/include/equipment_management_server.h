@@ -43,6 +43,10 @@ private:
   // 消息处理
   void process_single_message(int fd, const std::string &message);
 
+  // 处理Qt客户端登录
+  void handleQtClientLogin(int fd, const std::string &equipment_id,
+                           const std::string &payload);
+
   // 具体消息类型处理
   void update_equipment_status_and_db(const std::string &equipment_id,
                                       const std::string &status,

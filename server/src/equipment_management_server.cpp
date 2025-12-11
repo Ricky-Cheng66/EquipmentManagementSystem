@@ -290,9 +290,67 @@ void EquipmentManagementServer::process_single_message(
     handle_reservation_approve(fd, parse_result.equipment_id,
                                parse_result.payload);
     break;
+  case ProtocolParser::QT_CLIENT_LOGIN:
+    handleQtClientLogin(fd, parse_result.equipment_id, parse_result.payload);
+    break;
   default:
     std::cout << "未知消息类型: " << parse_result.type << " from fd=" << fd
               << std::endl;
+  }
+}
+
+// 处理Qt客户端登录
+void EquipmentManagementServer::handleQtClientLogin(
+    int fd, const std::string &equipment_id, const std::string &payload) {
+  std::cout << "处理Qt客户端登录请求，fd: " << fd << std::endl;
+
+  // 1. 解析payload，格式应为: "username|password"
+  auto parts = ProtocolParser::split_string(payload, '|');
+  if (parts.size() < 2) {
+    std::cout << "登录请求格式错误" << std::endl;
+    std::vector<char> response =
+        ProtocolParser::buildQtLoginResponseMessage(false, "请求格式错误");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  std::string username = parts[0];
+  std::string password = parts[1];
+
+  // 2. 验证用户名和密码（此处为简化版硬编码验证，后续可替换为数据库查询）
+  bool authSuccess = false;
+  std::string role = "user"; // 默认角色，用于后续权限扩展
+
+  // 【注意】此处仅为示例！正式使用时应从数据库验证
+  if (username == "admin" && password == "admin123") {
+    authSuccess = true;
+    role = "admin";
+    std::cout << "管理员登录成功: " << username << std::endl;
+  } else if (username == "user1" && password == "123456") {
+    authSuccess = true;
+    std::cout << "普通用户登录成功: " << username << std::endl;
+  }
+  // TODO: 连接数据库进行真实验证
+  // 示例SQL查询: SELECT password, role FROM users WHERE username = ?
+
+  // 3. 构建并发送响应
+  if (authSuccess) {
+    // 成功响应可附加角色信息，格式: “success|角色|用户名”
+    std::string successPayload = "success|" + role + "|" + username;
+    std::vector<char> response =
+        ProtocolParser::buildQtLoginResponseMessage(true, successPayload);
+    send(fd, response.data(), response.size(), 0);
+
+    // 【可选】将此连接标记为“已认证的Qt客户端”
+    // 例如：connections_manager_->markConnectionAsAuthenticated(fd, username,
+    // role);
+    std::cout << "已发送登录成功响应给fd: " << fd << std::endl;
+  } else {
+    // 失败响应
+    std::vector<char> response =
+        ProtocolParser::buildQtLoginResponseMessage(false, "用户名或密码错误");
+    send(fd, response.data(), response.size(), 0);
+    std::cout << "登录验证失败，用户名: " << username << std::endl;
   }
 }
 

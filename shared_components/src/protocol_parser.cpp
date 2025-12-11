@@ -109,6 +109,21 @@ std::vector<char> ProtocolParser::build_online_response(bool success) {
   return pack_message(body);
 }
 
+// ============ 登录消息实现 ============
+
+std::vector<char>
+ProtocolParser::buildQtLoginResponseMessage(bool success,
+                                            const std::string &message) {
+  std::vector<std::string> fields;
+  fields.push_back(success ? "success" : "fail");
+  if (!message.empty()) {
+    fields.push_back(message);
+  }
+  // 注意：这里设备ID为空字符串，使用专门的消息构建函数
+  std::string body = build_message_body(QT_LOGIN_RESPONSE, "", fields);
+  return pack_message(body);
+}
+
 // ============ 状态相关消息实现 ============
 
 std::vector<char> ProtocolParser::build_status_update_message(

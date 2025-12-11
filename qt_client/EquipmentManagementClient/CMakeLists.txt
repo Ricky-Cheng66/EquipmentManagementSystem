@@ -27,6 +27,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         message_buffer.cpp message_buffer.h protocol_parser.cpp protocol_parser.h
         tcpclient.h tcpclient.cpp
         messagedispatcher.h messagedispatcher.cpp
+        logindialog.h logindialog.cpp logindialog.ui
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET EquipmentManagementClient APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
