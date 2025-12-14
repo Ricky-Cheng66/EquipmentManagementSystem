@@ -33,6 +33,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         messagedispatcher.h messagedispatcher.cpp
         logindialog.h logindialog.cpp
         ${FORMS}
+        equipmentmanagerwidget.h equipmentmanagerwidget.cpp equipmentmanagerwidget.ui
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET EquipmentManagementClient APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
