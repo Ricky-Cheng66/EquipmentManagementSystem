@@ -1,13 +1,13 @@
 #include "equipmentmanagerwidget.h"
-#include "equipmentmanagerwidget.ui"
+#include "ui_equipmentmanagerwidget.h"
 #include "tcpclient.h"
 #include "messagedispatcher.h"
 #include "protocol_parser.h"
 #include <QMessageBox>
 #include <QDebug>
 
-EquipmentManagerWidget::EquipmentManagerWidget(TcpClient* tcpClient, MessageDispatcher* dispatcher, QObject *parent) :
-    QWidget(nullptr), // 注意：父对象需要是QWidget*，这里先设为nullptr，在MainWindow中设置
+EquipmentManagerWidget::EquipmentManagerWidget(TcpClient* tcpClient, MessageDispatcher* dispatcher, QWidget *parent) :
+    QWidget(parent), // 注意：父对象需要是QWidget*，这里先设为nullptr，在MainWindow中设置
     ui(new Ui::EquipmentManagerWidget),
     m_tcpClient(tcpClient),
     m_dispatcher(dispatcher),
@@ -64,7 +64,7 @@ EquipmentManagerWidget::~EquipmentManagerWidget()
 
 void EquipmentManagerWidget::setupTableView() {
     // 设置表格模型和表头
-    m_equipmentModel->setHorizontalHeaderLabels({“设备ID”, “类型”, “位置”, “状态”, “电源”, “最后更新”});
+    m_equipmentModel->setHorizontalHeaderLabels({"设备ID", "类型", "位置", "状态", "电源", "最后更新"});
     ui->equipmentTableView->setModel(m_equipmentModel);
     ui->equipmentTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->equipmentTableView->horizontalHeader()->setStretchLastSection(true); // 最后一列填充
@@ -74,12 +74,12 @@ void EquipmentManagerWidget::setupTableView() {
 void EquipmentManagerWidget::requestEquipmentList() {
     // TODO: 发送设备列表查询请求到服务端
     // 协议类型需要先在 protocol_parser.h 中定义，例如 QT_EQUIPMENT_LIST_QUERY = 101
-    // 示例: m_tcpClient->sendProtocolMessage(ProtocolParser::QT_EQUIPMENT_LIST_QUERY, “”);
-    qDebug() << “请求设备列表...”;
+    // 示例: m_tcpClient->sendProtocolMessage(ProtocolParser::QT_EQUIPMENT_LIST_QUERY, "");
+    qDebug() << "请求设备列表...";
     // --- 临时：添加模拟数据用于测试UI ---
     QList<QStandardItem*> row;
-    row << new QStandardItem(“projector_101”) << new QStandardItem(“投影仪”) << new QStandardItem(“101教室”)
-        << new QStandardItem(“online”) << new QStandardItem(“off”) << new QStandardItem(“-”);
+    row << new QStandardItem("projector_101") << new QStandardItem("投影仪") << new QStandardItem("101教室")
+        << new QStandardItem("online") << new QStandardItem("off") << new QStandardItem("-");
     m_equipmentModel->appendRow(row);
     // --- 模拟结束 ---
 }
@@ -103,12 +103,12 @@ void EquipmentManagerWidget::sendControlCommand(const QString& equipmentId, Prot
         // 使用你已经实现的通用控制命令发送接口
         // 参数可能需要根据你的具体协议调整
         bool sent = m_tcpClient->sendProtocolMessage(ProtocolParser::QT_CONTROL_REQUEST,
-                                                     equipmentId.toStdString(),
-                                                     std::to_string(static_cast<int>(command)));
+                                                     equipmentId,
+                                                     QString::number(static_cast<int>(command)));
         if (sent) {
-            qDebug() << “已发送控制命令:” << equipmentId << “, 类型:” << static_cast<int>(command);
+            qDebug() << "已发送控制命令:" << equipmentId << ", 类型:" << static_cast<int>(command);
         } else {
-            QMessageBox::warning(this, “发送失败”, “控制命令发送失败，请检查网络连接。”);
+            QMessageBox::warning(this, "发送失败", "控制命令发送失败，请检查网络连接。");
         }
     }
 }
@@ -117,19 +117,25 @@ void EquipmentManagerWidget::updateControlButtonsState(bool hasSelection) {
     ui->turnOffButton->setEnabled(hasSelection);
 }
 void EquipmentManagerWidget::handleEquipmentStatusUpdate(const ProtocolParser::ParseResult& result) {
-    // 解析 result.payload (格式例如: “online|on|45”)
-    // 更新表格中对应 equipmentId 的“状态”、“电源”和“最后更新”列
-    qDebug() << “收到状态更新:” << QString::fromStdString(result.equipment_id) << QString::fromStdString(result.payload);
+    // 解析 result.payload (格式例如: "online|on|45")
+    // 更新表格中对应 equipmentId 的"状态"、"电源"和"最后更新"列
+    qDebug() << "收到状态更新:" << QString::fromStdString(result.equipment_id) << QString::fromStdString(result.payload);
     // 具体更新逻辑需你根据 payload 格式实现
 }
 void EquipmentManagerWidget::handleControlResponse(const ProtocolParser::ParseResult& result) {
     // 解析控制命令执行结果，更新UI或给出提示
-    qDebug() << “收到控制响应:” << QString::fromStdString(result.equipment_id) << QString::fromStdString(result.payload);
-    bool success = (result.payload.find(“success”) != std::string::npos);
-    QString message = QString(“设备 [%1] 控制命令执行%2.”)
+    qDebug() << "收到控制响应:" << QString::fromStdString(result.equipment_id) << QString::fromStdString(result.payload);
+    bool success = (result.payload.find("success") != std::string::npos);
+    QString message = QString("设备 [%1] 控制命令执行%2.")
                           .arg(QString::fromStdString(result.equipment_id))
-                          .arg(success ? “成功” : “失败”);
+                          .arg(success ? "成功" : "失败");
     // 可以更新状态栏或弹窗提示
     emit showStatusMessage(message);
 }
 // handleEquipmentListResponse 函数留待协议定义后实现
+void EquipmentManagerWidget::handleEquipmentListResponse(const ProtocolParser::ParseResult &result)
+{
+    // 解析设备列表结果，更新表格
+    qDebug() << "收到设备列表:" << QString::fromStdString(result.payload);
+    // TODO：按你的协议格式解析并填充 m_equipmentModel
+}

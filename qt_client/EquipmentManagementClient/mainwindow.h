@@ -2,10 +2,14 @@
 #define MAINWINDOW_H
 #pragma once
 #include <QMainWindow>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QFormLayout>
 #include "protocol_parser.h"
 #include "message_buffer.h"
 #include "tcpclient.h"
 #include "messagedispatcher.h"
+#include "equipmentmanagerwidget.h"
 #include "logindialog.h"
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -40,6 +44,7 @@ private:
     TcpClient* m_tcpClient; // 声明TCP客户端指针
     MessageDispatcher* m_dispatcher;
     LoginDialog* m_loginDialog;
+    EquipmentManagerWidget* m_equipmentManagerWidget;
 
     bool m_isLoggedIn; // 登录状态标志
     QString m_currentUsername;
@@ -48,4 +53,5 @@ private:
     void setupConnection(); // 连接信号槽
     void enableMainUI(bool enable); // 根据登录状态启用/禁用主UI
 };
+
 #endif // MAINWINDOW_H

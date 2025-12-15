@@ -10,12 +10,48 @@ MainWindow::MainWindow(QWidget *parent)
     , m_loginDialog(nullptr)
     , m_isLoggedIn(false)
     , m_currentUsername("")
+    , m_equipmentManagerWidget(nullptr)
 {
     ui->setupUi(this);
     setWindowTitle("设备管理系统 - 未连接");
 
-    // 初始化UI状态
-    enableMainUI(false);
+    // --- 新增：为centralWidget创建垂直布局 ---
+    // 1. 创建一个垂直布局
+    QVBoxLayout* mainLayout = new QVBoxLayout(ui->centralwidget);
+
+    // 2. 创建一个容器Widget来放置原来的测试控件，保持它们的位置
+    QWidget* testControlsWidget = new QWidget(this);
+    // 将原来的测试控件重新设置父对象到这个容器中
+    // 注意：需要逐个设置，因为ui文件中的控件父对象原本就是centralWidget
+
+    // 创建一个表单布局用于放置连接相关的控件
+    QFormLayout* connectionLayout = new QFormLayout();
+    connectionLayout->addRow("主机:", ui->hostLineEdit);
+    connectionLayout->addRow("端口:", ui->portSpinBox);
+
+    // 创建一个水平布局用于放置连接按钮和测试按钮
+    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(ui->connectButton);
+    buttonLayout->addWidget(ui->sendHeartbeatButton);
+    buttonLayout->addStretch(); // 添加弹性空间
+
+    // 将表单布局和按钮布局添加到测试控件容器中
+    QVBoxLayout* testWidgetLayout = new QVBoxLayout(testControlsWidget);
+    testWidgetLayout->addLayout(connectionLayout);
+    testWidgetLayout->addLayout(buttonLayout);
+    testWidgetLayout->addWidget(ui->logTextEdit); // 日志框在下方
+
+    // 3. 创建设备管理界面
+    m_equipmentManagerWidget = new EquipmentManagerWidget(m_tcpClient, m_dispatcher, this);
+    m_equipmentManagerWidget->setVisible(false); // 登录前隐藏
+
+    // 4. 将测试控件区域和设备管理界面添加到主布局中
+    mainLayout->addWidget(testControlsWidget);
+    mainLayout->addWidget(m_equipmentManagerWidget);
+
+    // 设置布局比例，让设备管理界面占据更多空间
+    mainLayout->setStretch(0, 1); // 测试控件区域占1份
+    mainLayout->setStretch(1, 3); // 设备管理界面占3份
 
     // 修改按钮文本和连接
     ui->connectButton->setText("登录");
@@ -242,13 +278,7 @@ void MainWindow::setupConnection()
     });
 }
 
-void MainWindow::enableMainUI(bool enable)
-{
-    // 这里可以启用/禁用主功能区的控件
-    // 例如：设备列表、控制面板等（后续阶段添加）
-    ui->sendHeartbeatButton->setEnabled(enable);
-    // 后续添加: ui->deviceTableWidget->setEnabled(enable);
-}
+
 
 // 新增：心跳响应的具体处理函数
 void MainWindow::handleHeartbeatResponse(const ProtocolParser::ParseResult &result)
@@ -256,4 +286,20 @@ void MainWindow::handleHeartbeatResponse(const ProtocolParser::ParseResult &resu
     QString msg = QString("[业务处理] 心跳响应来自设备: %1").arg(QString::fromStdString(result.equipment_id));
     logMessage(msg);
     // 这里可以更新UI状态，比如让某个设备图标闪烁表示在线
+}
+
+void MainWindow::enableMainUI(bool enable)
+{
+    // 控制设备管理界面的显示
+    if (m_equipmentManagerWidget) {
+        m_equipmentManagerWidget->setVisible(enable);
+        if (enable) {
+            // 登录成功后，主动请求一次设备列表
+            m_equipmentManagerWidget->requestEquipmentList();
+            // 可以选择隐藏测试控件区域，释放空间
+            // ui->centralWidget->findChild<QWidget*>("testControlsWidget")->setVisible(false);
+        }
+    }
+    // 禁用测试按钮
+    ui->sendHeartbeatButton->setEnabled(false);
 }

@@ -3,12 +3,10 @@
 
 #include <QWidget>
 #include <QStandardItemModel>
+#include "protocol_parser.h"
 
 // 前向声明
-namespace ProtocolParser {
-struct ParseResult;
-enum class ControlCommandType : int;
-}
+class ProtocolParser;
 class TcpClient;
 class MessageDispatcher;
 
@@ -21,11 +19,14 @@ class EquipmentManagerWidget : public QWidget
     Q_OBJECT
 
 public:
-    explicit EquipmentManagerWidget(TcpClient* tcpClient, MessageDispatcher* dispatcher, QObject *parent = nullptr);
+    explicit EquipmentManagerWidget(TcpClient* tcpClient, MessageDispatcher* dispatcher, QWidget *parent = nullptr);
     ~EquipmentManagerWidget();
 
     // 提供给外部调用的刷新接口
     void requestEquipmentList();
+
+signals:
+    void showStatusMessage(const QString &msg);
 
 private slots:
     void on_refreshButton_clicked();
