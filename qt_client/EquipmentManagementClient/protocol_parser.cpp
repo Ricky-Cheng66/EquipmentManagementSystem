@@ -39,10 +39,8 @@ ProtocolParser::parse_message(const std::string &data) {
 
   // 解析消息类型
   int type_num = std::stoi(parts[0]);
-  if (type_num < 1 || type_num > 16) {
-      if ((type_num != 100) && (type_num != 101)) {
-          return result;
-      }
+  if (type_num < 1 || type_num > 103) {
+      return result;
   }
   result.type = static_cast<MessageType>(type_num);
 
@@ -62,8 +60,6 @@ ProtocolParser::parse_message(const std::string &data) {
   return result;
 }
 
-
-
 std::vector<std::string> ProtocolParser::split_string(const std::string &str,
                                                       char delimiter) {
   std::vector<std::string> tokens;
@@ -81,21 +77,31 @@ std::vector<std::string> ProtocolParser::split_string(const std::string &str,
 }
 
 // Qt客户端登录消息 (格式: 100|qt_client|username|password)
-std::vector<char> ProtocolParser::buildQtLoginMessage(const std::string& username, const std::string& password) {
-    std::string body = std::to_string(static_cast<int>(QT_CLIENT_LOGIN)) + "|" +
-                       "qt_client" + "|" +  // 固定设备ID，标识为Qt客户端
-                       username + "|" + password;
-    return pack_message(body);
+std::vector<char>
+ProtocolParser::buildQtLoginMessage(const std::string &username,
+                                    const std::string &password) {
+  std::string body = std::to_string(static_cast<int>(QT_CLIENT_LOGIN)) + "|" +
+                     "qt_client" + "|" + // 固定设备ID，标识为Qt客户端
+                     username + "|" + password;
+  return pack_message(body);
 }
 
 // Qt客户端登录响应 (格式: 101||success/fail|message)
-std::vector<char> ProtocolParser::buildQtLoginResponseMessage(bool success, const std::string& message) {
-    std::vector<std::string> fields;
-    fields.push_back(success ? "success" : "fail");
-    if (!message.empty()) {
-        fields.push_back(message);
-    }
-    std::string body = build_message_body(QT_LOGIN_RESPONSE, "", fields);
+std::vector<char>
+ProtocolParser::buildQtLoginResponseMessage(bool success,
+                                            const std::string &message) {
+  std::vector<std::string> fields;
+  fields.push_back(success ? "success" : "fail");
+  if (!message.empty()) {
+    fields.push_back(message);
+  }
+  std::string body = build_message_body(QT_LOGIN_RESPONSE, "", fields);
+  return pack_message(body);
+}
+
+std::vector<char> ProtocolParser::buildQtEquipmentListQuery() {
+    // 格式：102|| （类型|设备ID|payload，后两者为空）
+    std::string body = std::to_string(static_cast<int>(QT_EQUIPMENT_LIST_QUERY)) + "||";
     return pack_message(body);
 }
 

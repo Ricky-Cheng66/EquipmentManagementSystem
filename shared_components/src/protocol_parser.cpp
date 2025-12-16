@@ -39,10 +39,8 @@ ProtocolParser::parse_message(const std::string &data) {
 
   // 解析消息类型
   int type_num = std::stoi(parts[0]);
-  if (type_num < 1 || type_num > 16) {
-    if ((type_num != 100) && (type_num != 101)) {
-      return result;
-    }
+  if (type_num < 1 || type_num > 103) {
+    return result;
   }
   result.type = static_cast<MessageType>(type_num);
 

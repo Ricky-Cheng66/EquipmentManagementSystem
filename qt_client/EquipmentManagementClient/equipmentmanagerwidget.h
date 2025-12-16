@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QStandardItemModel>
+#include <QItemSelection>
 #include "protocol_parser.h"
 
 // 前向声明
@@ -46,10 +47,12 @@ private:
     QStandardItemModel* m_equipmentModel;
     QString m_currentSelectedEquipmentId; // 当前在表格中选中的设备ID
 
+    void logMessage(const QString &msg);
     void setupTableView();
     void sendControlCommand(const QString& equipmentId, ProtocolParser::ControlCommandType command);
     void updateControlButtonsState(bool hasSelection);
     void updateEquipmentItem(const QString& equipmentId, int statusCol, const QString& status, int powerCol, const QString& powerState);
+    void onSelectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
 };
 
 #endif // EQUIPMENTMANAGERWIDGET_H

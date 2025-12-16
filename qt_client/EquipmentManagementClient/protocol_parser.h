@@ -38,7 +38,9 @@ public:
 
     // ===== Qt客户端专用消息 =====
     QT_CLIENT_LOGIN = 100,      // Qt客户端 -> 服务器：登录请求
-    QT_LOGIN_RESPONSE = 101   // 服务器 -> Qt客户端：登录响应
+    QT_LOGIN_RESPONSE = 101,   // 服务器 -> Qt客户端：登录响应
+    QT_EQUIPMENT_LIST_QUERY = 102,   // Qt客户端 -> 服务器：查询设备列表
+    QT_EQUIPMENT_LIST_RESPONSE = 103 // 服务器 -> Qt客户端：返回设备列表
   };
 
   // ============ 控制命令类型枚举 ============
@@ -67,7 +69,7 @@ public:
   // Qt客户端登录相关
   static std::vector<char> buildQtLoginMessage(const std::string& username, const std::string& password);
   static std::vector<char> buildQtLoginResponseMessage(bool success, const std::string& message = "");
-
+  static std::vector<char> buildQtEquipmentListQuery();
 
   // ============ 设备上线相关消息构建 ============
   static std::vector<char>

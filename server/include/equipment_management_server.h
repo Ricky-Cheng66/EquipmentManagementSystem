@@ -47,6 +47,8 @@ private:
   void handleQtClientLogin(int fd, const std::string &equipment_id,
                            const std::string &payload);
 
+  void handleQtEquipmentListQuery(int fd);
+
   // 具体消息类型处理
   void update_equipment_status_and_db(const std::string &equipment_id,
                                       const std::string &status,

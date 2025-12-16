@@ -4,6 +4,7 @@
 #include <memory>
 #include <netinet/in.h>
 #include <optional>
+#include <sstream>
 #include <string.h>
 #include <string_view>
 #include <sys/epoll.h>
@@ -293,6 +294,9 @@ void EquipmentManagementServer::process_single_message(
   case ProtocolParser::QT_CLIENT_LOGIN:
     handleQtClientLogin(fd, parse_result.equipment_id, parse_result.payload);
     break;
+  case ProtocolParser::QT_EQUIPMENT_LIST_QUERY:
+    handleQtEquipmentListQuery(fd);
+    break;
   default:
     std::cout << "未知消息类型: " << parse_result.type << " from fd=" << fd
               << std::endl;
@@ -302,6 +306,18 @@ void EquipmentManagementServer::process_single_message(
 // 处理Qt客户端登录
 void EquipmentManagementServer::handleQtClientLogin(
     int fd, const std::string &equipment_id, const std::string &payload) {
+
+  // 检查是否已经登录过
+  auto equipment = connections_manager_->get_equipment_by_fd(fd);
+  if (equipment) {
+    std::cout << "该连接已经登录过，跳过重复登录请求，fd: " << fd << std::endl;
+    // 可以返回一个成功响应，避免客户端重试
+    std::vector<char> response =
+        ProtocolParser::buildQtLoginResponseMessage(true, "already_logged_in");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
   std::cout << "处理Qt客户端登录请求，fd: " << fd << std::endl;
 
   // 1. 解析payload，格式应为: "username|password"
@@ -352,6 +368,37 @@ void EquipmentManagementServer::handleQtClientLogin(
     send(fd, response.data(), response.size(), 0);
     std::cout << "登录验证失败，用户名: " << username << std::endl;
   }
+}
+
+void EquipmentManagementServer::handleQtEquipmentListQuery(int fd) {
+  std::cout << "处理设备列表查询请求,fd: " << fd << std::endl;
+
+  // 1. 从设备管理器获取所有设备
+  auto all_equipments = equipment_manager_->get_all_equipments();
+
+  // 2. 构建响应字符串 (格式: "id|type|location|status|power;...")
+  std::stringstream payload_stream;
+  for (size_t i = 0; i < all_equipments.size(); ++i) {
+    auto equip = all_equipments[i];
+    if (i > 0)
+      payload_stream << ";";
+    payload_stream << equip->get_equipment_id() << "|"
+                   << equip->get_equipment_type() << "|"
+                   << equip->get_location() << "|" << equip->get_status() << "|"
+                   << equip->get_power_state();
+  }
+
+  // 3. 构建并发送协议响应消息
+  std::string payload = payload_stream.str();
+  std::vector<char> response = ProtocolParser::pack_message(
+      std::to_string(
+          static_cast<int>(ProtocolParser::QT_EQUIPMENT_LIST_RESPONSE)) +
+      "||" + payload // 注意：设备ID字段留空，payload在第三个字段
+  );
+
+  send(fd, response.data(), response.size(), 0);
+  std::cout << "已发送设备列表响应，包含 " << all_equipments.size() << " 个设备"
+            << std::endl;
 }
 
 // 新增：处理设备控制响应
