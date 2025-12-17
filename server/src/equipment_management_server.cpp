@@ -262,7 +262,24 @@ void EquipmentManagementServer::process_single_message(
     std::cout << "协议解析失败: " << message << std::endl;
     return;
   }
+  // 根据客户端类型分流处理
+  switch (parse_result.client_type) {
+  case ProtocolParser::CLIENT_EQUIPMENT:
+    // 设备模拟端的消息处理
+    process_equipment_message(fd, parse_result);
+    break;
+  case ProtocolParser::CLIENT_QT_CLIENT:
+    // Qt客户端的消息处理
+    process_qt_client_message(fd, parse_result);
+    break;
+  default:
+    std::cout << "未知客户端类型: " << parse_result.client_type << std::endl;
+    break;
+  }
+}
 
+void EquipmentManagementServer::process_equipment_message(
+    int fd, const ProtocolParser::ParseResult &parse_result) {
   // 根据消息类型分发处理
   switch (parse_result.type) {
   case ProtocolParser::EQUIPMENT_ONLINE:
@@ -279,6 +296,18 @@ void EquipmentManagementServer::process_single_message(
   case ProtocolParser::HEARTBEAT:
     handle_heartbeat(fd, parse_result.equipment_id);
     break;
+  default:
+    std::cout << "未知消息类型: " << parse_result.type << " from fd=" << fd
+              << std::endl;
+    break;
+  }
+}
+
+void EquipmentManagementServer::process_qt_client_message(
+    int fd, const ProtocolParser::ParseResult &parse_result) {
+  // Qt客户端消息处理逻辑
+  // 根据消息类型分发处理
+  switch (parse_result.type) {
   case ProtocolParser::RESERVATION_APPLY:
     handle_reservation_apply(fd, parse_result.equipment_id,
                              parse_result.payload);
@@ -297,9 +326,12 @@ void EquipmentManagementServer::process_single_message(
   case ProtocolParser::QT_EQUIPMENT_LIST_QUERY:
     handleQtEquipmentListQuery(fd);
     break;
+  case ProtocolParser::QT_CONTROL_REQUEST:
+
   default:
     std::cout << "未知消息类型: " << parse_result.type << " from fd=" << fd
               << std::endl;
+    break;
   }
 }
 

@@ -43,6 +43,13 @@ public:
     QT_EQUIPMENT_LIST_RESPONSE = 103 // 服务器 -> Qt客户端：返回设备列表
   };
 
+  // ============ 客户端类型枚举 ============
+  enum ClientType {
+    CLIENT_UNKNOWN = 0,
+    CLIENT_EQUIPMENT = 1, // 设备模拟端
+    CLIENT_QT_CLIENT = 2  // Qt客户端
+  };
+
   // ============ 控制命令类型枚举 ============
   enum ControlCommandType {
     TURN_ON = 1,
@@ -54,6 +61,7 @@ public:
 
   // ============ 解析结果结构 ============
   struct ParseResult {
+    ClientType client_type;
     MessageType type;
     std::string equipment_id;
     std::string payload;
@@ -68,50 +76,60 @@ public:
 
   // ============ 设备上线相关消息构建 ============
   static std::vector<char>
-  build_online_message(const std::string &equipment_id,
+  build_online_message(ClientType client_type, const std::string &equipment_id,
                        const std::string &location,
                        const std::string &equipment_type);
-  static std::vector<char> build_online_response(bool success);
+  static std::vector<char> build_online_response(ClientType client_type,
+                                                 bool success);
 
   // ============登录消息构建 ============
   static std::vector<char>
-  buildQtLoginResponseMessage(bool success, const std::string &message = "");
+  buildQtLoginResponseMessage(ClientType client_type, bool success,
+                              const std::string &message = "");
 
   // ============ 状态相关消息构建 ============
   static std::vector<char> build_status_update_message(
-      const std::string &equipment_id, const std::string &status,
-      const std::string &power_state, const std::string &more_data = "");
-  static std::vector<char> build_status_query(const std::string &equipment_id);
+      ClientType client_type, const std::string &equipment_id,
+      const std::string &status, const std::string &power_state,
+      const std::string &more_data = "");
+  static std::vector<char> build_status_query(ClientType client_type,
+                                              const std::string &equipment_id);
   static std::vector<char>
-  build_status_response(const std::string &equipment_id,
+  build_status_response(ClientType client_type, const std::string &equipment_id,
                         const std::string &status,
                         const std::string &power_state);
 
   // ============ 控制相关消息构建 ============
   static std::vector<char>
-  build_control_command(const std::string &equipment_id,
+  build_control_command(ClientType client_type, const std::string &equipment_id,
                         ControlCommandType command_type,
                         const std::string &parameters = "");
   static std::vector<char>
-  build_control_response(const std::string &equipment_id, bool success,
+  build_control_response(ClientType client_type,
+                         const std::string &equipment_id, bool success,
                          const std::string &message);
 
   // ============ 心跳相关消息构建 ============
   static std::vector<char>
-  build_heartbeat_message(const std::string &equipment_id);
-  static std::vector<char> build_heartbeat_response();
+  build_heartbeat_message(ClientType client_type,
+                          const std::string &equipment_id);
+  static std::vector<char> build_heartbeat_response(ClientType client_type);
 
   // ============ 预约系统消息构建 ============
   static std::vector<char>
-  build_reservation_response(bool success, const std::string &message);
+  build_reservation_response(ClientType client_type, bool success,
+                             const std::string &message);
   static std::vector<char>
-  build_reservation_query_response(bool success, const std::string &data);
+  build_reservation_query_response(ClientType client_type, bool success,
+                                   const std::string &data);
   static std::vector<char>
-  build_reservation_approve_response(bool success, const std::string &message);
+  build_reservation_approve_response(ClientType client_type, bool success,
+                                     const std::string &message);
 
 private:
   // 工具函数 - 构建基础消息体
   static std::string
-  build_message_body(MessageType type, const std::string &equipment_id,
+  build_message_body(ClientType client_type, MessageType type,
+                     const std::string &equipment_id,
                      const std::vector<std::string> &fields = {});
 };

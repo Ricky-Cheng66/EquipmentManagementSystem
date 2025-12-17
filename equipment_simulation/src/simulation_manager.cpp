@@ -775,7 +775,8 @@ bool SimulationManager::send_online_message(const std::string &equipment_id) {
   }
 
   std::vector<char> message = ProtocolParser::build_online_message(
-      equipment_id, equipment->get_location(), equipment->get_equipment_type());
+      ProtocolParser::CLIENT_EQUIPMENT, equipment_id, equipment->get_location(),
+      equipment->get_equipment_type());
 
   bool success = send_message(fd, message);
   if (success) {

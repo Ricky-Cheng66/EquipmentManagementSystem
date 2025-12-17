@@ -42,6 +42,10 @@ private:
 
   // 消息处理
   void process_single_message(int fd, const std::string &message);
+  void process_equipment_message(int fd,
+                                 const ProtocolParser::ParseResult &result);
+  void process_qt_client_message(int fd,
+                                 const ProtocolParser::ParseResult &result);
 
   // 处理Qt客户端登录
   void handleQtClientLogin(int fd, const std::string &equipment_id,
