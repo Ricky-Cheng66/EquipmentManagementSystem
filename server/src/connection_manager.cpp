@@ -226,7 +226,7 @@ void ConnectionManager::print_connections() const {
 }
 
 bool ConnectionManager::send_control_to_simulator(
-    const std::string &equipment_id,
+    ProtocolParser::ClientType client_type, const std::string &equipment_id,
     ProtocolParser::ControlCommandType command_type,
     const std::string &parameters) {
   std::shared_lock lock(connection_rw_lock_);
@@ -266,7 +266,7 @@ bool ConnectionManager::send_control_to_simulator(
 
   // 构建控制命令
   std::vector<char> control_msg = ProtocolParser::build_control_command(
-      equipment_id, command_type, parameters);
+      client_type, equipment_id, command_type, parameters);
 
   // 发送给设备
   ssize_t bytes_sent =
@@ -294,6 +294,7 @@ bool ConnectionManager::send_control_to_simulator(
 
 // 新增：批量控制命令转发
 bool ConnectionManager::send_batch_control_to_simulator(
+    ProtocolParser::ClientType client_type,
     const std::vector<std::string> &equipment_ids,
     ProtocolParser::ControlCommandType command_type,
     const std::string &parameters) {
@@ -318,7 +319,7 @@ bool ConnectionManager::send_batch_control_to_simulator(
     }
 
     std::vector<char> control_msg = ProtocolParser::build_control_command(
-        equipment_id, command_type, parameters);
+        client_type, equipment_id, command_type, parameters);
 
     ssize_t bytes_sent = send(fd, control_msg.data(), control_msg.size(), 0);
     if (bytes_sent <= 0) {

@@ -321,10 +321,10 @@ void EquipmentManagementServer::process_qt_client_message(
                                parse_result.payload);
     break;
   case ProtocolParser::QT_CLIENT_LOGIN:
-    handleQtClientLogin(fd, parse_result.equipment_id, parse_result.payload);
+    handle_qt_client_login(fd, parse_result.equipment_id, parse_result.payload);
     break;
   case ProtocolParser::QT_EQUIPMENT_LIST_QUERY:
-    handleQtEquipmentListQuery(fd);
+    handle_qt_equipment_List_query(fd);
     break;
   case ProtocolParser::QT_CONTROL_REQUEST:
 
@@ -336,16 +336,17 @@ void EquipmentManagementServer::process_qt_client_message(
 }
 
 // 处理Qt客户端登录
-void EquipmentManagementServer::handleQtClientLogin(
+void EquipmentManagementServer::handle_qt_client_login(
     int fd, const std::string &equipment_id, const std::string &payload) {
 
   // 检查是否已经登录过
   auto equipment = connections_manager_->get_equipment_by_fd(fd);
   if (equipment) {
-    std::cout << "该连接已经登录过，跳过重复登录请求，fd: " << fd << std::endl;
+    std::cout << "该连接已经登录过,跳过重复登录请求,fd: " << fd << std::endl;
     // 可以返回一个成功响应，避免客户端重试
     std::vector<char> response =
-        ProtocolParser::buildQtLoginResponseMessage(true, "already_logged_in");
+        ProtocolParser::build_qt_login_response_message(
+            ProtocolParser::CLIENT_QT_CLIENT, true, "already_logged_in");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -357,7 +358,8 @@ void EquipmentManagementServer::handleQtClientLogin(
   if (parts.size() < 2) {
     std::cout << "登录请求格式错误" << std::endl;
     std::vector<char> response =
-        ProtocolParser::buildQtLoginResponseMessage(false, "请求格式错误");
+        ProtocolParser::build_qt_login_response_message(
+            ProtocolParser::CLIENT_QT_CLIENT, false, "请求格式错误");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -386,7 +388,8 @@ void EquipmentManagementServer::handleQtClientLogin(
     // 成功响应可附加角色信息，格式: “success|角色|用户名”
     std::string successPayload = "success|" + role + "|" + username;
     std::vector<char> response =
-        ProtocolParser::buildQtLoginResponseMessage(true, successPayload);
+        ProtocolParser::build_qt_login_response_message(
+            ProtocolParser::CLIENT_QT_CLIENT, true, successPayload);
     send(fd, response.data(), response.size(), 0);
 
     // 【可选】将此连接标记为“已认证的Qt客户端”
@@ -396,13 +399,14 @@ void EquipmentManagementServer::handleQtClientLogin(
   } else {
     // 失败响应
     std::vector<char> response =
-        ProtocolParser::buildQtLoginResponseMessage(false, "用户名或密码错误");
+        ProtocolParser::build_qt_login_response_message(
+            ProtocolParser::CLIENT_QT_CLIENT, false, "用户名或密码错误");
     send(fd, response.data(), response.size(), 0);
     std::cout << "登录验证失败，用户名: " << username << std::endl;
   }
 }
 
-void EquipmentManagementServer::handleQtEquipmentListQuery(int fd) {
+void EquipmentManagementServer::handle_qt_equipment_List_query(int fd) {
   std::cout << "处理设备列表查询请求,fd: " << fd << std::endl;
 
   // 1. 从设备管理器获取所有设备
@@ -500,7 +504,7 @@ bool EquipmentManagementServer::handle_qt_control_request(
 
   // 通过ConnectionManager转发给设备
   return connections_manager_->send_control_to_simulator(
-      equipment_id, command_type, parameters);
+      ProtocolParser::CLIENT_QT_CLIENT, equipment_id, command_type, parameters);
 }
 
 std::shared_ptr<Equipment> EquipmentManagementServer::handle_qt_status_query(
@@ -568,7 +572,8 @@ void EquipmentManagementServer::handle_equipment_online(
   if (!equipment) {
     std::cout << "设备未注册，拒绝上线: " << equipment_id << std::endl;
     // 发送上线失败响应
-    std::vector<char> response = ProtocolParser::build_online_response(false);
+    std::vector<char> response = ProtocolParser::build_online_response(
+        ProtocolParser::CLIENT_EQUIPMENT, false);
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -602,7 +607,8 @@ void EquipmentManagementServer::handle_equipment_online(
   }
 
   // 发送上线成功响应
-  std::vector<char> response = ProtocolParser::build_online_response(true);
+  std::vector<char> response = ProtocolParser::build_online_response(
+      ProtocolParser::CLIENT_EQUIPMENT, true);
   ssize_t bytes_sent = send(fd, response.data(), response.size(), 0);
 
   if (bytes_sent <= 0) {
@@ -691,12 +697,12 @@ void EquipmentManagementServer::handle_client_control_command(
 
   // 执行控制命令
   bool success = connections_manager_->send_control_to_simulator(
-      equipment_id, command_type, parameters);
+      ProtocolParser::CLIENT_EQUIPMENT, equipment_id, command_type, parameters);
 
   // 发送控制响应
   std::string response_msg = success ? "命令执行成功" : "命令执行失败";
   std::vector<char> response = ProtocolParser::build_control_response(
-      equipment_id, success, response_msg);
+      ProtocolParser::CLIENT_EQUIPMENT, equipment_id, success, response_msg);
 
   send(fd, response.data(), response.size(), 0);
 
@@ -715,7 +721,8 @@ void EquipmentManagementServer::handle_heartbeat(
   connections_manager_->update_heartbeat(fd);
 
   // 发送心跳响应
-  std::vector<char> response = ProtocolParser::build_heartbeat_response();
+  std::vector<char> response = ProtocolParser::build_heartbeat_response(
+      ProtocolParser::CLIENT_EQUIPMENT);
   ssize_t bytes_sent = send(fd, response.data(), response.size(), 0);
 
   if (bytes_sent > 0) {
@@ -900,8 +907,8 @@ void EquipmentManagementServer::handle_reservation_apply(
   auto parts = ProtocolParser::split_string(payload, '|');
   if (parts.size() < 4) {
     std::cout << "预约申请数据格式错误" << std::endl;
-    std::vector<char> response =
-        ProtocolParser::build_reservation_response(false, "数据格式错误");
+    std::vector<char> response = ProtocolParser::build_reservation_response(
+        ProtocolParser::CLIENT_QT_CLIENT, false, "数据格式错误");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -914,8 +921,8 @@ void EquipmentManagementServer::handle_reservation_apply(
   // 验证用户是否存在
   int user_id = std::stoi(user_id_str);
   if (!validate_user_exists(user_id)) {
-    std::vector<char> response =
-        ProtocolParser::build_reservation_response(false, "用户不存在");
+    std::vector<char> response = ProtocolParser::build_reservation_response(
+        ProtocolParser::CLIENT_EQUIPMENT, false, "用户不存在");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -923,16 +930,16 @@ void EquipmentManagementServer::handle_reservation_apply(
   // 检查设备是否存在
   auto equipment = equipment_manager_->get_equipment(equipment_id);
   if (!equipment) {
-    std::vector<char> response =
-        ProtocolParser::build_reservation_response(false, "设备不存在");
+    std::vector<char> response = ProtocolParser::build_reservation_response(
+        ProtocolParser::CLIENT_EQUIPMENT, false, "设备不存在");
     send(fd, response.data(), response.size(), 0);
     return;
   }
 
   // 检查时间冲突
   if (check_reservation_conflict(equipment_id, start_time, end_time)) {
-    std::vector<char> response =
-        ProtocolParser::build_reservation_response(false, "时间冲突");
+    std::vector<char> response = ProtocolParser::build_reservation_response(
+        ProtocolParser::CLIENT_EQUIPMENT, false, "时间冲突");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -943,18 +950,18 @@ void EquipmentManagementServer::handle_reservation_apply(
                                                 start_time, end_time);
     if (success) {
       std::vector<char> response = ProtocolParser::build_reservation_response(
-          true, "预约申请提交成功，等待审批");
+          ProtocolParser::CLIENT_EQUIPMENT, true, "预约申请提交成功，等待审批");
       send(fd, response.data(), response.size(), 0);
       std::cout << "预约申请成功: " << equipment_id << " by user " << user_id
                 << std::endl;
     } else {
-      std::vector<char> response =
-          ProtocolParser::build_reservation_response(false, "数据库错误");
+      std::vector<char> response = ProtocolParser::build_reservation_response(
+          ProtocolParser::CLIENT_EQUIPMENT, false, "数据库错误");
       send(fd, response.data(), response.size(), 0);
     }
   } else {
-    std::vector<char> response =
-        ProtocolParser::build_reservation_response(false, "系统错误");
+    std::vector<char> response = ProtocolParser::build_reservation_response(
+        ProtocolParser::CLIENT_EQUIPMENT, false, "系统错误");
     send(fd, response.data(), response.size(), 0);
   }
 }
@@ -965,8 +972,8 @@ void EquipmentManagementServer::handle_reservation_query(
             << std::endl;
 
   if (!db_manager_->is_connected()) {
-    std::vector<char> response =
-        ProtocolParser::build_reservation_response(false, "数据库连接失败");
+    std::vector<char> response = ProtocolParser::build_reservation_response(
+        ProtocolParser::CLIENT_EQUIPMENT, false, "数据库连接失败");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -996,8 +1003,8 @@ void EquipmentManagementServer::handle_reservation_query(
     }
   }
 
-  std::vector<char> response =
-      ProtocolParser::build_reservation_query_response(true, response_data);
+  std::vector<char> response = ProtocolParser::build_reservation_query_response(
+      ProtocolParser::CLIENT_EQUIPMENT, true, response_data);
   send(fd, response.data(), response.size(), 0);
   std::cout << "返回预约查询结果: " << reservations.size() << " 条记录"
             << std::endl;
@@ -1013,8 +1020,8 @@ void EquipmentManagementServer::handle_reservation_approve(
   if (parts.size() < 2) {
     std::cout << "审批数据格式错误" << std::endl;
     std::vector<char> response =
-        ProtocolParser::build_reservation_approve_response(false,
-                                                           "数据格式错误");
+        ProtocolParser::build_reservation_approve_response(
+            ProtocolParser::CLIENT_EQUIPMENT, false, "数据格式错误");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -1025,7 +1032,8 @@ void EquipmentManagementServer::handle_reservation_approve(
   // 验证管理员权限
   if (!validate_admin_permission(admin_id)) {
     std::vector<char> response =
-        ProtocolParser::build_reservation_approve_response(false, "权限不足");
+        ProtocolParser::build_reservation_approve_response(
+            ProtocolParser::CLIENT_EQUIPMENT, false, "权限不足");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -1036,8 +1044,8 @@ void EquipmentManagementServer::handle_reservation_approve(
   } catch (const std::exception &e) {
     std::cout << "预约ID格式错误: " << reservation_id_str << std::endl;
     std::vector<char> response =
-        ProtocolParser::build_reservation_approve_response(false,
-                                                           "预约ID格式错误");
+        ProtocolParser::build_reservation_approve_response(
+            ProtocolParser::CLIENT_EQUIPMENT, false, "预约ID格式错误");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -1050,7 +1058,8 @@ void EquipmentManagementServer::handle_reservation_approve(
     new_status = "rejected";
   } else {
     std::vector<char> response =
-        ProtocolParser::build_reservation_approve_response(false, "无效操作");
+        ProtocolParser::build_reservation_approve_response(
+            ProtocolParser::CLIENT_EQUIPMENT, false, "无效操作");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -1061,20 +1070,21 @@ void EquipmentManagementServer::handle_reservation_approve(
         db_manager_->update_reservation_status(reservation_id, new_status);
     if (success) {
       std::vector<char> response =
-          ProtocolParser::build_reservation_approve_response(true,
-                                                             "审批操作成功");
+          ProtocolParser::build_reservation_approve_response(
+              ProtocolParser::CLIENT_EQUIPMENT, true, "审批操作成功");
       send(fd, response.data(), response.size(), 0);
       std::cout << "预约审批成功: reservation " << reservation_id << " -> "
                 << new_status << std::endl;
     } else {
       std::vector<char> response =
-          ProtocolParser::build_reservation_approve_response(false,
-                                                             "数据库错误");
+          ProtocolParser::build_reservation_approve_response(
+              ProtocolParser::CLIENT_EQUIPMENT, false, "数据库错误");
       send(fd, response.data(), response.size(), 0);
     }
   } else {
     std::vector<char> response =
-        ProtocolParser::build_reservation_approve_response(false, "系统错误");
+        ProtocolParser::build_reservation_approve_response(
+            ProtocolParser::CLIENT_EQUIPMENT, false, "系统错误");
     send(fd, response.data(), response.size(), 0);
   }
 }
@@ -1109,7 +1119,7 @@ bool EquipmentManagementServer::send_control_command(
     const std::string &parameters) {
 
   return connections_manager_->send_control_to_simulator(
-      equipment_id, command_type, parameters);
+      ProtocolParser::CLIENT_EQUIPMENT, equipment_id, command_type, parameters);
 }
 
 bool EquipmentManagementServer::send_batch_control_command(
@@ -1118,7 +1128,8 @@ bool EquipmentManagementServer::send_batch_control_command(
     const std::string &parameters) {
 
   return connections_manager_->send_batch_control_to_simulator(
-      equipment_ids, command_type, parameters);
+      ProtocolParser::CLIENT_EQUIPMENT, equipment_ids, command_type,
+      parameters);
 }
 
 std::vector<std::string>

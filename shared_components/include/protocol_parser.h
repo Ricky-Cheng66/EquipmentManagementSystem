@@ -73,6 +73,17 @@ public:
   static ParseResult parse_message(const std::string &data);
   static std::vector<std::string> split_string(const std::string &str,
                                                char delimiter);
+  // Qt客户端登录相关
+  static std::vector<char>
+  build_qt_login_message(ProtocolParser::ClientType client_type,
+                         const std::string &username,
+                         const std::string &password);
+  static std::vector<char>
+  build_qt_login_response_message(ProtocolParser::ClientType client_type,
+                                  bool success,
+                                  const std::string &message = "");
+  static std::vector<char>
+  build_qt_equipment_list_query(ProtocolParser::ClientType client_type);
 
   // ============ 设备上线相关消息构建 ============
   static std::vector<char>

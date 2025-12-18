@@ -79,6 +79,41 @@ std::vector<std::string> ProtocolParser::split_string(const std::string &str,
   return tokens;
 }
 
+// ============ qt客户端登录相关 ========
+// Qt客户端登录消息
+std::vector<char>
+ProtocolParser::build_qt_login_message(ProtocolParser::ClientType client_type,
+                                       const std::string &username,
+                                       const std::string &password) {
+  std::string body = std::to_string(client_type) + "|" +
+                     std::to_string(static_cast<int>(QT_CLIENT_LOGIN)) + "|" +
+                     "qt_client" + "|" + // 固定设备ID，标识为Qt客户端
+                     username + "|" + password;
+  return pack_message(body);
+}
+
+// Qt客户端登录响应
+std::vector<char> ProtocolParser::build_qt_login_response_message(
+    ProtocolParser::ClientType client_type, bool success,
+    const std::string &message) {
+  std::vector<std::string> fields;
+  fields.push_back(success ? "success" : "fail");
+  if (!message.empty()) {
+    fields.push_back(message);
+  }
+  std::string body =
+      build_message_body(client_type, QT_LOGIN_RESPONSE, "", fields);
+  return pack_message(body);
+}
+
+std::vector<char> ProtocolParser::build_qt_equipment_list_query(
+    ProtocolParser::ClientType client_type) {
+  std::string body = std::to_string(client_type) + "|" +
+                     std::to_string(static_cast<int>(QT_EQUIPMENT_LIST_QUERY)) +
+                     "||";
+  return pack_message(body);
+}
+
 // ============ 私有工具函数 ============
 
 std::string

@@ -574,8 +574,8 @@ void SimulationManager::send_control_response(int fd,
                                               const std::string &equipment_id,
                                               bool success,
                                               const std::string &message) {
-  std::vector<char> response =
-      ProtocolParser::build_control_response(equipment_id, success, message);
+  std::vector<char> response = ProtocolParser::build_control_response(
+      ProtocolParser::CLIENT_EQUIPMENT, equipment_id, success, message);
 
   if (send_message(fd, response)) {
     std::cout << "控制响应已发送: " << equipment_id
@@ -796,8 +796,8 @@ bool SimulationManager::send_heartbeat_message(
     return false;
   }
 
-  std::vector<char> message =
-      ProtocolParser::build_heartbeat_message(equipment_id);
+  std::vector<char> message = ProtocolParser::build_heartbeat_message(
+      ProtocolParser::CLIENT_EQUIPMENT, equipment_id);
 
   bool success = send_message(fd, message);
   if (success) {
@@ -827,8 +827,8 @@ bool SimulationManager::send_status_update_message(
   }
 
   std::vector<char> message = ProtocolParser::build_status_update_message(
-      equipment_id, equipment->get_status(), equipment->get_power_state(),
-      "simulated_data");
+      ProtocolParser::CLIENT_EQUIPMENT, equipment_id, equipment->get_status(),
+      equipment->get_power_state(), "simulated_data");
 
   bool success = send_message(fd, message);
   if (success) {
@@ -856,7 +856,8 @@ bool SimulationManager::send_status_response(const std::string &equipment_id) {
   }
 
   std::vector<char> message = ProtocolParser::build_status_response(
-      equipment_id, equipment->get_status(), equipment->get_power_state());
+      ProtocolParser::CLIENT_EQUIPMENT, equipment_id, equipment->get_status(),
+      equipment->get_power_state());
 
   bool success = send_message(fd, message);
   if (success) {

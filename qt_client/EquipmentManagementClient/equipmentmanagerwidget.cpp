@@ -84,7 +84,7 @@ void EquipmentManagerWidget::requestEquipmentList() {
     if (m_tcpClient && m_tcpClient->isConnected()) {
         // 发送设备列表查询请求，格式必须为：类型|设备ID|payload
         // 设备ID可以为空，但必须有三部分：102||
-        std::vector<char> message = ProtocolParser::buildQtEquipmentListQuery();
+        std::vector<char> message = ProtocolParser::build_qt_equipment_list_query(ProtocolParser::CLIENT_QT_CLIENT);
         m_tcpClient->sendData(QByteArray(message.data(), message.size()));
         qDebug() << "已发送设备列表查询请求";
     } else {
@@ -127,6 +127,7 @@ void EquipmentManagerWidget::sendControlCommand(const QString& equipmentId, Prot
     // 例如：“10|projector_101|1|” 表示开启 projector_101 设备。
     std::string parameters = ""; // 附加参数，根据协议需要可扩展
     std::vector<char> controlMsg = ProtocolParser::build_control_command(
+        ProtocolParser::CLIENT_QT_CLIENT,
         equipmentId.toStdString(),
         command,
         parameters

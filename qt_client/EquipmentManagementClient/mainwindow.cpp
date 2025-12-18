@@ -146,7 +146,7 @@ void MainWindow::onLoginRequested(const QString &username, const QString &passwo
     }
 
     // 构建登录消息并发送
-    std::vector<char> loginMsg = ProtocolParser::buildQtLoginMessage(username.toStdString(), password.toStdString());
+    std::vector<char> loginMsg = ProtocolParser::build_qt_login_message(ProtocolParser::CLIENT_QT_CLIENT, username.toStdString(), password.toStdString());
     if (m_tcpClient->sendData(QByteArray(loginMsg.data(), loginMsg.size())) > 0) {
         logMessage(QString("登录请求已发送，用户: %1").arg(username));
         if (m_loginDialog) {
@@ -208,7 +208,7 @@ void MainWindow::handleLoginResponse(const ProtocolParser::ParseResult &result)
 void MainWindow::onSendHeartbeatButtonClicked()
 {
     // 发送一个测试心跳，设备ID暂时留空或填写测试ID
-    if(m_tcpClient->sendProtocolMessage(ProtocolParser::HEARTBEAT, "test_device")) {
+    if(m_tcpClient->sendProtocolMessage(ProtocolParser::CLIENT_QT_CLIENT ,ProtocolParser::HEARTBEAT, "test_device")) {
         logMessage("已发送测试心跳消息。");
     } else {
         logMessage("发送心跳失败。");

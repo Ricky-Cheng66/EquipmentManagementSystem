@@ -49,7 +49,7 @@ qint64 TcpClient::sendData(const QByteArray& data)
     return bytesWritten;
 }
 
-bool TcpClient::sendProtocolMessage(ProtocolParser::MessageType type,
+bool TcpClient::sendProtocolMessage(ProtocolParser::ClientType client_type, ProtocolParser::MessageType type,
                                     const QString& equipmentId,
                                     const QString& payload)
 {
@@ -58,7 +58,7 @@ bool TcpClient::sendProtocolMessage(ProtocolParser::MessageType type,
     std::vector<std::string> fields;
     // 根据协议类型构建fields...
     // 这是一个示例，你需要根据实际协议调整
-    std::string body = std::to_string(static_cast<int>(type)) + "|" + equipmentId.toStdString();
+    std::string body = std::to_string(static_cast<int>(client_type)) + "|" + std::to_string(static_cast<int>(type)) + "|" + equipmentId.toStdString();
     if (!payload.isEmpty()) {
         body += "|" + payload.toStdString();
     }

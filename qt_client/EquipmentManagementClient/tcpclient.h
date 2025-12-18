@@ -20,7 +20,8 @@ public:
     // 发送原始数据（已打包的消息）
     qint64 sendData(const QByteArray& data);
     // 发送协议消息（自动打包）
-    bool sendProtocolMessage(ProtocolParser::MessageType type,
+    bool sendProtocolMessage(ProtocolParser::ClientType client_type,
+        ProtocolParser::MessageType message_type,
                              const QString& equipmentId = "",
                              const QString& payload = "");
 

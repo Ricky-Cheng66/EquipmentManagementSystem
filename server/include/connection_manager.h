@@ -35,11 +35,13 @@ public:
 
   // 控制命令转发
   bool
-  send_control_to_simulator(const std::string &equipment_id,
+  send_control_to_simulator(ProtocolParser::ClientType client_type,
+                            const std::string &equipment_id,
                             ProtocolParser::ControlCommandType command_type,
                             const std::string &parameters = "");
 
   bool send_batch_control_to_simulator(
+      ProtocolParser::ClientType client_type,
       const std::vector<std::string> &equipment_ids,
       ProtocolParser::ControlCommandType command_type,
       const std::string &parameters = "");

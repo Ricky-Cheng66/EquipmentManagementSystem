@@ -48,10 +48,10 @@ private:
                                  const ProtocolParser::ParseResult &result);
 
   // 处理Qt客户端登录
-  void handleQtClientLogin(int fd, const std::string &equipment_id,
-                           const std::string &payload);
+  void handle_qt_client_login(int fd, const std::string &equipment_id,
+                              const std::string &payload);
 
-  void handleQtEquipmentListQuery(int fd);
+  void handle_qt_equipment_List_query(int fd);
 
   // 具体消息类型处理
   void update_equipment_status_and_db(const std::string &equipment_id,
