@@ -196,6 +196,11 @@ bool EquipmentManagementServer::process_events(int nfds,
       }
 
     } else if (events & EPOLLIN) {
+      // 在处理前检查连接是否仍然有效
+      if (!connections_manager_->is_connection_alive(event_fd)) {
+        std::cout << "连接已关闭，跳过可读事件: fd=" << event_fd << std::endl;
+        continue;
+      }
       handle_client_data(event_fd);
     } else {
       std::cout << "未处理的事件类型: 0x" << std::hex << events << std::dec
@@ -338,7 +343,12 @@ void EquipmentManagementServer::process_qt_client_message(
 // 处理Qt客户端登录
 void EquipmentManagementServer::handle_qt_client_login(
     int fd, const std::string &equipment_id, const std::string &payload) {
-
+  // 检查连接类型
+  auto client_type = connections_manager_->get_client_type(fd);
+  if (client_type != ProtocolParser::CLIENT_QT_CLIENT) {
+    std::cout << "连接类型错误，拒绝登录请求, fd: " << fd << std::endl;
+    return;
+  }
   // 检查是否已经登录过
   auto equipment = connections_manager_->get_equipment_by_fd(fd);
   if (equipment) {
@@ -427,6 +437,7 @@ void EquipmentManagementServer::handle_qt_equipment_List_query(int fd) {
   // 3. 构建并发送协议响应消息
   std::string payload = payload_stream.str();
   std::vector<char> response = ProtocolParser::pack_message(
+      std::to_string(ProtocolParser::CLIENT_QT_CLIENT) + "|" +
       std::to_string(
           static_cast<int>(ProtocolParser::QT_EQUIPMENT_LIST_RESPONSE)) +
       "||" + payload // 注意：设备ID字段留空，payload在第三个字段
@@ -578,6 +589,12 @@ void EquipmentManagementServer::handle_equipment_online(
     return;
   }
 
+  // 更新连接类型为设备端
+  if (!connections_manager_->update_connection_to_equipment(fd, equipment)) {
+    std::cout << "连接类型更新失败: " << equipment_id << std::endl;
+    return;
+  }
+
   // 设备已注册，添加到连接管理
   connections_manager_->add_connection(fd, equipment);
 
@@ -651,7 +668,7 @@ void EquipmentManagementServer::handle_status_update(
 }
 
 //处理控制指令(从设备端发来的控制响应)
-void EquipmentManagementServer::handle_control_command(
+void EquipmentManagementServer::handle_control_command_response_from_simulator(
     int fd, const std::string &equipment_id, const std::string &payload) {
   std::cout << "处理控制响应: " << equipment_id << " payload: " << payload
             << std::endl;
@@ -669,7 +686,7 @@ void EquipmentManagementServer::handle_control_command(
             << std::endl;
 }
 
-// 处理客户端控制命令
+// 处理qt客户端控制命令
 void EquipmentManagementServer::handle_client_control_command(
     int fd, const std::string &equipment_id, const std::string &payload) {
 
@@ -787,6 +804,10 @@ bool EquipmentManagementServer::accept_new_connection() {
     socklen_t client_len = sizeof(client_addr);
     if (getpeername(client_fd, (struct sockaddr *)&client_addr, &client_len) ==
         0) {
+
+      // 将新连接添加到连接管理器，默认类型为Qt客户端
+      connections_manager_->add_connection(client_fd, nullptr,
+                                           ProtocolParser::CLIENT_QT_CLIENT);
       std::cout << "新客户端连接[" << accepted_count << "]: fd=" << client_fd
                 << ", IP=" << inet_ntoa(client_addr.sin_addr)
                 << ", Port=" << ntohs(client_addr.sin_port) << std::endl;
@@ -795,7 +816,6 @@ bool EquipmentManagementServer::accept_new_connection() {
                 << " (无法获取地址)" << std::endl;
     }
   }
-
   return !has_error; // 有错误返回false，无错误返回true
 }
 
@@ -807,13 +827,20 @@ void EquipmentManagementServer::handle_connection_close(int fd) {
     return;
   }
 
-  // 清理消息缓冲区
-  message_buffers_.erase(fd);
+  // 第一步：立即检查连接是否已存在
+  if (!connections_manager_->is_connection_exist(fd)) {
+    std::cout << "连接已不存在，跳过重复关闭: fd=" << fd << std::endl;
+    return; // 连接已经被清理，直接返回
+  }
 
-  // 检查是否为设备连接
+  // 第二步：获取设备信息（必须在移除连接之前）
   auto equipment = connections_manager_->get_equipment_by_fd(fd);
+  std::string equipment_id;
+
   if (equipment) {
-    std::cout << "设备离线: " << equipment->get_equipment_id() << std::endl;
+    equipment_id = equipment->get_equipment_id();
+    std::cout << "设备离线: " << equipment_id << std::endl;
+
     // 更新设备状态为离线
     equipment_manager_->update_equipment_status(equipment->get_equipment_id(),
                                                 "offline");
@@ -831,23 +858,20 @@ void EquipmentManagementServer::handle_connection_close(int fd) {
       }
     }
   } else {
-    std::cout << "普通客户端连接关闭: fd=" << fd << std::endl;
+    std::cout << "Qt客户端连接关闭: fd=" << fd << std::endl;
   }
 
-  // 从ConnectionManager中移除（如果存在）
-  // 注意：remove_connection会自己检查连接是否存在
-  connections_manager_->remove_connection(fd);
-
+  // 第三步：清理资源（必须按照正确顺序）
+  message_buffers_.erase(fd);
   // 从epoll中移除
   Epoll &ep = Epoll::get_instance();
   if (ep.is_initialized()) {
     ep.delete_epoll(fd);
   }
-
-  // 关闭文件描述符
-  if (fd > 0) {
-    close(fd);
-  }
+  // 从ConnectionManager中移除（如果存在）
+  // 注意：remove_connection会自己检查连接是否存在
+  connections_manager_->remove_connection(fd);
+  std::cout << "remove_connetion success..." << std::endl;
   std::cout << "连接完全清理: fd=" << fd << std::endl;
 }
 

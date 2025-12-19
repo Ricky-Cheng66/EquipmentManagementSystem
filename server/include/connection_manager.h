@@ -9,7 +9,9 @@
 class ConnectionManager {
 public:
   // 连接管理
-  void add_connection(int fd, std::shared_ptr<Equipment> equipment);
+  void add_connection(int fd, std::shared_ptr<Equipment> equipment,
+                      ProtocolParser::ClientType client_type =
+                          ProtocolParser::CLIENT_QT_CLIENT);
   void remove_connection(int fd);
   void close_all_connections();
 
@@ -32,6 +34,7 @@ public:
   //工具函数
   size_t get_connection_count() const;
   void print_connections() const;
+  bool is_connection_exist(int fd) const;
 
   // 控制命令转发
   bool
@@ -46,8 +49,16 @@ public:
       ProtocolParser::ControlCommandType command_type,
       const std::string &parameters = "");
 
+  // 获取连接类型
+  ProtocolParser::ClientType get_client_type(int fd) const;
+
+  // 更新连接类型（主要用于设备上线时从Qt类型转为设备类型）
+  bool update_connection_to_equipment(int fd,
+                                      std::shared_ptr<Equipment> equipment);
+
 private:
   mutable std::shared_mutex connection_rw_lock_;
+  std::unordered_map<int, ProtocolParser::ClientType> client_types_;
   std::unordered_map<int, std::shared_ptr<Equipment>>
       connections_;                                      // fd -> 设备
   std::unordered_map<int, time_t> heartbeat_times_;      // fd -> 心跳时间

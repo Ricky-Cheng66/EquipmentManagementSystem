@@ -164,44 +164,59 @@ void MainWindow::onLoginRequested(const QString &username, const QString &passwo
 
 void MainWindow::handleLoginResponse(const ProtocolParser::ParseResult &result)
 {
-    // 解析响应载荷: "success" 或 "fail|错误信息"
+    // 注意：按照新协议格式，result.payload 只包含"success"及后面的字段
+    // 原始消息格式：客户端类型|消息类型|设备ID|success|用户名|角色
+    // 所以 result.payload = "success|admin|管理员"
+
     QString payload = QString::fromStdString(result.payload);
     QStringList parts = payload.split('|');
 
     bool success = false;
     QString message;
+    QString username;
+    QString role;
 
     if (parts.size() > 0) {
         success = (parts[0] == "success");
-        if (parts.size() > 1) {
-            message = parts[1];
+
+        if (success) {
+            // 成功时格式：success|用户名|角色
+            if (parts.size() > 1) {
+                username = parts[1];
+                m_currentUsername = username;
+            }
+            if (parts.size() > 2) {
+                role = parts[2];
+            }
+
+            m_isLoggedIn = true;
+
+            logMessage(QString("登录成功！欢迎，%1 (%2)").arg(username).arg(role));
+            setWindowTitle(QString("设备管理系统 - 用户: %1").arg(username));
+
+            if (m_loginDialog) {
+                m_loginDialog->accept();
+                m_loginDialog = nullptr;
+            }
+
+            enableMainUI(true);
+            ui->connectButton->setText("注销");
+            ui->sendHeartbeatButton->setEnabled(true);
+
+        } else {
+            // 失败时格式：fail|错误信息
+            if (parts.size() > 1) {
+                message = parts[1];
+            }
+
+            logMessage(QString("登录失败: %1").arg(message));
+            if (m_loginDialog) {
+                m_loginDialog->setStatusMessage(QString("登录失败: %1").arg(message), true);
+                m_loginDialog->setLoginButtonEnabled(true);
+                m_loginDialog->setCancelButtonEnabled(true);
+            }
+            m_isLoggedIn = false;
         }
-    }
-
-    if (success) {
-        m_isLoggedIn = true;
-        m_currentUsername = parts.size() > 2 ? parts[2] : "用户"; // 服务器可返回用户名
-
-        logMessage(QString("登录成功！欢迎，%1").arg(m_currentUsername));
-        setWindowTitle(QString("设备管理系统 - 用户: %1").arg(m_currentUsername));
-
-        if (m_loginDialog) {
-            m_loginDialog->accept(); // 关闭登录对话框
-            m_loginDialog = nullptr;
-        }
-
-        enableMainUI(true);
-        ui->connectButton->setText("注销");
-        ui->sendHeartbeatButton->setEnabled(true);
-
-    } else {
-        logMessage(QString("登录失败: %1").arg(message));
-        if (m_loginDialog) {
-            m_loginDialog->setStatusMessage(QString("登录失败: %1").arg(message), true);
-            m_loginDialog->setLoginButtonEnabled(true);
-            m_loginDialog->setCancelButtonEnabled(true);
-        }
-        m_isLoggedIn = false;
     }
 }
 

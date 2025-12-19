@@ -4,7 +4,8 @@
 #include <unistd.h>
 // 连接管理
 void ConnectionManager::add_connection(int fd,
-                                       std::shared_ptr<Equipment> equipment) {
+                                       std::shared_ptr<Equipment> equipment,
+                                       ProtocolParser::ClientType client_type) {
   std::unique_lock lock(connection_rw_lock_);
   auto it1 = connections_.find(fd);
   if (fd < 0) {
@@ -31,10 +32,9 @@ void ConnectionManager::add_connection(int fd,
       std::cout << "heartbeat_times_ insert failed..." << std::endl;
     }
 
-    auto [it4, inserted4] =
-        equipment_to_fd_.emplace(equipment->get_equipment_id(), fd);
+    auto [it4, inserted4] = client_types_.emplace(fd, client_type);
     if (inserted4) {
-      std::cout << "equipment_to_fd_ insert sucess... quipement_id is" << fd
+      std::cout << "client_types_ insert sucess... quipement_id is" << fd
                 << std::endl;
     } else {
       std::cout << "equipment_to_fd_ insert failed..." << std::endl;
@@ -47,9 +47,21 @@ void ConnectionManager::add_connection(int fd,
       std::cout << "connection_healthy_insert failed..." << std::endl;
     }
   }
-
-  std::cout << "连接添加成功: fd=" << fd << " -> "
-            << equipment->get_equipment_id() << std::endl;
+  // 只有设备端连接且设备指针不为空时才加入equipment_to_fd_映射
+  if (client_type == ProtocolParser::CLIENT_EQUIPMENT && equipment) {
+    auto [it6, inserted6] =
+        equipment_to_fd_.emplace(equipment->get_equipment_id(), fd);
+    if (inserted6) {
+      std::cout << "equipment_to_fd_ insert sucess... quipement_id is" << fd
+                << std::endl;
+    } else {
+      std::cout << "connection_healthy_insert failed..." << std::endl;
+    }
+    std::cout << "设备连接添加: fd=" << fd << " -> "
+              << equipment->get_equipment_id() << std::endl;
+  } else {
+    std::cout << "Qt客户端连接添加: fd=" << fd << std::endl;
+  }
 }
 void ConnectionManager::remove_connection(int fd) {
   std::unique_lock lock(connection_rw_lock_);
@@ -57,16 +69,31 @@ void ConnectionManager::remove_connection(int fd) {
   if (fd < 0) {
     std::cout << "fd invalid..." << std::endl;
   } else if (it != connections_.end()) {
+    // 获取连接类型和设备指针
+    auto client_type_it = client_types_.find(fd);
+    ProtocolParser::ClientType client_type = ProtocolParser::CLIENT_UNKNOWN;
+    if (client_type_it != client_types_.end()) {
+      client_type = client_type_it->second;
+    }
+
+    // 如果是设备连接，从equipment_to_fd_中移除
+    if (client_type == ProtocolParser::CLIENT_EQUIPMENT && it->second) {
+      // 安全地获取设备ID
+      std::string equipment_id = it->second->get_equipment_id();
+      equipment_to_fd_.erase(equipment_id);
+      std::cout << "移除设备连接映射: " << equipment_id << " -> fd=" << fd
+                << std::endl;
+    }
     //从所有映射中移除
     connections_.erase(it);
     heartbeat_times_.erase(fd);
-    equipment_to_fd_.erase(it->second->get_equipment_id());
     connection_healthy_.erase(fd);
+    client_types_.erase(fd);
     close(fd);
-    std::cout << "连接移除: fd=" << fd << " -> "
-              << it->second->get_equipment_id() << std::endl;
+    std::cout << "连接完全清理: fd=" << fd << std::endl;
   } else {
-    std::cout << "fd not in connections_..." << std::endl;
+    std::cout << "remove_connection failed fd not in connections_..."
+              << std::endl;
   }
 }
 
@@ -83,6 +110,7 @@ void ConnectionManager::close_all_connections() {
   heartbeat_times_.clear();
   equipment_to_fd_.clear();
   connection_healthy_.clear();
+  client_types_.clear();
 
   std::cout << "所有连接已关闭" << std::endl;
 }
@@ -95,16 +123,16 @@ int ConnectionManager::get_fd_by_equipment_id(const std::string &equipment_id) {
 }
 std::shared_ptr<Equipment> ConnectionManager::get_equipment_by_fd(int fd) {
   std::shared_lock lock(connection_rw_lock_);
-  auto it = connections_.find(fd);
-  if (fd < 0) {
-    std::cout << "fd invalid..." << std::endl;
-    return nullptr;
-  } else if (it != connections_.end()) {
-    return it->second;
-  } else {
-    std::cout << "fd not in connections_..." << std::endl;
+
+  // 先检查fd是否有效
+  if (fd <= 0) {
     return nullptr;
   }
+  auto it = connections_.find(fd);
+  if (it != connections_.end()) {
+    return it->second; // 可能为nullptr（Qt连接）
+  }
+  return nullptr;
 }
 
 std::shared_ptr<Equipment>
@@ -205,6 +233,10 @@ bool ConnectionManager::is_equipment_connected(
 //连接健康状态查询
 bool ConnectionManager::is_connection_alive(int fd) const {
   std::shared_lock lock(connection_rw_lock_);
+  auto conn_it = connections_.find(fd);
+  if (conn_it == connections_.end()) {
+    return false;
+  }
   auto it = connection_healthy_.find(fd);
   return (it != connection_healthy_.end()) ? it->second : false;
 }
@@ -219,10 +251,32 @@ void ConnectionManager::print_connections() const {
   std::cout << "当前连接数: " << connections_.size() << std::endl;
   for (const auto &[fd, equipment] : connections_) {
     bool healthy = connection_healthy_.at(fd);
-    std::cout << "fd=" << fd << ", 设备=" << equipment->get_equipment_id()
-              << ", 状态=" << equipment->get_status()
-              << ", 连接健康=" << (healthy ? "是" : "否") << std::endl;
+    auto client_type_it = client_types_.find(fd);
+    ProtocolParser::ClientType client_type =
+        client_type_it != client_types_.end() ? client_type_it->second
+                                              : ProtocolParser::CLIENT_UNKNOWN;
+
+    std::cout << "fd=" << fd << ", 类型=";
+    if (client_type == ProtocolParser::CLIENT_EQUIPMENT) {
+      std::cout << "设备端";
+      if (equipment) {
+        std::cout << ", 设备=" << equipment->get_equipment_id()
+                  << ", 状态=" << equipment->get_status();
+      } else {
+        std::cout << ", 设备指针为空";
+      }
+    } else if (client_type == ProtocolParser::CLIENT_QT_CLIENT) {
+      std::cout << "Qt客户端";
+    } else {
+      std::cout << "未知";
+    }
+    std::cout << ", 连接健康=" << (healthy ? "是" : "否") << std::endl;
   }
+}
+
+bool ConnectionManager::is_connection_exist(int fd) const {
+  std::shared_lock lock(connection_rw_lock_);
+  return connections_.find(fd) != connections_.end();
 }
 
 bool ConnectionManager::send_control_to_simulator(
@@ -332,4 +386,45 @@ bool ConnectionManager::send_batch_control_to_simulator(
   }
 
   return all_success;
+}
+
+ProtocolParser::ClientType ConnectionManager::get_client_type(int fd) const {
+  std::shared_lock lock(connection_rw_lock_);
+  auto it = client_types_.find(fd);
+  if (it != client_types_.end()) {
+    return it->second;
+  }
+  return ProtocolParser::CLIENT_UNKNOWN;
+}
+
+bool ConnectionManager::update_connection_to_equipment(
+    int fd, std::shared_ptr<Equipment> equipment) {
+  std::unique_lock lock(connection_rw_lock_);
+
+  auto conn_it = connections_.find(fd);
+  if (conn_it == connections_.end()) {
+    return false;
+  }
+
+  // 检查当前是否是Qt客户端连接
+  auto client_type_it = client_types_.find(fd);
+  if (client_type_it == client_types_.end() ||
+      client_type_it->second != ProtocolParser::CLIENT_QT_CLIENT) {
+    return false; // 不是Qt客户端连接，不能转换
+  }
+
+  if (!equipment) {
+    return false; // 设备指针不能为空
+  }
+
+  // 更新连接类型和设备指针
+  conn_it->second = equipment;
+  client_type_it->second = ProtocolParser::CLIENT_EQUIPMENT;
+
+  // 添加到equipment_to_fd_映射
+  equipment_to_fd_[equipment->get_equipment_id()] = fd;
+
+  std::cout << "连接类型更新为设备: fd=" << fd << " -> "
+            << equipment->get_equipment_id() << std::endl;
+  return true;
 }

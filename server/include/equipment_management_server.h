@@ -102,8 +102,8 @@ private:
   void handle_client_control_command(int fd, const std::string &equipment_id,
                                      const std::string &payload);
   //消息处理函数
-  void handle_control_command(int fd, const std::string &equipment_id,
-                              const std::string &payload);
+  void handle_control_command_response_from_simulator(
+      int fd, const std::string &equipment_id, const std::string &payload);
   //预约处理函数
   void handle_reservation_apply(int fd, const std::string &equipment_id,
                                 const std::string &payload);
