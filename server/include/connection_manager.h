@@ -58,7 +58,8 @@ public:
 
 private:
   mutable std::shared_mutex connection_rw_lock_;
-  std::unordered_map<int, ProtocolParser::ClientType> client_types_;
+  std::unordered_map<int, ProtocolParser::ClientType>
+      client_types_; // fd -> ClientType
   std::unordered_map<int, std::shared_ptr<Equipment>>
       connections_;                                      // fd -> 设备
   std::unordered_map<int, time_t> heartbeat_times_;      // fd -> 心跳时间

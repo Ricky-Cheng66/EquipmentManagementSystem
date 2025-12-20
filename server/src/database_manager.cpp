@@ -62,6 +62,14 @@ bool DatabaseManager::update_equipment_status(const std::string &equipment_id,
   return execute_update(query);
 }
 
+bool DatabaseManager::update_equipment_power_state(
+    const std::string &equipment_id, const std::string &power_state) {
+  std::string query = "UPDATE equipments SET power_state = '" + power_state +
+                      "', updated_time = NOW() WHERE equipment_id = '" +
+                      equipment_id + "'";
+  return execute_update(query);
+}
+
 bool DatabaseManager::log_equipment_status(const std::string &equipment_id,
                                            const std::string &status,
                                            const std::string &power_state,

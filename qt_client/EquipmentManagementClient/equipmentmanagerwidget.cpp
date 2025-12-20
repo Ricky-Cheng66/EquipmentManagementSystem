@@ -123,10 +123,10 @@ void EquipmentManagerWidget::sendControlCommand(const QString& equipmentId, Prot
     }
 
     // 构造控制请求消息。
-    // 协议格式参考：QT_CONTROL_REQUEST|equipment_id|command_type|parameters
-    // 例如：“10|projector_101|1|” 表示开启 projector_101 设备。
+    // 协议格式参考：CLIENT_QT_CLIENT|QT_CONTROL_REQUEST|equipment_id|command_type|parameters
+    // 例如：“2|10|projector_101|1|” 表示开启 projector_101 设备。
     std::string parameters = ""; // 附加参数，根据协议需要可扩展
-    std::vector<char> controlMsg = ProtocolParser::build_control_command(
+    std::vector<char> controlMsg = ProtocolParser::build_control_command_to_server(
         ProtocolParser::CLIENT_QT_CLIENT,
         equipmentId.toStdString(),
         command,
@@ -166,13 +166,13 @@ void EquipmentManagerWidget::handleEquipmentStatusUpdate(const ProtocolParser::P
 }
 void EquipmentManagerWidget::handleControlResponse(const ProtocolParser::ParseResult& result) {
     QString equipmentId = QString::fromStdString(result.equipment_id);
-    // 解析payload，例如 “success|turn_on” 或 “fail|turn_off|reason”
+    // 解析payload，例如 “qt_fd|success|turn_on|result_message” 或 “qt_fd|fail|turn_off|result_message”
     QString payload = QString::fromStdString(result.payload);
     QStringList parts = payload.split('|');
 
     if (parts.size() >= 2) {
-        bool success = (parts[0] == "success");
-        QString command = parts[1];
+        bool success = (parts[1] == "success");
+        QString command = parts[2];
         QString message = QString("设备 [%1] %2命令执行%3")
                               .arg(equipmentId)
                               .arg(command)

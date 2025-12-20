@@ -115,10 +115,14 @@ public:
   build_control_command(ClientType client_type, const std::string &equipment_id,
                         ControlCommandType command_type,
                         const std::string &parameters = "");
+
+  static std::vector<char> build_control_command_to_server(
+      ClientType client_type, const std::string &equipment_id,
+      ControlCommandType command_type, const std::string &parameters = "");
   static std::vector<char>
   build_control_response(ClientType client_type,
                          const std::string &equipment_id, bool success,
-                         const std::string &message);
+                         const std::string &parameters);
 
   // ============ 心跳相关消息构建 ============
   static std::vector<char>

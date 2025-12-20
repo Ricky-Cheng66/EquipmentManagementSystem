@@ -62,9 +62,9 @@ private:
                                const std::string &payload);
   void handle_status_update(int fd, const std::string &equipment_id,
                             const std::string &payload);
-  void
-  handle_control_response(int fd, const std::string &equipment_id,
-                          const std::string &payload); // 新增：处理设备控制响应
+  void handle_control_command_response_from_simulator(
+      int fd, const std::string &equipment_id,
+      const std::string &payload); //处理设备控制响应
   void handle_heartbeat(int fd, const std::string &equipment_id);
 
   // 连接管理
@@ -94,16 +94,17 @@ private:
                              ProtocolParser::ControlCommandType command_type,
                              const std::string &parameters = "");
 
+  bool send_control_command_response_to_qt_client(
+      int qt_fd, const std::string &equipment_id, bool sucess,
+      const std::string &reason);
+
   std::vector<std::string>
   get_equipment_control_capabilities(const std::string &equipment_id);
 
 private:
   // 处理来自客户端的控制命令
-  void handle_client_control_command(int fd, const std::string &equipment_id,
-                                     const std::string &payload);
-  //消息处理函数
-  void handle_control_command_response_from_simulator(
-      int fd, const std::string &equipment_id, const std::string &payload);
+  void handle_qt_client_control_command(int fd, const std::string &equipment_id,
+                                        const std::string &payload);
   //预约处理函数
   void handle_reservation_apply(int fd, const std::string &equipment_id,
                                 const std::string &payload);

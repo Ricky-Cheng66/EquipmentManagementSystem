@@ -213,12 +213,25 @@ std::vector<char> ProtocolParser::build_control_command(
   return pack_message(body);
 }
 
+std::vector<char> ProtocolParser::build_control_command_to_server(
+    ClientType client_type, const std::string &equipment_id,
+    ControlCommandType command_type, const std::string &parameters) {
+  std::vector<std::string> fields = {
+      std::to_string(static_cast<int>(command_type))};
+  if (!parameters.empty()) {
+    fields.push_back(parameters);
+  }
+
+  std::string body = build_message_body(
+      client_type, MessageType::QT_CONTROL_REQUEST, equipment_id, fields);
+  return pack_message(body);
+}
+
 std::vector<char> ProtocolParser::build_control_response(
     ClientType client_type, const std::string &equipment_id, bool success,
-    const std::string &message) {
-  std::string body =
-      build_message_body(client_type, MessageType::CONTROL_RESPONSE,
-                         equipment_id, {success ? "success" : "fail", message});
+    const std::string &parameters) {
+  std::string body = build_message_body(
+      client_type, MessageType::CONTROL_RESPONSE, equipment_id, {parameters});
   return pack_message(body);
 }
 

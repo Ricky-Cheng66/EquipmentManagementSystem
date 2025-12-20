@@ -57,7 +57,7 @@ private:
                               bool success);
   void handle_heartbeat_response(int fd, const std::string &equipment_id);
   void handle_control_command(int fd, const std::string &equipment_id,
-                              const std::string &command);
+                              const std::string &payload);
   void
   handle_status_query(int fd,
                       const std::string &equipment_id); // 新增：处理状态查询

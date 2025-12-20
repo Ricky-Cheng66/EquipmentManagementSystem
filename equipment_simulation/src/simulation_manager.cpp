@@ -510,13 +510,14 @@ void SimulationManager::handle_control_command(int fd,
   std::cout << "执行控制命令: " << equipment_id << " -> " << payload
             << std::endl;
 
-  // 解析控制命令 (格式: "command_type|parameters")
+  // 解析控制命令 (格式: "qt_fd|command_type|parameters")
   auto parts = ProtocolParser::split_string(payload, '|');
-  if (parts.size() < 1) {
+  if (parts.size() < 2) {
     std::cout << "控制命令格式错误: " << payload << std::endl;
     send_control_response(fd, equipment_id, false, "format_error");
     return;
   }
+  std::cout << payload << std::endl;
 
   int command_type;
   try {
@@ -528,6 +529,7 @@ void SimulationManager::handle_control_command(int fd,
   }
 
   std::string parameters = parts.size() > 1 ? parts[1] : "";
+  std::cout << "parameter: " << parameters << std::endl;
   bool success = false;
   std::string result_message = "";
 
@@ -553,13 +555,18 @@ void SimulationManager::handle_control_command(int fd,
     result_message = "未知控制命令";
     break;
   }
-
+  std::string parts_after_qt_fd{};
+  if (!success) {
+    parts_after_qt_fd = "fail";
+  }
+  parts_after_qt_fd = "success";
   // 发送控制响应
   send_control_response(
       fd, equipment_id, success,
-      get_command_name(
-          static_cast<ProtocolParser::ControlCommandType>(command_type)) +
-          (success ? "" : "|" + result_message));
+      parameters + '|' + parts_after_qt_fd + '|' +
+          get_command_name(
+              static_cast<ProtocolParser::ControlCommandType>(command_type)) +
+          '|' + result_message);
 }
 
 // 新增：处理状态查询
@@ -573,13 +580,14 @@ void SimulationManager::handle_status_query(int fd,
 void SimulationManager::send_control_response(int fd,
                                               const std::string &equipment_id,
                                               bool success,
-                                              const std::string &message) {
+                                              const std::string &parameters) {
   std::vector<char> response = ProtocolParser::build_control_response(
-      ProtocolParser::CLIENT_EQUIPMENT, equipment_id, success, message);
+      ProtocolParser::CLIENT_EQUIPMENT, equipment_id, success, parameters);
 
   if (send_message(fd, response)) {
     std::cout << "控制响应已发送: " << equipment_id
-              << " 结果: " << (success ? "成功" : "失败") << std::endl;
+              << " 结果: " << (success ? "成功" : "失败") << " parameters "
+              << parameters << std::endl;
   } else {
     std::cout << "控制响应发送失败: " << equipment_id << std::endl;
   }

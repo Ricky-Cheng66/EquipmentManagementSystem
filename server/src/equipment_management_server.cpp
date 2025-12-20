@@ -295,8 +295,8 @@ void EquipmentManagementServer::process_equipment_message(
     handle_status_update(fd, parse_result.equipment_id, parse_result.payload);
     break;
   case ProtocolParser::CONTROL_RESPONSE:
-    handle_control_response(fd, parse_result.equipment_id,
-                            parse_result.payload);
+    handle_control_command_response_from_simulator(
+        fd, parse_result.equipment_id, parse_result.payload);
     break;
   case ProtocolParser::HEARTBEAT:
     handle_heartbeat(fd, parse_result.equipment_id);
@@ -332,7 +332,9 @@ void EquipmentManagementServer::process_qt_client_message(
     handle_qt_equipment_List_query(fd);
     break;
   case ProtocolParser::QT_CONTROL_REQUEST:
-
+    handle_qt_client_control_command(fd, parse_result.equipment_id,
+                                     parse_result.payload);
+    break;
   default:
     std::cout << "未知消息类型: " << parse_result.type << " from fd=" << fd
               << std::endl;
@@ -449,20 +451,23 @@ void EquipmentManagementServer::handle_qt_equipment_List_query(int fd) {
 }
 
 // 新增：处理设备控制响应
-void EquipmentManagementServer::handle_control_response(
+void EquipmentManagementServer::handle_control_command_response_from_simulator(
     int fd, const std::string &equipment_id, const std::string &payload) {
   std::cout << "收到设备控制响应: " << equipment_id << " -> " << payload
             << std::endl;
 
-  // 解析响应 (格式: "success|turn_on" 或 "fail|turn_off|reason")
+  // 解析响应 (格式: "qt_fd|success|turn_on|result_message" 或
+  // "qt_fd|fail|turn_on|result_message")
   auto parts = ProtocolParser::split_string(payload, '|');
-  if (parts.size() < 2) {
+  if (parts.size() < 4) {
     std::cout << "控制响应格式错误: " << payload << std::endl;
     return;
   }
 
-  bool success = (parts[0] == "success");
-  std::string command = parts[1];
+  std::string qt_fd = parts[0];
+  bool success = (parts[1] == "success");
+  std::string command = parts[2];
+  const std::string result_message = parts[3];
 
   if (success) {
     // 控制成功，只更新设备电源状态，不改变在线状态
@@ -490,17 +495,22 @@ void EquipmentManagementServer::handle_control_response(
     }
 
     std::cout << "控制命令执行成功: " << equipment_id << " -> " << command
-              << std::endl;
+              << result_message << std::endl;
   } else {
     std::cout << "控制命令执行失败: " << equipment_id << " -> " << command
-              << std::endl;
-    if (parts.size() > 2) {
-      std::cout << "失败原因: " << parts[2] << std::endl;
-    }
+              << result_message << std::endl;
   }
 
-  // 这里可以添加通知Qt客户端的逻辑
-  // notify_qt_control_result(equipment_id, success, command);
+  // 通知Qt客户端的逻辑
+  if (!send_control_command_response_to_qt_client(
+          std::stoi(qt_fd), equipment_id, success, payload)) {
+    std::cout << "send_control_command_response_to_qt_client failed..."
+              << std::endl;
+    return;
+  }
+  std::cout << "send_control_command_response_to_qt_client sucess..."
+            << std::endl;
+  return;
 }
 
 // Qt客户端接口实现
@@ -667,39 +677,18 @@ void EquipmentManagementServer::handle_status_update(
             << power_state << std::endl;
 }
 
-//处理控制指令(从设备端发来的控制响应)
-void EquipmentManagementServer::handle_control_command_response_from_simulator(
-    int fd, const std::string &equipment_id, const std::string &payload) {
-  std::cout << "处理控制响应: " << equipment_id << " payload: " << payload
-            << std::endl;
-
-  // 这里处理设备对控制指令的响应
-  // 比如设备执行turn_on后的确认消息
-
-  //更新设备状态
-  if (payload == "turn_on_success") {
-    equipment_manager_->update_equipment_power_state(equipment_id, "on");
-  } else if (payload == "turn_off_success") {
-    equipment_manager_->update_equipment_power_state(equipment_id, "off");
-  }
-  std::cout << "控制响应处理完成: " << equipment_id << " -> " << payload
-            << std::endl;
-}
-
 // 处理qt客户端控制命令
-void EquipmentManagementServer::handle_client_control_command(
-    int fd, const std::string &equipment_id, const std::string &payload) {
+void EquipmentManagementServer::handle_qt_client_control_command(
+    int qt_fd, const std::string &equipment_id, const std::string &payload) {
 
   std::cout << "处理控制命令: " << equipment_id << " payload: " << payload
             << std::endl;
-
   // 解析控制命令（格式: "command_type|parameters"）
   auto parts = ProtocolParser::split_string(payload, '|');
   if (parts.size() < 1) {
     std::cout << "控制命令格式错误" << std::endl;
     return;
   }
-
   int command_type_num;
   try {
     command_type_num = std::stoi(parts[0]);
@@ -710,25 +699,17 @@ void EquipmentManagementServer::handle_client_control_command(
 
   ProtocolParser::ControlCommandType command_type =
       static_cast<ProtocolParser::ControlCommandType>(command_type_num);
-  std::string parameters = parts.size() > 1 ? parts[1] : "";
+  std::string parameters =
+      std::to_string(qt_fd) + (parts.size() > 1 ? parts[1] : "");
 
   // 执行控制命令
   bool success = connections_manager_->send_control_to_simulator(
       ProtocolParser::CLIENT_EQUIPMENT, equipment_id, command_type, parameters);
-
-  // 发送控制响应
-  std::string response_msg = success ? "命令执行成功" : "命令执行失败";
-  std::vector<char> response = ProtocolParser::build_control_response(
-      ProtocolParser::CLIENT_EQUIPMENT, equipment_id, success, response_msg);
-
-  send(fd, response.data(), response.size(), 0);
-
-  // 记录到数据库
-  if (db_manager_->is_connected()) {
-    // 这里可以添加控制命令日志记录
-    std::cout << "控制命令已记录: " << equipment_id << " -> "
-              << command_type_num << std::endl;
+  if (!success) {
+    std::cout << "send_control_to_simulator failed..." << std::endl;
+    return;
   }
+  std::cout << "send_control_to_simulator success" << std::endl;
 }
 
 // 处理心跳
@@ -1154,6 +1135,27 @@ bool EquipmentManagementServer::send_batch_control_command(
   return connections_manager_->send_batch_control_to_simulator(
       ProtocolParser::CLIENT_EQUIPMENT, equipment_ids, command_type,
       parameters);
+}
+
+bool EquipmentManagementServer::send_control_command_response_to_qt_client(
+    int qt_fd, const std::string &equipment_id, bool success,
+    const std::string &payload) {
+  // 发送控制指令响应
+  std::cout << payload << std::endl;
+  std::vector<char> response = ProtocolParser::build_control_response(
+      ProtocolParser::CLIENT_QT_CLIENT, equipment_id, success, payload);
+
+  ssize_t bytes_sent = send(qt_fd, response.data(), response.size(), 0);
+
+  if (bytes_sent > 0) {
+    std::cout << "to qt_client控制响应处理: " << equipment_id << " fd=" << qt_fd
+              << " (响应已发送)" << std::endl;
+    return true;
+  } else {
+    std::cout << "to qt_client控制响应处理: " << equipment_id << " fd=" << qt_fd
+              << " (响应发送失败)" << std::endl;
+    return false;
+  }
 }
 
 std::vector<std::string>

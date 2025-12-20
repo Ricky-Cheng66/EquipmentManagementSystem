@@ -25,6 +25,10 @@ public:
   bool update_equipment_status(const std::string &equipment_id,
                                const std::string &status,
                                const std::string &power_state);
+
+  bool update_equipment_power_state(const std::string &equipment_id,
+                                    const std::string &power_state);
+
   bool log_equipment_status(const std::string &equipment_id,
                             const std::string &status,
                             const std::string &power_state,
