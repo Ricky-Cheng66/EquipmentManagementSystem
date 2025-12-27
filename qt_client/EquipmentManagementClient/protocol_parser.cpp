@@ -274,3 +274,31 @@ std::vector<char> ProtocolParser::build_reservation_approve_response(
                            "response", {success ? "success" : "fail", message});
     return pack_message(body);
 }
+
+// ============ 新增Qt端预约请求消息实现 ============
+
+std::vector<char> ProtocolParser::build_reservation_message(
+    ClientType client_type, const std::string &equipment_id,
+    const std::string &payload) {
+    std::string body =
+        build_message_body(client_type, MessageType::RESERVATION_APPLY,
+                           equipment_id, {payload});
+    return pack_message(body);
+}
+
+std::vector<char> ProtocolParser::build_reservation_query(
+    ClientType client_type, const std::string &equipment_id) {
+    std::string body =
+        build_message_body(client_type, MessageType::RESERVATION_QUERY,
+                           equipment_id, {});
+    return pack_message(body);
+}
+
+std::vector<char> ProtocolParser::build_reservation_approve(
+    ClientType client_type, const std::string &admin_id,
+    const std::string &payload) {
+    std::string body =
+        build_message_body(client_type, MessageType::RESERVATION_APPROVE,
+                           admin_id, {payload});
+    return pack_message(body);
+}

@@ -398,7 +398,7 @@ void EquipmentManagementServer::handle_qt_client_login(
   // 3. 构建并发送响应
   if (authSuccess) {
     // 成功响应可附加角色信息，格式: “success|角色|用户名”
-    std::string successPayload = "success|" + role + "|" + username;
+    std::string successPayload = role + "|" + username;
     std::vector<char> response =
         ProtocolParser::build_qt_login_response_message(
             ProtocolParser::CLIENT_QT_CLIENT, true, successPayload);

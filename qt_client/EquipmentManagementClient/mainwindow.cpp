@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 #include <QTime>
+#include <QMessageBox>
+#include <QLabel>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -61,14 +63,55 @@ MainWindow::MainWindow(QWidget *parent)
     // 禁用发送测试按钮，直到登录成功
     ui->sendHeartbeatButton->setEnabled(false);
 
+    // 在构造函数中一次性创建菜单（初始禁用菜单项）
+    QMenuBar* menuBar = this->menuBar();
+    QMenu* managementMenu = menuBar->addMenu("管理");
+
+    m_reservationAction = managementMenu->addAction("预约管理");
+    m_reservationAction->setEnabled(false); // 初始禁用
+    connect(m_reservationAction, &QAction::triggered, this, &MainWindow::showReservationWidget);
+
     // 连接网络相关信号
     setupConnection();
+
+    // 创建预约管理窗口（初始隐藏）
+    m_reservationWidget = new ReservationWidget(this);
+    m_reservationWidget->setVisible(false);
+
+    // 连接预约窗口的信号到主窗口的发送槽
+    connect(m_reservationWidget, &ReservationWidget::reservationApplyRequested,
+            this, &MainWindow::onReservationApplyRequested);
+    connect(m_reservationWidget, &ReservationWidget::reservationQueryRequested,
+            this, &MainWindow::onReservationQueryRequested);
+    connect(m_reservationWidget, &ReservationWidget::reservationApproveRequested,
+            this, &MainWindow::onReservationApproveRequested);
 
     // 注册消息处理器（心跳响应已注册，新增登录响应）
     m_dispatcher->registerHandler(ProtocolParser::QT_LOGIN_RESPONSE,
                                   [this](const ProtocolParser::ParseResult &result) {
                                       QMetaObject::invokeMethod(this, [this, result]() {
                                           this->handleLoginResponse(result);
+                                      });
+                                  });
+    // 注册预约响应处理器
+    m_dispatcher->registerHandler(ProtocolParser::RESERVATION_APPLY,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          this->handleReservationApplyResponse(result);
+                                      });
+                                  });
+
+    m_dispatcher->registerHandler(ProtocolParser::RESERVATION_QUERY,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          this->handleReservationQueryResponse(result);
+                                      });
+                                  });
+
+    m_dispatcher->registerHandler(ProtocolParser::RESERVATION_APPROVE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          this->handleReservationApproveResponse(result);
                                       });
                                   });
 
@@ -167,7 +210,7 @@ void MainWindow::handleLoginResponse(const ProtocolParser::ParseResult &result)
     // 注意：按照新协议格式，result.payload 只包含"success"及后面的字段
     // 原始消息格式：客户端类型|消息类型|设备ID|success|用户名|角色
     // 所以 result.payload = "success|admin|管理员"
-
+     qDebug() << "LOGIN RESPONSE payload:" << QString::fromStdString(result.payload);
     QString payload = QString::fromStdString(result.payload);
     QStringList parts = payload.split('|');
 
@@ -184,6 +227,7 @@ void MainWindow::handleLoginResponse(const ProtocolParser::ParseResult &result)
             if (parts.size() > 1) {
                 username = parts[1];
                 m_currentUsername = username;
+                m_currentUserId = username;  // 用用户名作为用户ID（或从parts[3]解析真实ID）
             }
             if (parts.size() > 2) {
                 role = parts[2];
@@ -200,6 +244,12 @@ void MainWindow::handleLoginResponse(const ProtocolParser::ParseResult &result)
             }
 
             enableMainUI(true);
+
+            // 登录后启用预约管理菜单项
+            if (m_reservationAction) {
+                m_reservationAction->setEnabled(true);
+            }
+
             ui->connectButton->setText("注销");
             ui->sendHeartbeatButton->setEnabled(true);
 
@@ -317,4 +367,152 @@ void MainWindow::enableMainUI(bool enable)
     }
     // 禁用测试按钮
     ui->sendHeartbeatButton->setEnabled(false);
+}
+
+// 发送预约申请
+void MainWindow::onReservationApplyRequested(const QString &equipmentId, const QString &purpose,
+                                             const QString &startTime, const QString &endTime)
+{
+    if (!m_tcpClient || !m_tcpClient->isConnected()) {
+        QMessageBox::warning(this, "预约失败", "网络未连接");
+        return;
+    }
+
+    // payload格式: "userId|start_time|end_time|purpose"
+    // TODO: 登录成功后需保存当前用户ID到m_currentUserId
+    QString payload = QString("%1|%2|%3|%4").arg(m_currentUserId).arg(startTime).arg(endTime).arg(purpose);
+qDebug() << "DEBUG: m_currentUserId=" << m_currentUserId << ", payload=" << payload;  // 添加这行
+    std::vector<char> msg = ProtocolParser::build_reservation_message(
+        ProtocolParser::CLIENT_QT_CLIENT, equipmentId.toStdString(), payload.toStdString());
+
+    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+    logMessage(QString("预约申请已发送: 设备[%1]").arg(equipmentId));
+}
+
+// 发送预约查询
+void MainWindow::onReservationQueryRequested(const QString &equipmentId)
+{
+    if (!m_tcpClient || !m_tcpClient->isConnected()) {
+        QMessageBox::warning(this, "查询失败", "网络未连接");
+        return;
+    }
+
+    // equipmentId为空表示查询所有设备
+    std::string eqId = equipmentId.isEmpty() ? "all" : equipmentId.toStdString();
+    std::vector<char> msg = ProtocolParser::build_reservation_query(
+        ProtocolParser::CLIENT_QT_CLIENT, eqId);
+
+    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+    logMessage(QString("预约查询已发送: 设备[%1]").arg(equipmentId.isEmpty() ? "全部" : equipmentId));
+}
+
+// 发送预约审批
+void MainWindow::onReservationApproveRequested(int reservationId, bool approve)
+{
+    if (!m_tcpClient || !m_tcpClient->isConnected()) {
+        QMessageBox::warning(this, "审批失败", "网络未连接");
+        return;
+    }
+
+    // payload格式: "reservation_id|approve|reject"
+    QString payload = QString("%1|%2").arg(reservationId).arg(approve ? "approve" : "reject");
+
+    std::vector<char> msg = ProtocolParser::build_reservation_approve(
+        ProtocolParser::CLIENT_QT_CLIENT, m_currentUsername.toStdString(), payload.toStdString());
+
+    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+    logMessage(QString("预约审批已发送: ID[%1] 操作[%2]").arg(reservationId).arg(approve ? "批准" : "拒绝"));
+}
+
+void MainWindow::handleReservationApplyResponse(const ProtocolParser::ParseResult &result)
+{
+    QString payload = QString::fromStdString(result.payload);
+    QStringList parts = payload.split('|');
+
+    if (parts.size() >= 2 && parts[0] == "success") {
+        QMessageBox::information(this, "预约成功", parts[1]);
+        logMessage("预约申请提交成功");
+    } else {
+        QString errorMsg = parts.size() >= 2 ? parts[1] : "未知错误";
+        QMessageBox::warning(this, "预约失败", errorMsg);
+        logMessage(QString("预约申请失败: %1").arg(errorMsg));
+    }
+}
+
+void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResult &result)
+{
+    // payload格式: "id|eqId|userId|purpose|start|end|status;..."
+    QString payload = QString::fromStdString(result.payload);
+
+    if (payload.isEmpty()) {
+        QMessageBox::information(this, "查询结果", "暂无预约记录");
+        return;
+    }
+
+    // 解析并填充到表格（后续在ReservationWidget中实现）
+    logMessage(QString("收到预约查询结果，共%1条记录").arg(payload.count(';') + 1));
+    // TODO: 发射信号更新ReservationWidget的表格
+}
+
+void MainWindow::handleReservationApproveResponse(const ProtocolParser::ParseResult &result)
+{
+    QString payload = QString::fromStdString(result.payload);
+    QStringList parts = payload.split('|');
+
+    if (parts.size() >= 2 && parts[0] == "success") {
+        QMessageBox::information(this, "审批成功", parts[1]);
+        logMessage("预约审批操作成功");
+        // TODO: 刷新审批页面的表格
+    } else {
+        QString errorMsg = parts.size() >= 2 ? parts[1] : "未知错误";
+        QMessageBox::warning(this, "审批失败", errorMsg);
+        logMessage(QString("预约审批失败: %1").arg(errorMsg));
+    }
+}
+
+void MainWindow::showReservationWidget()
+{
+    if (!m_isLoggedIn) {
+        QMessageBox::warning(this, "提示", "请先登录");
+        return;
+    }
+
+    // 先获取 model（提到前面，确保两个 if 都能访问）
+    QStandardItemModel* model = nullptr;
+    if (m_equipmentManagerWidget) {
+        model = m_equipmentManagerWidget->m_equipmentModel;  // 直接访问 public 成员
+    }
+
+    // 填充申请页的设备下拉框
+    if (m_reservationWidget) {
+        m_reservationWidget->m_equipmentComboApply->clear();
+
+        if (model) {
+            for (int row = 0; row < model->rowCount(); ++row) {
+                QString equipmentId = model->item(row, 0)->text();
+                QString equipmentType = model->item(row, 1)->text();
+                m_reservationWidget->m_equipmentComboApply->addItem(
+                    QString("[%1] %2").arg(equipmentType).arg(equipmentId), equipmentId);
+            }
+        }
+    }
+
+    // 填充查询页的设备下拉框
+    if (m_reservationWidget) {
+        m_reservationWidget->m_equipmentComboQuery->clear();
+        m_reservationWidget->m_equipmentComboQuery->addItem("全部设备", "all");
+
+        if (model) {
+            for (int row = 0; row < model->rowCount(); ++row) {
+                QString equipmentId = model->item(row, 0)->text();
+                QString equipmentType = model->item(row, 1)->text();
+                m_reservationWidget->m_equipmentComboQuery->addItem(
+                    QString("[%1] %2").arg(equipmentType).arg(equipmentId), equipmentId);
+            }
+        }
+    }
+
+    m_reservationWidget->show();
+    m_reservationWidget->raise();
+    m_reservationWidget->activateWindow();
 }

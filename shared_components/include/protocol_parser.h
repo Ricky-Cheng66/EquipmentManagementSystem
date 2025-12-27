@@ -40,7 +40,10 @@ public:
     QT_CLIENT_LOGIN = 100,         // Qt客户端 -> 服务器：登录请求
     QT_LOGIN_RESPONSE = 101,       // 服务器 -> Qt客户端：登录响应
     QT_EQUIPMENT_LIST_QUERY = 102, // Qt客户端 -> 服务器：查询设备列表
-    QT_EQUIPMENT_LIST_RESPONSE = 103 // 服务器 -> Qt客户端：返回设备列表
+    QT_EQUIPMENT_LIST_RESPONSE = 103, // 服务器 -> Qt客户端：返回设备列表
+    QT_RESERVATION_APPLY_RESPONSE = 104, // 服务器 -> Qt客户端：预约申请响应
+    QT_RESERVATION_QUERY_RESPONSE = 105, // 服务器 -> Qt客户端：预约查询响应
+    QT_RESERVATION_APPROVE_RESPONSE = 106 // 服务器 -> Qt客户端：预约审批响应
   };
 
   // ============ 客户端类型枚举 ============
@@ -109,6 +112,18 @@ public:
   build_status_response(ClientType client_type, const std::string &equipment_id,
                         const std::string &status,
                         const std::string &power_state);
+
+  // ============ 预约系统消息构建 ============
+  static std::vector<char>
+  build_reservation_message(ClientType client_type,
+                            const std::string &equipment_id,
+                            const std::string &payload);
+  static std::vector<char>
+  build_reservation_query(ClientType client_type,
+                          const std::string &equipment_id);
+  static std::vector<char>
+  build_reservation_approve(ClientType client_type, const std::string &admin_id,
+                            const std::string &payload);
 
   // ============ 控制相关消息构建 ============
   static std::vector<char>

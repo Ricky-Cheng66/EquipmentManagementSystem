@@ -110,6 +110,16 @@ public:
                           const std::string &status,
                           const std::string &power_state);
 
+    // ============ 预约系统消息构建 ============
+    static std::vector<char> build_reservation_message(
+        ClientType client_type, const std::string &equipment_id,
+        const std::string &payload);
+    static std::vector<char> build_reservation_query(
+        ClientType client_type, const std::string &equipment_id);
+    static std::vector<char> build_reservation_approve(
+        ClientType client_type, const std::string &admin_id,
+        const std::string &payload);
+
     // ============ 控制相关消息构建 ============
     static std::vector<char>
     build_control_command(ClientType client_type, const std::string &equipment_id,

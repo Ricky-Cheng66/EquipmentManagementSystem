@@ -23,6 +23,8 @@ public:
     explicit EquipmentManagerWidget(TcpClient* tcpClient, MessageDispatcher* dispatcher, QWidget *parent = nullptr);
     ~EquipmentManagerWidget();
 
+    QStandardItemModel* m_equipmentModel;
+
     // 提供给外部调用的刷新接口
     void requestEquipmentList();
 
@@ -44,7 +46,7 @@ private:
     Ui::EquipmentManagerWidget *ui;
     TcpClient* m_tcpClient;
     MessageDispatcher* m_dispatcher;
-    QStandardItemModel* m_equipmentModel;
+
     QString m_currentSelectedEquipmentId; // 当前在表格中选中的设备ID
 
     void logMessage(const QString &msg);
