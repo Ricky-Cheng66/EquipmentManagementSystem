@@ -21,12 +21,15 @@ public:
     explicit ReservationWidget(QWidget *parent = nullptr);
     void setUserRole(const QString &role, const QString &userId);
     void updateQueryResultTable(const QString &data);
+    void loadPendingReservations(const QString &data);
     QComboBox *m_equipmentComboQuery;
     QComboBox *m_equipmentComboApply;
+    QTabWidget *m_tabWidget;
 signals:
     void reservationApplyRequested(const QString &equipmentId, const QString &purpose,
                                    const QString &startTime, const QString &endTime);
     void reservationQueryRequested(const QString &equipmentId);
+
     void reservationApproveRequested(int reservationId, bool approve);
 private slots:
     void onApplyButtonClicked();
@@ -39,7 +42,7 @@ private:
     void setupQueryTab();
     void setupApproveTab();
 
-    QTabWidget *m_tabWidget;
+
 
     // 申请页控件
     QDateTimeEdit *m_startTimeEdit;

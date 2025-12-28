@@ -61,6 +61,8 @@ private:
     bool m_isLoggedIn; // 登录状态标志
     QString m_currentUsername;
 
+    QString m_userRole;
+
     QAction* m_reservationAction;  // 预约管理菜单项指针
 
     ReservationWidget* m_reservationWidget;

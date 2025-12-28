@@ -227,11 +227,14 @@ void MainWindow::handleLoginResponse(const ProtocolParser::ParseResult &result)
             if (parts.size() > 1) {
                 username = parts[1];
                 m_currentUsername = username;
-                m_currentUserId = 1;  // 用用户名作为用户ID（或从parts[3]解析真实ID）
+                m_currentUserId = 1;  //后面需要完善
             }
             if (parts.size() > 2) {
                 role = parts[2];
+
             }
+            m_userRole = role;  // 确保这行存在
+            qDebug() << "DEBUG: 登录成功，role=" << m_userRole;  // 添加调试
 
             m_isLoggedIn = true;
 
@@ -454,7 +457,14 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
     QString data = payload.mid(parts[0].length() + 1); // +1 跳过 '|'
 
     if (m_reservationWidget) {
-        m_reservationWidget->updateQueryResultTable(data);
+        // 判断当前在哪个标签页
+        int currentTab = m_reservationWidget->m_tabWidget->currentIndex();
+
+        if (currentTab == 1) {  // 查询页
+            m_reservationWidget->updateQueryResultTable(data);
+        } else if (currentTab == 2 && m_userRole == "admin") {  // 审批页
+            m_reservationWidget->loadPendingReservations(data);
+        }
     }
 }
 
@@ -480,6 +490,9 @@ void MainWindow::showReservationWidget()
         QMessageBox::warning(this, "提示", "请先登录");
         return;
     }
+    // 先设置用户角色（必须在显示窗口前）
+    qDebug() << "DEBUG: MainWindow userRole=" << m_userRole << ", userId=" << m_currentUserId;
+    m_reservationWidget->setUserRole(m_userRole, QString::number(m_currentUserId));
 
     // 先获取 model（提到前面，确保两个 if 都能访问）
     QStandardItemModel* model = nullptr;
@@ -514,6 +527,14 @@ void MainWindow::showReservationWidget()
                     QString("[%1] %2").arg(equipmentType).arg(equipmentId), equipmentId);
             }
         }
+    }
+
+    // 加载待审批预约列表（仅管理员）
+    if (m_userRole == "admin") {
+        std::vector<char> msg = ProtocolParser::build_reservation_query(
+            ProtocolParser::CLIENT_QT_CLIENT, "all");
+        m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+        logMessage("加载待审批预约列表...");
     }
 
     m_reservationWidget->show();

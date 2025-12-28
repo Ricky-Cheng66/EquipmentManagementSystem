@@ -91,8 +91,8 @@ void ReservationWidget::setupApproveTab()
 
 void ReservationWidget::setUserRole(const QString &role, const QString &userId)
 {
+    qDebug() << "DEBUG: setUserRole called, role=" << role << ", userId=" << userId;
     m_userRole = role;
-    m_currentUserId = userId;
 
     // 非管理员隐藏审批页
     if (role != "admin") {
@@ -120,18 +120,6 @@ void ReservationWidget::onQueryButtonClicked()
     emit reservationQueryRequested(m_equipmentComboQuery->currentData().toString());
 }
 
-// 后续再实现审批按钮功能
-void ReservationWidget::onApproveButtonClicked()
-{
-    // TODO: 获取选中的预约ID，发送批准请求
-    QMessageBox::information(this, "提示", "批准功能开发中");
-}
-
-void ReservationWidget::onDenyButtonClicked()
-{
-    // TODO: 获取选中的预约ID，发送拒绝请求
-    QMessageBox::information(this, "提示", "拒绝功能开发中");
-}
 
 void ReservationWidget::updateQueryResultTable(const QString &data)
 {
@@ -163,4 +151,72 @@ void ReservationWidget::updateQueryResultTable(const QString &data)
     qDebug() << "[ReservationWidget] 预约查询完成，共" << reservations.size() << "条记录";
 
     qDebug() << "预约查询完成，共" << reservations.size() << "条记录";
+}
+
+void ReservationWidget::loadPendingReservations(const QString &data)
+{
+    m_approveTable->setRowCount(0);
+
+    if (data.isEmpty()) {
+        return;
+    }
+
+    // 解析所有预约，筛选状态为 pending 的
+    QStringList reservations = data.split(';', Qt::SkipEmptyParts);
+    int pendingRow = 0;
+
+    for (int i = 0; i < reservations.size(); ++i) {
+        QStringList fields = reservations[i].split('|');
+        if (fields.size() >= 7 && fields[6] == "pending") {
+            m_approveTable->insertRow(pendingRow);
+
+            // 填充前7列数据
+            for (int j = 0; j < 7; ++j) {
+                m_approveTable->setItem(pendingRow, j, new QTableWidgetItem(fields[j]));
+            }
+
+            // 第8列添加操作按钮
+            QWidget *btnWidget = new QWidget(this);
+            QHBoxLayout *btnLayout = new QHBoxLayout(btnWidget);
+            btnLayout->setContentsMargins(0, 0, 0, 0);
+            btnLayout->setSpacing(2);
+
+            QPushButton *approveBtn = new QPushButton("批准", this);
+            approveBtn->setProperty("reservationId", fields[0]);
+            connect(approveBtn, &QPushButton::clicked, this, &ReservationWidget::onApproveButtonClicked);
+
+            QPushButton *rejectBtn = new QPushButton("拒绝", this);
+            rejectBtn->setProperty("reservationId", fields[0]);
+            connect(rejectBtn, &QPushButton::clicked, this, &ReservationWidget::onDenyButtonClicked);
+
+            btnLayout->addWidget(approveBtn);
+            btnLayout->addWidget(rejectBtn);
+
+            m_approveTable->setCellWidget(pendingRow, 7, btnWidget);
+
+            pendingRow++;
+        }
+    }
+
+    // 调整列宽
+    m_approveTable->resizeColumnsToContents();
+    m_approveTable->horizontalHeader()->setStretchLastSection(true);
+}
+
+void ReservationWidget::onApproveButtonClicked()
+{
+    QPushButton *btn = qobject_cast<QPushButton*>(sender());
+    if (!btn) return;
+
+    int reservationId = btn->property("reservationId").toInt();
+    emit reservationApproveRequested(reservationId, true);
+}
+
+void ReservationWidget::onDenyButtonClicked()
+{
+    QPushButton *btn = qobject_cast<QPushButton*>(sender());
+    if (!btn) return;
+
+    int reservationId = btn->property("reservationId").toInt();
+    emit reservationApproveRequested(reservationId, false);
 }
