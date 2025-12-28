@@ -1,4 +1,5 @@
 #include "reservationwidget.h"
+
 #include <QMessageBox>
 #include <QHeaderView>
 #include <QLabel>
@@ -130,4 +131,36 @@ void ReservationWidget::onDenyButtonClicked()
 {
     // TODO: 获取选中的预约ID，发送拒绝请求
     QMessageBox::information(this, "提示", "拒绝功能开发中");
+}
+
+void ReservationWidget::updateQueryResultTable(const QString &data)
+{
+    // 清空表格
+    m_queryResultTable->setRowCount(0);
+
+    if (data.isEmpty()) {
+        QMessageBox::information(this, "查询结果", "暂无预约记录");
+        return;
+    }
+
+    // 解析数据格式: "id|equipment_id|user_id|purpose|start_time|end_time|status;..."
+    QStringList reservations = data.split(';', Qt::SkipEmptyParts);
+
+    for (int i = 0; i < reservations.size(); ++i) {
+        QStringList fields = reservations[i].split('|');
+        if (fields.size() >= 7) {
+            m_queryResultTable->insertRow(i);
+            for (int j = 0; j < 7; ++j) {
+                QTableWidgetItem *item = new QTableWidgetItem(fields[j]);
+                m_queryResultTable->setItem(i, j, item);
+            }
+        }
+    }
+    // 调整列宽（关键修复）
+    m_queryResultTable->resizeColumnsToContents();  // 自动调整所有列宽
+    m_queryResultTable->horizontalHeader()->setStretchLastSection(true);  // 最后一列拉伸
+
+    qDebug() << "[ReservationWidget] 预约查询完成，共" << reservations.size() << "条记录";
+
+    qDebug() << "预约查询完成，共" << reservations.size() << "条记录";
 }

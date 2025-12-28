@@ -20,7 +20,7 @@ class ReservationWidget : public QWidget
 public:
     explicit ReservationWidget(QWidget *parent = nullptr);
     void setUserRole(const QString &role, const QString &userId);
-
+    void updateQueryResultTable(const QString &data);
     QComboBox *m_equipmentComboQuery;
     QComboBox *m_equipmentComboApply;
 signals:
@@ -28,7 +28,6 @@ signals:
                                    const QString &startTime, const QString &endTime);
     void reservationQueryRequested(const QString &equipmentId);
     void reservationApproveRequested(int reservationId, bool approve);
-
 private slots:
     void onApplyButtonClicked();
     void onQueryButtonClicked();

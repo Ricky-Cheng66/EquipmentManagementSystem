@@ -57,7 +57,7 @@ private:
     MessageDispatcher* m_dispatcher;
     LoginDialog* m_loginDialog;
     EquipmentManagerWidget* m_equipmentManagerWidget;
-    QString m_currentUserId;    // 登录成功后从响应解析保存
+    int  m_currentUserId;    // 登录成功后从响应解析保存
     bool m_isLoggedIn; // 登录状态标志
     QString m_currentUsername;
 

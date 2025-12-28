@@ -227,7 +227,7 @@ void MainWindow::handleLoginResponse(const ProtocolParser::ParseResult &result)
             if (parts.size() > 1) {
                 username = parts[1];
                 m_currentUsername = username;
-                m_currentUserId = username;  // 用用户名作为用户ID（或从parts[3]解析真实ID）
+                m_currentUserId = 1;  // 用用户名作为用户ID（或从parts[3]解析真实ID）
             }
             if (parts.size() > 2) {
                 role = parts[2];
@@ -441,17 +441,21 @@ void MainWindow::handleReservationApplyResponse(const ProtocolParser::ParseResul
 
 void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResult &result)
 {
-    // payload格式: "id|eqId|userId|purpose|start|end|status;..."
     QString payload = QString::fromStdString(result.payload);
+    QStringList parts = payload.split('|', Qt::SkipEmptyParts);
 
-    if (payload.isEmpty()) {
-        QMessageBox::information(this, "查询结果", "暂无预约记录");
+    if (parts.isEmpty() || parts[0] != "success") {
+        QString errorMsg = parts.size() >= 2 ? parts[1] : "查询失败";
+        QMessageBox::warning(this, "查询失败", errorMsg);
         return;
     }
 
-    // 解析并填充到表格（后续在ReservationWidget中实现）
-    logMessage(QString("收到预约查询结果，共%1条记录").arg(payload.count(';') + 1));
-    // TODO: 发射信号更新ReservationWidget的表格
+    // 正确提取 data 部分（去掉 "success|" 前缀）
+    QString data = payload.mid(parts[0].length() + 1); // +1 跳过 '|'
+
+    if (m_reservationWidget) {
+        m_reservationWidget->updateQueryResultTable(data);
+    }
 }
 
 void MainWindow::handleReservationApproveResponse(const ProtocolParser::ParseResult &result)
