@@ -453,18 +453,16 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
         return;
     }
 
-    // 正确提取 data 部分（去掉 "success|" 前缀）
-    QString data = payload.mid(parts[0].length() + 1); // +1 跳过 '|'
+    QString data = payload.mid(parts[0].length() + 1);
 
-    if (m_reservationWidget) {
-        // 判断当前在哪个标签页
-        int currentTab = m_reservationWidget->m_tabWidget->currentIndex();
+    if (!m_reservationWidget) return;
 
-        if (currentTab == 1) {  // 查询页
-            m_reservationWidget->updateQueryResultTable(data);
-        } else if (currentTab == 2 && m_userRole == "admin") {  // 审批页
-            m_reservationWidget->loadPendingReservations(data);
-        }
+    int currentTab = m_reservationWidget->m_tabWidget->currentIndex();
+
+    if (currentTab == 2) {  // 审批页
+        m_reservationWidget->loadAllReservationsForApproval(data);
+    } else if (currentTab == 1) {  // 查询页
+        m_reservationWidget->updateQueryResultTable(data);
     }
 }
 
@@ -476,7 +474,14 @@ void MainWindow::handleReservationApproveResponse(const ProtocolParser::ParseRes
     if (parts.size() >= 2 && parts[0] == "success") {
         QMessageBox::information(this, "审批成功", parts[1]);
         logMessage("预约审批操作成功");
-        // TODO: 刷新审批页面的表格
+
+        // **自动刷新审批页面**
+        if (m_reservationWidget && m_reservationWidget->m_tabWidget->currentIndex() == 2) {
+            std::vector<char> msg = ProtocolParser::build_reservation_query(
+                ProtocolParser::CLIENT_QT_CLIENT, "all");
+            m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+            logMessage("自动刷新审批列表...");
+        }
     } else {
         QString errorMsg = parts.size() >= 2 ? parts[1] : "未知错误";
         QMessageBox::warning(this, "审批失败", errorMsg);
@@ -490,32 +495,18 @@ void MainWindow::showReservationWidget()
         QMessageBox::warning(this, "提示", "请先登录");
         return;
     }
-    // 先设置用户角色（必须在显示窗口前）
-    qDebug() << "DEBUG: MainWindow userRole=" << m_userRole << ", userId=" << m_currentUserId;
+
+    // 先设置用户角色
     m_reservationWidget->setUserRole(m_userRole, QString::number(m_currentUserId));
 
-    // 先获取 model（提到前面，确保两个 if 都能访问）
+    // 填充设备列表（保持原样）
     QStandardItemModel* model = nullptr;
     if (m_equipmentManagerWidget) {
-        model = m_equipmentManagerWidget->m_equipmentModel;  // 直接访问 public 成员
+        model = m_equipmentManagerWidget->m_equipmentModel;
     }
 
-    // 填充申请页的设备下拉框
     if (m_reservationWidget) {
         m_reservationWidget->m_equipmentComboApply->clear();
-
-        if (model) {
-            for (int row = 0; row < model->rowCount(); ++row) {
-                QString equipmentId = model->item(row, 0)->text();
-                QString equipmentType = model->item(row, 1)->text();
-                m_reservationWidget->m_equipmentComboApply->addItem(
-                    QString("[%1] %2").arg(equipmentType).arg(equipmentId), equipmentId);
-            }
-        }
-    }
-
-    // 填充查询页的设备下拉框
-    if (m_reservationWidget) {
         m_reservationWidget->m_equipmentComboQuery->clear();
         m_reservationWidget->m_equipmentComboQuery->addItem("全部设备", "all");
 
@@ -523,19 +514,23 @@ void MainWindow::showReservationWidget()
             for (int row = 0; row < model->rowCount(); ++row) {
                 QString equipmentId = model->item(row, 0)->text();
                 QString equipmentType = model->item(row, 1)->text();
-                m_reservationWidget->m_equipmentComboQuery->addItem(
-                    QString("[%1] %2").arg(equipmentType).arg(equipmentId), equipmentId);
+                QString displayText = QString("[%1] %2").arg(equipmentType).arg(equipmentId);
+
+                m_reservationWidget->m_equipmentComboApply->addItem(displayText, equipmentId);
+                m_reservationWidget->m_equipmentComboQuery->addItem(displayText, equipmentId);
             }
         }
     }
 
-    // 加载待审批预约列表（仅管理员）
-    if (m_userRole == "admin") {
-        std::vector<char> msg = ProtocolParser::build_reservation_query(
-            ProtocolParser::CLIENT_QT_CLIENT, "all");
-        m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
-        logMessage("加载待审批预约列表...");
-    }
+    // 连接审批页加载信号
+    connect(m_reservationWidget, &ReservationWidget::loadAllReservationsRequested,
+            this, [this]() {
+                qDebug() << "DEBUG: 收到审批页加载请求";
+                std::vector<char> msg = ProtocolParser::build_reservation_query(
+                    ProtocolParser::CLIENT_QT_CLIENT, "all");
+                m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+                logMessage("加载全部预约列表...");
+            });
 
     m_reservationWidget->show();
     m_reservationWidget->raise();

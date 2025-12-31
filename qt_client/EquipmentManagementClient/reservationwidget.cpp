@@ -19,6 +19,8 @@ ReservationWidget::ReservationWidget(QWidget *parent)
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->addWidget(m_tabWidget);
     setLayout(mainLayout);
+
+    connect(m_tabWidget, &QTabWidget::currentChanged, this, &ReservationWidget::onTabChanged);
 }
 
 void ReservationWidget::setupApplyTab()
@@ -87,16 +89,28 @@ void ReservationWidget::setupApproveTab()
     vLayout->addWidget(m_approveTable);
 
     m_tabWidget->addTab(approveTab, "预约审批");
+
+    m_approveTable->insertRow(0);
+    m_approveTable->setItem(0, 0, new QTableWidgetItem("暂无待审批记录"));
 }
 
 void ReservationWidget::setUserRole(const QString &role, const QString &userId)
 {
-    qDebug() << "DEBUG: setUserRole called, role=" << role << ", userId=" << userId;
-    m_userRole = role;
 
-    // 非管理员隐藏审批页
-    if (role != "admin") {
-        m_tabWidget->removeTab(2); // 移除审批页
+    m_userRole = role;
+    qDebug() << "DEBUG: setUserRole called, role=" << role << ", userId=" << userId;
+    // 确保 setupApproveTab 已创建审批页（在构造函数中已调用）
+    if (role == "admin") {
+        qDebug() << "DEBUG: 管理员，显示审批页";
+        // 如果审批页被移除了，重新添加
+        if (m_tabWidget->count() <= 2) {
+            setupApproveTab();  // 重新创建审批页
+        }
+    } else {
+        qDebug() << "DEBUG: 非管理员，移除审批页";
+        if (m_tabWidget->count() > 2) {
+            m_tabWidget->removeTab(2);
+        }
     }
 }
 
@@ -153,54 +167,75 @@ void ReservationWidget::updateQueryResultTable(const QString &data)
     qDebug() << "预约查询完成，共" << reservations.size() << "条记录";
 }
 
-void ReservationWidget::loadPendingReservations(const QString &data)
+void ReservationWidget::loadAllReservationsForApproval(const QString &data)
 {
     m_approveTable->setRowCount(0);
 
     if (data.isEmpty()) {
+        m_approveTable->insertRow(0);
+        m_approveTable->setItem(0, 0, new QTableWidgetItem("暂无预约记录"));
+        for (int i = 1; i < 8; ++i) {
+            m_approveTable->setItem(0, i, new QTableWidgetItem(""));
+        }
         return;
     }
 
-    // 解析所有预约，筛选状态为 pending 的
+    // 解析所有预约记录
     QStringList reservations = data.split(';', Qt::SkipEmptyParts);
-    int pendingRow = 0;
 
     for (int i = 0; i < reservations.size(); ++i) {
         QStringList fields = reservations[i].split('|');
-        if (fields.size() >= 7 && fields[6] == "pending") {
-            m_approveTable->insertRow(pendingRow);
+        if (fields.size() >= 7) {
+            m_approveTable->insertRow(i);
 
             // 填充前7列数据
             for (int j = 0; j < 7; ++j) {
-                m_approveTable->setItem(pendingRow, j, new QTableWidgetItem(fields[j]));
+                m_approveTable->setItem(i, j, new QTableWidgetItem(fields[j]));
             }
 
-            // 第8列添加操作按钮
-            QWidget *btnWidget = new QWidget(this);
-            QHBoxLayout *btnLayout = new QHBoxLayout(btnWidget);
-            btnLayout->setContentsMargins(0, 0, 0, 0);
-            btnLayout->setSpacing(2);
+            // 第8列：操作列
+            QString status = fields[6];  // status: pending/approved/rejected
 
-            QPushButton *approveBtn = new QPushButton("批准", this);
-            approveBtn->setProperty("reservationId", fields[0]);
-            connect(approveBtn, &QPushButton::clicked, this, &ReservationWidget::onApproveButtonClicked);
+            QWidget *opWidget = new QWidget(this);
+            QHBoxLayout *opLayout = new QHBoxLayout(opWidget);
+            opLayout->setContentsMargins(0, 0, 0, 0);
+            opLayout->setSpacing(2);
 
-            QPushButton *rejectBtn = new QPushButton("拒绝", this);
-            rejectBtn->setProperty("reservationId", fields[0]);
-            connect(rejectBtn, &QPushButton::clicked, this, &ReservationWidget::onDenyButtonClicked);
+            if (status == "pending") {
+                // 待审批：显示批准和拒绝按钮
+                QPushButton *approveBtn = new QPushButton("Approve", this);
+                approveBtn->setProperty("reservationId", fields[0]);
+                approveBtn->setProperty("action", "approve");
+                connect(approveBtn, &QPushButton::clicked, this, &ReservationWidget::onApproveButtonClicked);
 
-            btnLayout->addWidget(approveBtn);
-            btnLayout->addWidget(rejectBtn);
+                QPushButton *rejectBtn = new QPushButton("Reject", this);
+                rejectBtn->setProperty("reservationId", fields[0]);
+                rejectBtn->setProperty("action", "reject");
+                connect(rejectBtn, &QPushButton::clicked, this, &ReservationWidget::onDenyButtonClicked);
 
-            m_approveTable->setCellWidget(pendingRow, 7, btnWidget);
+                opLayout->addWidget(approveBtn);
+                opLayout->addWidget(rejectBtn);
+            } else {
+                // 已审批：显示状态文本
+                QLabel *statusLabel = new QLabel(status.toUpper(), this);
+                statusLabel->setAlignment(Qt::AlignCenter);
+                if (status == "approved") {
+                    statusLabel->setStyleSheet("color: green; font-weight: bold;");
+                } else if (status == "rejected") {
+                    statusLabel->setStyleSheet("color: red; font-weight: bold;");
+                }
+                opLayout->addWidget(statusLabel);
+            }
 
-            pendingRow++;
+            m_approveTable->setCellWidget(i, 7, opWidget);
         }
     }
 
     // 调整列宽
     m_approveTable->resizeColumnsToContents();
     m_approveTable->horizontalHeader()->setStretchLastSection(true);
+    m_approveTable->setColumnWidth(4, 150);  // 开始时间
+    m_approveTable->setColumnWidth(5, 150);  // 结束时间
 }
 
 void ReservationWidget::onApproveButtonClicked()
@@ -219,4 +254,15 @@ void ReservationWidget::onDenyButtonClicked()
 
     int reservationId = btn->property("reservationId").toInt();
     emit reservationApproveRequested(reservationId, false);
+}
+
+void ReservationWidget::onTabChanged(int index)
+{
+    qDebug() << "DEBUG: Tab changed to index" << index;
+
+    // 当切换到审批页（索引2）时，触发加载请求
+    if (index == 2 && m_userRole == "admin") {
+        qDebug() << "DEBUG: 切换到审批页，请求加载待审批列表";
+        emit loadAllReservationsRequested();
+    }
 }

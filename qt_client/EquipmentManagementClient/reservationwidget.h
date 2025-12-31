@@ -21,7 +21,7 @@ public:
     explicit ReservationWidget(QWidget *parent = nullptr);
     void setUserRole(const QString &role, const QString &userId);
     void updateQueryResultTable(const QString &data);
-    void loadPendingReservations(const QString &data);
+    void loadAllReservationsForApproval(const QString &data);
     QComboBox *m_equipmentComboQuery;
     QComboBox *m_equipmentComboApply;
     QTabWidget *m_tabWidget;
@@ -31,11 +31,13 @@ signals:
     void reservationQueryRequested(const QString &equipmentId);
 
     void reservationApproveRequested(int reservationId, bool approve);
+    void loadAllReservationsRequested();
 private slots:
     void onApplyButtonClicked();
     void onQueryButtonClicked();
     void onApproveButtonClicked();
     void onDenyButtonClicked();
+    void onTabChanged(int index);
 
 private:
     void setupApplyTab();
