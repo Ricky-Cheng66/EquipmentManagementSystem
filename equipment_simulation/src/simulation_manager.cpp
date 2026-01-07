@@ -669,8 +669,6 @@ void SimulationManager::handle_connection_close(int fd) {
 }
 
 void SimulationManager::perform_maintenance_tasks() {
-  // 不再使用loop_count_来触发心跳
-  // 只处理状态更新打印等任务
 
   // 每30次循环打印一次状态
   static int loop_count = 0;
@@ -835,52 +833,13 @@ bool SimulationManager::send_status_update_message(
     power_state = "off"; // 默认值
   }
 
-  // ====== 新增：模拟功耗计算 ======
-  // 1. 根据设备类型设置基础功耗
-  int base_power = 50; // 默认50W
-  std::string equipment_type = equipment->get_equipment_type();
-
-  if (equipment_type == "projector") {
-    base_power = 150;
-  } else if (equipment_type == "camera") {
-    base_power = 30;
-  } else if (equipment_type == "air_conditioner") {
-    base_power = 2000;
-  } else if (equipment_type == "access_control") {
-    base_power = 5;
-  }
-
-  // 2. 根据电源状态计算实际功耗
-  int current_power = 0;
-  if (equipment->get_power_state() == "on") {
-    // 工作中：基础功率 ±10% 波动
-    int fluctuation = base_power / 10; // ±10%
-    current_power = base_power + (rand() % (fluctuation * 2 + 1) - fluctuation);
-    if (current_power < 0)
-      current_power = 0;
-  } else {
-    // 待机：固定5W
-    current_power = 5;
-  }
-
-  // 3. 获取当前时间戳
-  std::string timestamp = get_current_time();
-
-  // 4. 构建附加数据：功率|时间戳
-  std::string more_data = std::to_string(current_power) + "|" + timestamp;
-
-  // ====== 修改：使用带功耗和时间戳的协议消息 ======
   std::vector<char> message = ProtocolParser::build_status_update_message(
       ProtocolParser::CLIENT_EQUIPMENT, equipment_id, equipment->get_status(),
-      equipment->get_power_state(), more_data);
+      equipment->get_power_state(), "simulated_data");
 
   bool success = send_message(fd, message);
   if (success) {
-    std::cout << "[" << timestamp << "] 发送状态更新: " << equipment_id
-              << " 状态:" << equipment->get_status()
-              << " 电源:" << equipment->get_power_state()
-              << " 功率:" << current_power << "W"
-              << " 时间:" << timestamp << std::endl;
+    std::cout << "发送状态更新: " << equipment_id << std::endl;
   }
 
   return success;
