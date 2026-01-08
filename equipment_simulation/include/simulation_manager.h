@@ -92,6 +92,8 @@ private:
   bool add_to_epoll(int fd);
   std::string get_command_name(ProtocolParser::ControlCommandType command_type);
 
+  void send_power_reports(); // 新增：定时发送功耗报告
+
   // 成员变量
   std::unique_ptr<SimulatorConnections> connections_;
 
@@ -102,6 +104,9 @@ private:
 
   std::atomic<bool> is_running_{false};
   std::thread event_loop_thread_;
+
+  int power_report_counter_ = 0;         // 新增：计数器
+  const int POWER_REPORT_INTERVAL = 500; //
 
   // 定时任务计数器
   int loop_count_{0};

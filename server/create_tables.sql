@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS equipments (
     location VARCHAR(100) NOT NULL,
     status VARCHAR(20) DEFAULT 'offline',
     power_state VARCHAR(20) DEFAULT 'off',
+    energy_total DECIMAL(12,4) DEFAULT 0.0000 COMMENT '累计能耗(0.1kWh)',
     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -55,14 +56,13 @@ CREATE TABLE IF NOT EXISTS reservations (
 ) ENGINE=InnoDB;
 
 -- 5. 能耗记录表
-CREATE TABLE IF NOT EXISTS energy_logs (
+CREATE TABLE energy_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     equipment_id VARCHAR(50) NOT NULL,
-    power_consumption DECIMAL(10,2) NOT NULL,
-    cost DECIMAL(10,2),
-    record_date DATE NOT NULL,
+    power_consumption DECIMAL(10,2) NOT NULL,  -- 瞬时功耗(W)
+    timestamp DATETIME NOT NULL,               -- 采样时间
     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_equipment_date (equipment_id, record_date),
+    INDEX idx_equipment_timestamp (equipment_id, timestamp),
     FOREIGN KEY (equipment_id) REFERENCES equipments(equipment_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 

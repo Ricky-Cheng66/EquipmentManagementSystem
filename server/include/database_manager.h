@@ -33,6 +33,15 @@ public:
                             const std::string &status,
                             const std::string &power_state,
                             const std::string &additional_data = "");
+
+  // 新增：记录功耗日志
+  bool insert_power_log(const std::string &equipment_id, double power_value,
+                        const std::string &timestamp);
+
+  // 新增：累加设备总能耗
+  bool update_equipment_energy_total(const std::string &equipment_id,
+                                     double energy_increment);
+
   //预约相关操作
   bool add_reservation(const std::string &equipment_id, int user_id,
                        const std::string &purpose,

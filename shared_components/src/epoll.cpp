@@ -78,7 +78,6 @@ int Epoll::wait_events(struct epoll_event *evs, int timeout) {
   if (epfd_ < 0) {
     return -1;
   }
-  timeout = -1;
   int nfds = epoll_wait(epfd_, evs, max_events_, timeout);
   if (nfds < 0) {
     if (errno == EINTR) {

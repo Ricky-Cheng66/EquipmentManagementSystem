@@ -301,6 +301,9 @@ void EquipmentManagementServer::process_equipment_message(
   case ProtocolParser::HEARTBEAT:
     handle_heartbeat(fd, parse_result.equipment_id);
     break;
+  case ProtocolParser::POWER_REPORT:
+    handle_power_report(fd, parse_result.equipment_id, parse_result.payload);
+    break;
   default:
     std::cout << "未知消息类型: " << parse_result.type << " from fd=" << fd
               << std::endl;
@@ -729,6 +732,50 @@ void EquipmentManagementServer::handle_heartbeat(
   } else {
     std::cout << "心跳处理: " << equipment_id << " fd=" << fd
               << " (响应发送失败)" << std::endl;
+  }
+}
+
+void EquipmentManagementServer::handle_power_report(
+    int fd, const std::string &equipment_id, const std::string &payload) {
+
+  std::cout << "处理功耗报告: " << equipment_id << " payload: " << payload
+            << std::endl;
+
+  // 解析功耗数据格式: "power_state|power_value|timestamp"
+  auto parts = ProtocolParser::split_string(payload, '|');
+  if (parts.size() < 3) {
+    std::cout << "功耗报告格式错误" << std::endl;
+    return;
+  }
+
+  std::string power_state = parts[0];
+  std::string power_value_str = parts[1];
+  std::string timestamp = parts[2];
+
+  try {
+    double power_value = std::stod(power_value_str);
+
+    // 1. 写入原始功耗日志表
+    if (db_manager_->is_connected()) {
+      db_manager_->insert_power_log(equipment_id, power_value, timestamp);
+    }
+
+    // 2. 累加设备总能耗（简单累加，后续可优化为精确计算）
+    // 假设每次上报间隔为5秒，能耗增量 = 功率 × 5 / 3600 / 10 (0.1kWh)
+    double energy_increment = power_value * 5.0 / 3600.0 / 10.0;
+    if (power_state == "on") {
+      db_manager_->update_equipment_energy_total(equipment_id,
+                                                 energy_increment);
+    }
+
+    std::cout << "  记录功耗: " << power_value << "W, 时间: " << timestamp
+              << ", 能耗增量: " << energy_increment << " (0.1kWh)" << std::endl;
+
+    // 3. 更新心跳时间
+    connections_manager_->update_heartbeat(fd);
+
+  } catch (const std::exception &e) {
+    std::cerr << "解析功耗值失败: " << e.what() << std::endl;
   }
 }
 

@@ -207,3 +207,23 @@ bool DatabaseManager::check_reservation_conflict(
   }
   return false;
 }
+
+bool DatabaseManager::insert_power_log(const std::string &equipment_id,
+                                       double power_value,
+                                       const std::string &timestamp) {
+  // 字段名必须是 power_consumption
+  std::string sql =
+      "INSERT INTO energy_logs (equipment_id, power_consumption, timestamp) "
+      "VALUES ('" +
+      equipment_id + "', " + std::to_string(power_value) + ", '" + timestamp +
+      "')";
+  return execute_update(sql);
+}
+
+bool DatabaseManager::update_equipment_energy_total(
+    const std::string &equipment_id, double energy_increment) {
+  std::string sql = "UPDATE equipments SET energy_total = energy_total + " +
+                    std::to_string(energy_increment) +
+                    " WHERE equipment_id = '" + equipment_id + "'";
+  return execute_update(sql);
+}

@@ -36,6 +36,9 @@ public:
     RESERVATION_QUERY = 15,
     RESERVATION_APPROVE = 16,
 
+    // ============ 能耗相关消息（新增） ============
+    POWER_REPORT = 17, // 设备→服务器：定时功耗上报
+
     // ===== Qt客户端专用消息 =====
     QT_CLIENT_LOGIN = 100,         // Qt客户端 -> 服务器：登录请求
     QT_LOGIN_RESPONSE = 101,       // 服务器 -> Qt客户端：登录响应
@@ -156,7 +159,12 @@ public:
   build_reservation_approve_response(ClientType client_type, bool success,
                                      const std::string &message);
 
-private:
+  // ============ 能耗采集消息构建 ============
+  static std::vector<char>
+  build_power_report_message(ClientType client_type,
+                             const std::string &equipment_id,
+                             const std::string &power_state, int power_value,
+                             const std::string &timestamp);
   // 工具函数 - 构建基础消息体
   static std::string
   build_message_body(ClientType client_type, MessageType type,

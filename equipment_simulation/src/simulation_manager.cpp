@@ -676,6 +676,12 @@ void SimulationManager::perform_maintenance_tasks() {
     print_status();
     loop_count = 0;
   }
+
+  // 每50次循环发送一次功耗报告
+  if (++power_report_counter_ >= POWER_REPORT_INTERVAL) {
+    send_power_reports();
+    power_report_counter_ = 0;
+  }
 }
 
 void SimulationManager::send_heartbeats() {
@@ -736,13 +742,9 @@ void SimulationManager::send_status_updates() {
 std::string SimulationManager::get_current_time() {
   auto now = std::chrono::system_clock::now();
   auto time_t_now = std::chrono::system_clock::to_time_t(now);
-  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                now.time_since_epoch()) %
-            1000;
 
   std::stringstream ss;
-  ss << std::put_time(std::localtime(&time_t_now), "%H:%M:%S");
-  ss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+  ss << std::put_time(std::localtime(&time_t_now), "%Y-%m-%d %H:%M:%S");
 
   return ss.str();
 }
@@ -888,4 +890,45 @@ void SimulationManager::print_status() const {
   connections_->print_statistics();
   connections_->print_connections();
   std::cout << "==================" << std::endl;
+}
+
+void SimulationManager::send_power_reports() {
+  auto connected_equipments = connections_->get_connected_equipments();
+
+  for (const auto &equipment : connected_equipments) {
+    std::string equipment_id = equipment->get_equipment_id();
+    int fd = connections_->get_fd_by_equipment_id(equipment_id);
+    if (fd == -1)
+      continue;
+
+    // 计算功耗（基于设备类型和电源状态）
+    int base_power = 50;
+    std::string type = equipment->get_equipment_type();
+    if (type == "projector")
+      base_power = 150;
+    else if (type == "camera")
+      base_power = 30;
+    else if (type == "air_conditioner")
+      base_power = 2000;
+
+    int current_power = 0;
+    if (equipment->get_power_state() == "on") {
+      int fluctuation = base_power / 10; // ±10%
+      current_power =
+          base_power + (rand() % (fluctuation * 2 + 1) - fluctuation);
+    } else {
+      current_power = 5; // 待机功耗
+    }
+
+    // 构建 payload: "power_state|power_value|timestamp"
+    std::string timestamp = get_current_time();
+    std::vector<char> msg = ProtocolParser::build_power_report_message(
+        ProtocolParser::CLIENT_EQUIPMENT, equipment_id,
+        equipment->get_power_state(), current_power, timestamp);
+
+    send_message(fd, msg);
+
+    std::cout << "[" << timestamp << "] 发送功耗报告: " << equipment_id
+              << std::endl;
+  }
 }

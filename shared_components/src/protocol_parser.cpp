@@ -306,3 +306,14 @@ ProtocolParser::build_reservation_approve(ClientType client_type,
       client_type, MessageType::RESERVATION_APPROVE, admin_id, {payload});
   return pack_message(body);
 }
+
+std::vector<char> ProtocolParser::build_power_report_message(
+    ClientType client_type, const std::string &equipment_id,
+    const std::string &power_state, int power_value,
+    const std::string &timestamp) {
+  std::string payload =
+      power_state + "|" + std::to_string(power_value) + "|" + timestamp;
+  std::string body =
+      build_message_body(client_type, POWER_REPORT, equipment_id, {payload});
+  return pack_message(body);
+}

@@ -67,6 +67,9 @@ private:
       const std::string &payload); //处理设备控制响应
   void handle_heartbeat(int fd, const std::string &equipment_id);
 
+  void handle_power_report(int fd, const std::string &equipment_id,
+                           const std::string &payload);
+
   // 连接管理
   void handle_connection_close(int fd);
   void perform_maintenance_tasks();
