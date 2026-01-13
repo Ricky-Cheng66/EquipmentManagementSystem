@@ -81,31 +81,36 @@ std::vector<std::string> ProtocolParser::split_string(const std::string &str,
 
 // ============ qt客户端登录相关 ========
 // Qt客户端登录消息
-std::vector<char> ProtocolParser::build_qt_login_message(ProtocolParser::ClientType client_type,
-                                                         const std::string &username,
-                                                         const std::string &password) {
-    std::string body = std::to_string(client_type) + "|" + std::to_string(static_cast<int>(QT_CLIENT_LOGIN)) + "|" +
+std::vector<char>
+ProtocolParser::build_qt_login_message(ProtocolParser::ClientType client_type,
+                                       const std::string &username,
+                                       const std::string &password) {
+    std::string body = std::to_string(client_type) + "|" +
+                       std::to_string(static_cast<int>(QT_CLIENT_LOGIN)) + "|" +
                        "qt_client" + "|" + // 固定设备ID，标识为Qt客户端
                        username + "|" + password;
     return pack_message(body);
 }
 
 // Qt客户端登录响应
-std::vector<char>
-ProtocolParser::build_qt_login_response_message(ProtocolParser::ClientType client_type, bool success,
-                                                const std::string &message) {
+std::vector<char> ProtocolParser::build_qt_login_response_message(
+    ProtocolParser::ClientType client_type, bool success,
+    const std::string &message) {
     std::vector<std::string> fields;
     fields.push_back(success ? "success" : "fail");
     if (!message.empty()) {
         fields.push_back(message);
     }
-    std::string body = build_message_body(client_type, QT_LOGIN_RESPONSE, "", fields);
+    std::string body =
+        build_message_body(client_type, QT_LOGIN_RESPONSE, "", fields);
     return pack_message(body);
 }
 
-std::vector<char> ProtocolParser::build_qt_equipment_list_query(ProtocolParser::ClientType client_type) {
-    std::string body =
-        std::to_string(client_type) + "|" + std::to_string(static_cast<int>(QT_EQUIPMENT_LIST_QUERY)) + "||";
+std::vector<char> ProtocolParser::build_qt_equipment_list_query(
+    ProtocolParser::ClientType client_type) {
+    std::string body = std::to_string(client_type) + "|" +
+                       std::to_string(static_cast<int>(QT_EQUIPMENT_LIST_QUERY)) +
+                       "||";
     return pack_message(body);
 }
 
@@ -225,9 +230,8 @@ std::vector<char> ProtocolParser::build_control_command_to_server(
 std::vector<char> ProtocolParser::build_control_response(
     ClientType client_type, const std::string &equipment_id, bool success,
     const std::string &parameters) {
-    std::string body =
-        build_message_body(client_type, MessageType::CONTROL_RESPONSE,
-                           equipment_id, {parameters});
+    std::string body = build_message_body(
+        client_type, MessageType::CONTROL_RESPONSE, equipment_id, {parameters});
     return pack_message(body);
 }
 
@@ -275,30 +279,41 @@ std::vector<char> ProtocolParser::build_reservation_approve_response(
     return pack_message(body);
 }
 
-// ============ 新增Qt端预约请求消息实现 ============
+// ============ Qt端预约请求消息实现 ============
 
-std::vector<char> ProtocolParser::build_reservation_message(
+std::vector<char>
+ProtocolParser::build_reservation_message(ClientType client_type,
+                                          const std::string &equipment_id,
+                                          const std::string &payload) {
+    std::string body = build_message_body(
+        client_type, MessageType::RESERVATION_APPLY, equipment_id, {payload});
+    return pack_message(body);
+}
+
+std::vector<char>
+ProtocolParser::build_reservation_query(ClientType client_type,
+                                        const std::string &equipment_id) {
+    std::string body = build_message_body(
+        client_type, MessageType::RESERVATION_QUERY, equipment_id, {});
+    return pack_message(body);
+}
+
+std::vector<char>
+ProtocolParser::build_reservation_approve(ClientType client_type,
+                                          const std::string &admin_id,
+                                          const std::string &payload) {
+    std::string body = build_message_body(
+        client_type, MessageType::RESERVATION_APPROVE, admin_id, {payload});
+    return pack_message(body);
+}
+
+std::vector<char> ProtocolParser::build_power_report_message(
     ClientType client_type, const std::string &equipment_id,
-    const std::string &payload) {
+    const std::string &power_state, int power_value,
+    const std::string &timestamp) {
+    std::string payload =
+        power_state + "|" + std::to_string(power_value) + "|" + timestamp;
     std::string body =
-        build_message_body(client_type, MessageType::RESERVATION_APPLY,
-                           equipment_id, {payload});
-    return pack_message(body);
-}
-
-std::vector<char> ProtocolParser::build_reservation_query(
-    ClientType client_type, const std::string &equipment_id) {
-    std::string body =
-        build_message_body(client_type, MessageType::RESERVATION_QUERY,
-                           equipment_id, {});
-    return pack_message(body);
-}
-
-std::vector<char> ProtocolParser::build_reservation_approve(
-    ClientType client_type, const std::string &admin_id,
-    const std::string &payload) {
-    std::string body =
-        build_message_body(client_type, MessageType::RESERVATION_APPROVE,
-                           admin_id, {payload});
+        build_message_body(client_type, POWER_REPORT, equipment_id, {payload});
     return pack_message(body);
 }

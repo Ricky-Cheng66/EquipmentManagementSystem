@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 find_package(Qt6 REQUIRED COMPONENTS Network)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Charts)
 
 set(PROJECT_SOURCES
         main.cpp
@@ -36,6 +37,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         ${FORMS}
         equipmentmanagerwidget.h equipmentmanagerwidget.cpp
         reservationwidget.h reservationwidget.cpp
+        energystatisticswidget.h energystatisticswidget.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET EquipmentManagementClient APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
@@ -56,11 +58,14 @@ else()
 endif()
 
 target_link_libraries(EquipmentManagementClient PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
-                        Qt6::Network)
+                        Qt6::Network
+                    Qt6::Core Qt6::Gui Qt6::Charts)
+
 # 让源码能找到构建目录里生成的 ui_*.h
 target_include_directories(EquipmentManagementClient PRIVATE
                         ${CMAKE_CURRENT_BINARY_DIR}/EquipmentManagementClient_autogen/include
 )
+
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.

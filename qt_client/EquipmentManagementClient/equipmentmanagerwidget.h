@@ -28,6 +28,7 @@ public:
     // 提供给外部调用的刷新接口
     void requestEquipmentList();
 
+
 signals:
     void showStatusMessage(const QString &msg);
 

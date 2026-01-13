@@ -39,6 +39,9 @@ public:
     // ============ 能耗相关消息（新增） ============
     POWER_REPORT = 17, // 设备→服务器：定时功耗上报
 
+    QT_ENERGY_QUERY = 18,    // Qt客户端 -> 服务器：查询能耗
+    QT_ENERGY_RESPONSE = 19, // 服务器 -> Qt客户端：返回能耗数据
+
     // ===== Qt客户端专用消息 =====
     QT_CLIENT_LOGIN = 100,         // Qt客户端 -> 服务器：登录请求
     QT_LOGIN_RESPONSE = 101,       // 服务器 -> Qt客户端：登录响应

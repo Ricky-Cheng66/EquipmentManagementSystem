@@ -71,12 +71,16 @@ MainWindow::MainWindow(QWidget *parent)
     m_reservationAction->setEnabled(false); // 初始禁用
     connect(m_reservationAction, &QAction::triggered, this, &MainWindow::showReservationWidget);
 
+    // 添加能耗统计菜单项（新增）
+    QAction* energyAction = managementMenu->addAction("能耗统计");
+    energyAction->setEnabled(false); // 初始禁用
+    connect(energyAction, &QAction::triggered, this, &MainWindow::showEnergyStatisticsWidget);
+
+    // 保存指针以便登录后启用（新增）
+    m_energyAction = energyAction;
+
     // 连接网络相关信号
     setupConnection();
-
-    // 创建预约管理窗口（初始隐藏）
-    m_reservationWidget = new ReservationWidget(this);
-    m_reservationWidget->setVisible(false);
 
     // 连接预约窗口的信号到主窗口的发送槽
     connect(m_reservationWidget, &ReservationWidget::reservationApplyRequested,
@@ -85,6 +89,14 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::onReservationQueryRequested);
     connect(m_reservationWidget, &ReservationWidget::reservationApproveRequested,
             this, &MainWindow::onReservationApproveRequested);
+
+    // 创建能耗统计窗口（新增）
+    m_energyStatisticsWidget = new EnergyStatisticsWidget(this);
+    m_energyStatisticsWidget->setVisible(false);
+
+    // 连接能耗查询信号（新增）
+    connect(m_energyStatisticsWidget, &EnergyStatisticsWidget::energyQueryRequested,
+            this, &MainWindow::onEnergyQueryRequested);
 
     // 注册消息处理器（心跳响应已注册，新增登录响应）
     m_dispatcher->registerHandler(ProtocolParser::QT_LOGIN_RESPONSE,
@@ -251,6 +263,11 @@ void MainWindow::handleLoginResponse(const ProtocolParser::ParseResult &result)
             // 登录后启用预约管理菜单项
             if (m_reservationAction) {
                 m_reservationAction->setEnabled(true);
+            }
+
+            // 启用能耗统计菜单
+            if (m_energyAction) {
+                m_energyAction->setEnabled(true);
             }
 
             ui->connectButton->setText("注销");
@@ -535,4 +552,51 @@ void MainWindow::showReservationWidget()
     m_reservationWidget->show();
     m_reservationWidget->raise();
     m_reservationWidget->activateWindow();
+}
+
+void MainWindow::showEnergyStatisticsWidget()
+{
+    if (!m_isLoggedIn) {
+        QMessageBox::warning(this, "提示", "请先登录");
+        return;
+    }
+
+    // 获取设备列表
+    QStringList equipmentIds;
+    QStandardItemModel* model = m_equipmentManagerWidget->m_equipmentModel;
+    if (model) {
+        for (int row = 0; row < model->rowCount(); ++row) {
+            equipmentIds << model->item(row, 0)->text();
+        }
+    }
+
+    m_energyStatisticsWidget->setEquipmentList(equipmentIds);
+    m_energyStatisticsWidget->show();
+}
+
+void MainWindow::onEnergyQueryRequested(const QString &equipmentId, const QString &timeRange)
+{
+    if (!m_tcpClient || !m_tcpClient->isConnected()) {
+        QMessageBox::warning(this, "查询失败", "网络未连接");
+        return;
+    }
+
+    // 构建查询请求
+    // 协议格式: "timeRange|startDate|endDate"
+    QString payload = timeRange + "|" +
+                      m_energyStatisticsWidget->findChild<QDateEdit*>(
+                                                  "m_startDateEdit")->date().toString("yyyy-MM-dd") + "|" +
+                      m_energyStatisticsWidget->findChild<QDateEdit*>(
+                                                  "m_endDateEdit")->date().toString("yyyy-MM-dd");
+
+    // 第一步：先接收string返回值
+    std::string str_msg = ProtocolParser::build_message_body(
+        ProtocolParser::CLIENT_QT_CLIENT, ProtocolParser::QT_ENERGY_QUERY,
+        equipmentId.toStdString(), {payload.toStdString()}
+        );
+    // 第二步：string转vector<char>
+    std::vector<char> msg(str_msg.begin(), str_msg.end());
+
+    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+    logMessage(QString("能耗查询已发送: 设备[%1] 时间范围[%2]").arg(equipmentId, timeRange));
 }

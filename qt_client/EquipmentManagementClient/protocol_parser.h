@@ -36,11 +36,20 @@ public:
         RESERVATION_QUERY = 15,
         RESERVATION_APPROVE = 16,
 
+        // ============ 能耗相关消息（新增） ============
+        POWER_REPORT = 17, // 设备→服务器：定时功耗上报
+
+        QT_ENERGY_QUERY = 18,   // Qt客户端 -> 服务器：查询能耗
+        QT_ENERGY_RESPONSE = 19, // 服务器 -> Qt客户端：返回能耗数据
+
         // ===== Qt客户端专用消息 =====
         QT_CLIENT_LOGIN = 100,         // Qt客户端 -> 服务器：登录请求
         QT_LOGIN_RESPONSE = 101,       // 服务器 -> Qt客户端：登录响应
         QT_EQUIPMENT_LIST_QUERY = 102, // Qt客户端 -> 服务器：查询设备列表
-        QT_EQUIPMENT_LIST_RESPONSE = 103 // 服务器 -> Qt客户端：返回设备列表
+        QT_EQUIPMENT_LIST_RESPONSE = 103, // 服务器 -> Qt客户端：返回设备列表
+        QT_RESERVATION_APPLY_RESPONSE = 104, // 服务器 -> Qt客户端：预约申请响应
+        QT_RESERVATION_QUERY_RESPONSE = 105, // 服务器 -> Qt客户端：预约查询响应
+        QT_RESERVATION_APPROVE_RESPONSE = 106 // 服务器 -> Qt客户端：预约审批响应
     };
 
     // ============ 客户端类型枚举 ============
@@ -111,14 +120,16 @@ public:
                           const std::string &power_state);
 
     // ============ 预约系统消息构建 ============
-    static std::vector<char> build_reservation_message(
-        ClientType client_type, const std::string &equipment_id,
-        const std::string &payload);
-    static std::vector<char> build_reservation_query(
-        ClientType client_type, const std::string &equipment_id);
-    static std::vector<char> build_reservation_approve(
-        ClientType client_type, const std::string &admin_id,
-        const std::string &payload);
+    static std::vector<char>
+    build_reservation_message(ClientType client_type,
+                              const std::string &equipment_id,
+                              const std::string &payload);
+    static std::vector<char>
+    build_reservation_query(ClientType client_type,
+                            const std::string &equipment_id);
+    static std::vector<char>
+    build_reservation_approve(ClientType client_type, const std::string &admin_id,
+                              const std::string &payload);
 
     // ============ 控制相关消息构建 ============
     static std::vector<char>
@@ -129,7 +140,6 @@ public:
     static std::vector<char> build_control_command_to_server(
         ClientType client_type, const std::string &equipment_id,
         ControlCommandType command_type, const std::string &parameters = "");
-
     static std::vector<char>
     build_control_response(ClientType client_type,
                            const std::string &equipment_id, bool success,
@@ -152,7 +162,12 @@ public:
     build_reservation_approve_response(ClientType client_type, bool success,
                                        const std::string &message);
 
-private:
+    // ============ 能耗采集消息构建 ============
+    static std::vector<char>
+    build_power_report_message(ClientType client_type,
+                               const std::string &equipment_id,
+                               const std::string &power_state, int power_value,
+                               const std::string &timestamp);
     // 工具函数 - 构建基础消息体
     static std::string
     build_message_body(ClientType client_type, MessageType type,

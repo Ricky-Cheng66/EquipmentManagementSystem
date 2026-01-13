@@ -9,9 +9,10 @@
 #include "message_buffer.h"
 #include "tcpclient.h"
 #include "messagedispatcher.h"
-#include "equipmentmanagerwidget.h"
 #include "logindialog.h"
 #include "reservationwidget.h"
+#include "equipmentmanagerwidget.h"
+#include "energystatisticswidget.h"
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -51,6 +52,10 @@ private slots:
     void onReservationApproveRequested(int reservationId, bool approve);
 
     void showReservationWidget();
+
+    void showEnergyStatisticsWidget();
+
+    void onEnergyQueryRequested(const QString &equipmentId, const QString &timeRange);
 private:
     Ui::MainWindow *ui;
     TcpClient* m_tcpClient; // 声明TCP客户端指针
@@ -66,6 +71,10 @@ private:
     QAction* m_reservationAction;  // 预约管理菜单项指针
 
     ReservationWidget* m_reservationWidget;
+
+    EnergyStatisticsWidget* m_energyStatisticsWidget;
+
+    QAction* m_energyAction;
 
     void logMessage(const QString& msg); // 辅助日志函数
     void setupConnection(); // 连接信号槽
