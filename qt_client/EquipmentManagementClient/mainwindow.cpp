@@ -13,9 +13,24 @@ MainWindow::MainWindow(QWidget *parent)
     , m_isLoggedIn(false)
     , m_currentUsername("")
     , m_equipmentManagerWidget(nullptr)
+    , m_reservationWidget(nullptr)      // 确保初始化为nullptr
+    , m_energyStatisticsWidget(nullptr) // 确保初始化为nullptr
 {
     ui->setupUi(this);
     setWindowTitle("设备管理系统 - 未连接");
+
+    // ===== 修复：先创建所有Widget实例 =====
+    // 创建设备管理界面
+    m_equipmentManagerWidget = new EquipmentManagerWidget(m_tcpClient, m_dispatcher, this);
+    m_equipmentManagerWidget->setVisible(false);
+
+    // 创建预约管理窗口（原代码缺失！）
+    m_reservationWidget = new ReservationWidget(this);  // 修复核心问题
+    m_reservationWidget->setVisible(false);
+
+    // 创建能耗统计窗口
+    m_energyStatisticsWidget = new EnergyStatisticsWidget(this);
+    m_energyStatisticsWidget->setVisible(false);
 
     // --- 新增：为centralWidget创建垂直布局 ---
     // 1. 创建一个垂直布局
@@ -127,6 +142,15 @@ MainWindow::MainWindow(QWidget *parent)
                                       });
                                   });
 
+    // 注册能耗查询响应处理器（添加到其他registerHandler之后）
+    m_dispatcher->registerHandler(ProtocolParser::QT_ENERGY_RESPONSE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          this->handleEnergyResponse(result);
+                                      });
+                                  });
+
+    ui->centralwidget->setAutoFillBackground(true); // 确保背景填充
     logMessage("客户端初始化完成。请点击'登录'按钮开始。");
 }
 
@@ -506,6 +530,37 @@ void MainWindow::handleReservationApproveResponse(const ProtocolParser::ParseRes
     }
 }
 
+void MainWindow::handleEnergyResponse(const ProtocolParser::ParseResult &result)
+{
+    qDebug() << "=== 能耗响应接收调试 ===";
+    qDebug() << "equipment_id:" << QString::fromStdString(result.equipment_id);
+    qDebug() << "payload:" << QString::fromStdString(result.payload);
+
+    QString data = QString::fromStdString(result.payload);
+
+    // 检查是否为错误响应
+    if (data.startsWith("fail|")) {
+        QString errorMsg = data.mid(5);
+        QMessageBox::warning(this, "查询失败", errorMsg);
+        logMessage(QString("能耗查询失败: %1").arg(errorMsg));
+        return;
+    }
+
+    // 检查数据是否为空
+    if (data.isEmpty()) {
+        QMessageBox::information(this, "查询结果", "返回数据为空");
+        return;
+    }
+
+    if (m_energyStatisticsWidget) {
+        m_energyStatisticsWidget->updateEnergyChart(data);
+    } else {
+        qWarning() << "EnergyStatisticsWidget 未初始化！";
+    }
+
+    logMessage(QString("能耗数据接收成功，准备显示"));
+}
+
 void MainWindow::showReservationWidget()
 {
     if (!m_isLoggedIn) {
@@ -571,7 +626,13 @@ void MainWindow::showEnergyStatisticsWidget()
     }
 
     m_energyStatisticsWidget->setEquipmentList(equipmentIds);
+
+    // 修正：像预约窗口一样显示，不使用setModal
     m_energyStatisticsWidget->show();
+    m_energyStatisticsWidget->raise();      // 提升到最前
+    m_energyStatisticsWidget->activateWindow(); // 激活窗口
+
+    logMessage("能耗统计窗口已显示");
 }
 
 void MainWindow::onEnergyQueryRequested(const QString &equipmentId, const QString &timeRange)
@@ -581,22 +642,25 @@ void MainWindow::onEnergyQueryRequested(const QString &equipmentId, const QStrin
         return;
     }
 
-    // 构建查询请求
-    // 协议格式: "timeRange|startDate|endDate"
-    QString payload = timeRange + "|" +
-                      m_energyStatisticsWidget->findChild<QDateEdit*>(
-                                                  "m_startDateEdit")->date().toString("yyyy-MM-dd") + "|" +
-                      m_energyStatisticsWidget->findChild<QDateEdit*>(
-                                                  "m_endDateEdit")->date().toString("yyyy-MM-dd");
+    // 修复：直接调用widget的公有方法，避免findChild
+    QString startDate = m_energyStatisticsWidget->getStartDate().toString("yyyy-MM-dd");
+    QString endDate = m_energyStatisticsWidget->getEndDate().toString("yyyy-MM-dd");
 
-    // 第一步：先接收string返回值
-    std::string str_msg = ProtocolParser::build_message_body(
-        ProtocolParser::CLIENT_QT_CLIENT, ProtocolParser::QT_ENERGY_QUERY,
-        equipmentId.toStdString(), {payload.toStdString()}
+    qDebug() << "发送能耗查询:" << equipmentId << timeRange << startDate << endDate;
+
+    // 构建payload
+    QString payload = QString("%1|%2|%3").arg(timeRange).arg(startDate).arg(endDate);
+
+    // 发送查询
+    std::vector<char> packet = ProtocolParser::pack_message(
+        ProtocolParser::build_message_body(
+            ProtocolParser::CLIENT_QT_CLIENT,
+            ProtocolParser::QT_ENERGY_QUERY,
+            equipmentId.toStdString(),
+            {payload.toStdString()}
+            )
         );
-    // 第二步：string转vector<char>
-    std::vector<char> msg(str_msg.begin(), str_msg.end());
 
-    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
-    logMessage(QString("能耗查询已发送: 设备[%1] 时间范围[%2]").arg(equipmentId, timeRange));
+    m_tcpClient->sendData(QByteArray(packet.data(), packet.size()));
+    logMessage(QString("能耗查询已发送: %1 %2 %3至%4").arg(equipmentId, timeRange, startDate, endDate));
 }

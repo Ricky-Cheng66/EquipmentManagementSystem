@@ -338,6 +338,14 @@ void EquipmentManagementServer::process_qt_client_message(
     handle_qt_client_control_command(fd, parse_result.equipment_id,
                                      parse_result.payload);
     break;
+  case ProtocolParser::QT_ENERGY_QUERY:
+    handle_qt_energy_query(fd, parse_result.equipment_id, parse_result.payload);
+    break;
+
+  case ProtocolParser::QT_ENERGY_RESPONSE:
+    // 服务端不应收到响应，忽略或记录警告
+    std::cout << "警告: 服务端收到QT_ENERGY_RESPONSE消息" << std::endl;
+    break;
   default:
     std::cout << "未知消息类型: " << parse_result.type << " from fd=" << fd
               << std::endl;
@@ -845,6 +853,57 @@ bool EquipmentManagementServer::accept_new_connection() {
     }
   }
   return !has_error; // 有错误返回false，无错误返回true
+}
+
+void EquipmentManagementServer::handle_qt_energy_query(
+    int fd, const std::string &equipment_id, const std::string &payload) {
+
+  std::cout << "处理能耗查询: equipment_id=" << equipment_id
+            << " payload=" << payload << std::endl;
+
+  // 解析payload: "timeRange|startDate|endDate"
+  auto parts = ProtocolParser::split_string(payload, '|');
+  if (parts.size() < 3) {
+    // 错误响应 - 使用协议函数构建
+    std::vector<char> response =
+        ProtocolParser::pack_message(ProtocolParser::build_message_body(
+            ProtocolParser::CLIENT_QT_CLIENT,
+            ProtocolParser::QT_ENERGY_RESPONSE,
+            "response", // 错误时equipment_id填response
+            {"fail", "数据格式错误"}));
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  std::string timeRange = parts[0];
+  std::string startDate = parts[1];
+  std::string endDate = parts[2];
+
+  // 查询数据库
+  std::string data;
+  if (equipment_id == "all" || equipment_id.empty()) {
+    data =
+        db_manager_->get_energy_statistics_all(timeRange, startDate, endDate);
+  } else {
+    data = db_manager_->get_energy_statistics_by_equipment(
+        equipment_id, timeRange, startDate, endDate);
+  }
+
+  std::cout << "[调试] 查询结果数据: " << data << std::endl;
+
+  // 成功响应 - 使用协议函数构建
+  std::vector<char> response =
+      ProtocolParser::pack_message(ProtocolParser::build_message_body(
+          ProtocolParser::CLIENT_QT_CLIENT, ProtocolParser::QT_ENERGY_RESPONSE,
+          equipment_id, {data} // 将聚合数据作为单个字段
+          ));
+
+  ssize_t bytes_sent = send(fd, response.data(), response.size(), 0);
+  if (bytes_sent > 0) {
+    std::cout << "能耗查询响应已发送: " << bytes_sent << " 字节" << std::endl;
+  } else {
+    std::cerr << "能耗查询响应发送失败: " << strerror(errno) << std::endl;
+  }
 }
 
 void EquipmentManagementServer::handle_connection_close(int fd) {

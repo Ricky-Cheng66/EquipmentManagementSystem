@@ -42,6 +42,16 @@ public:
   bool update_equipment_energy_total(const std::string &equipment_id,
                                      double energy_increment);
 
+  // 能耗统计查询（所有设备）
+  std::string get_energy_statistics_all(const std::string &timeRange,
+                                        const std::string &startDate,
+                                        const std::string &endDate);
+
+  // 能耗统计查询（单个设备）
+  std::string get_energy_statistics_by_equipment(
+      const std::string &equipment_id, const std::string &timeRange,
+      const std::string &startDate, const std::string &endDate);
+
   //预约相关操作
   bool add_reservation(const std::string &equipment_id, int user_id,
                        const std::string &purpose,

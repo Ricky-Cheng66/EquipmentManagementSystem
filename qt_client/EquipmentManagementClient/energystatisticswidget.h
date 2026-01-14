@@ -18,6 +18,10 @@ public:
 
     void setEquipmentList(const QStringList &equipmentIds);
 
+    // 添加获取日期的方法
+    QDate getStartDate() const { return m_startDateEdit->date(); }
+    QDate getEndDate() const { return m_endDateEdit->date(); }
+
 signals:
     void energyQueryRequested(const QString &equipmentId, const QString &timeRange); // timeRange: "day/week/month/year"
     void equipmentEnergyQueryRequested(const QString &equipmentId);

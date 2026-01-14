@@ -1,5 +1,6 @@
 #include "database_manager.h"
 #include <iostream>
+#include <sstream>
 
 DatabaseManager::DatabaseManager() : mysql_conn_(nullptr), port_(3306) {
   mysql_conn_ = mysql_init(nullptr);
@@ -226,4 +227,115 @@ bool DatabaseManager::update_equipment_energy_total(
                     std::to_string(energy_increment) +
                     " WHERE equipment_id = '" + equipment_id + "'";
   return execute_update(sql);
+}
+
+std::string
+DatabaseManager::get_energy_statistics_all(const std::string &timeRange,
+                                           const std::string &startDate,
+                                           const std::string &endDate) {
+
+  std::string groupBy;
+  if (timeRange == "day") {
+    groupBy = "DATE(timestamp)";
+  } else if (timeRange == "month") {
+    groupBy = "DATE_FORMAT(timestamp, '%Y-%m')";
+  } else if (timeRange == "week") {
+    groupBy = "DATE(DATE_SUB(timestamp, INTERVAL WEEKDAY(timestamp) DAY))";
+  } else if (timeRange == "year") {
+    groupBy = "DATE_FORMAT(timestamp, '%Y')";
+  } else {
+    groupBy = "DATE(timestamp)"; // 默认按天
+  }
+
+  // 查询能耗数据，格式：equipment_id|period|energy|avg_power|cost
+  std::string query = "SELECT equipment_id, " + groupBy +
+                      " as period, "
+                      "ROUND(SUM(power_consumption * 5 / 3600 / 10), 2) as "
+                      "energy, " // 5秒间隔，转换为0.1kWh
+                      "ROUND(AVG(power_consumption), 2) as avg_power, "
+                      "ROUND(SUM(power_consumption * 5 / 3600 / 10) * 0.6, 2) "
+                      "as cost " // 假设电费0.6元/0.1kWh
+                      "FROM energy_logs "
+                      "WHERE timestamp BETWEEN '" +
+                      startDate + " 00:00:00' AND '" + endDate +
+                      " 23:59:59' "
+                      "GROUP BY equipment_id, period "
+                      "ORDER BY equipment_id, period";
+
+  auto results = execute_query(query);
+
+  // 修复：如果没有数据，返回错误信息而非空字符串
+  if (results.empty()) {
+    return "fail|指定时间范围内暂无能耗数据";
+  }
+
+  std::stringstream ss;
+  for (size_t i = 0; i < results.size(); ++i) {
+    if (i > 0)
+      ss << ";";
+    // 确保每个字段都有值，避免空指针
+    for (int j = 0; j < 5; ++j) {
+      if (j > 0)
+        ss << "|";
+      ss << (results[i][j].empty() ? "0" : results[i][j]);
+    }
+  }
+
+  return ss.str();
+}
+
+std::string DatabaseManager::get_energy_statistics_by_equipment(
+    const std::string &equipment_id, const std::string &timeRange,
+    const std::string &startDate, const std::string &endDate) {
+
+  std::string groupBy;
+  if (timeRange == "day") {
+    groupBy = "DATE(timestamp)";
+  } else if (timeRange == "month") {
+    groupBy = "DATE_FORMAT(timestamp, '%Y-%m')";
+  } else if (timeRange == "week") {
+    groupBy = "DATE(DATE_SUB(timestamp, INTERVAL WEEKDAY(timestamp) DAY))";
+  } else if (timeRange == "year") {
+    groupBy = "DATE_FORMAT(timestamp, '%Y')";
+  } else {
+    groupBy = "DATE(timestamp)";
+  }
+
+  std::string query =
+      "SELECT equipment_id, " + groupBy +
+      " as period, "
+      "ROUND(SUM(power_consumption * 5 / 3600 / 10), 2) as energy, "
+      "ROUND(AVG(power_consumption), 2) as avg_power, "
+      "ROUND(SUM(power_consumption * 5 / 3600 / 10) * 0.6, 2) as cost "
+      "FROM energy_logs "
+      "WHERE equipment_id = '" +
+      equipment_id +
+      "' "
+      "AND timestamp BETWEEN '" +
+      startDate + " 00:00:00' AND '" + endDate +
+      " 23:59:59' "
+      "GROUP BY " +
+      groupBy +
+      " "
+      "ORDER BY period";
+
+  auto results = execute_query(query);
+
+  // 修复：如果没有数据，返回错误信息而非空字符串
+  if (results.empty()) {
+    return "fail|指定时间范围内暂无能耗数据";
+  }
+
+  std::stringstream ss;
+  for (size_t i = 0; i < results.size(); ++i) {
+    if (i > 0)
+      ss << ";";
+    for (int j = 0; j < 5; ++j) {
+      if (j > 0)
+        ss << "|";
+      ss << (results[i][j].empty() ? "0" : results[i][j]);
+    }
+  }
+
+  return ss.str();
 }

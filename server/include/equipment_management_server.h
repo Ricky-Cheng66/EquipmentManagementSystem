@@ -117,6 +117,10 @@ private:
                                   const std::string &payload);
   void check_heartbeat_timeout();
 
+  // 处理Qt客户端能耗查询请求
+  void handle_qt_energy_query(int fd, const std::string &equipment_id,
+                              const std::string &payload);
+
   //成员变量
   const int MAXCLIENTFDS = 1024;
   int server_fd_;

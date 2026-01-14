@@ -56,6 +56,8 @@ private slots:
     void showEnergyStatisticsWidget();
 
     void onEnergyQueryRequested(const QString &equipmentId, const QString &timeRange);
+
+    void handleEnergyResponse(const ProtocolParser::ParseResult &result);
 private:
     Ui::MainWindow *ui;
     TcpClient* m_tcpClient; // 声明TCP客户端指针
