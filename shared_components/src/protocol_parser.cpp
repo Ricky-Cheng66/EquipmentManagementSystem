@@ -42,7 +42,7 @@ ProtocolParser::parse_message(const std::string &data) {
 
   // 解析消息类型
   int type_num = std::stoi(parts[1]);
-  if (type_num < 1 || type_num > 103) {
+  if (type_num < 1 || type_num > 200) {
     return result;
   }
   result.type = static_cast<MessageType>(type_num);
@@ -112,6 +112,22 @@ std::vector<char> ProtocolParser::build_qt_equipment_list_query(
                      std::to_string(static_cast<int>(QT_EQUIPMENT_LIST_QUERY)) +
                      "||";
   return pack_message(body);
+}
+
+// ============ Qt客户端心跳消息实现 ============
+
+std::vector<char> ProtocolParser::build_qt_heartbeat_message(
+    ClientType client_type, const std::string &client_identifier) {
+  // payload为空
+  return pack_message(
+      build_message_body(client_type, QT_HEARTBEAT, client_identifier, {}));
+}
+
+std::vector<char> ProtocolParser::build_qt_heartbeat_response(
+    ClientType client_type, const std::string &client_identifier,
+    const std::string &timestamp) {
+  return pack_message(build_message_body(client_type, QT_HEARTBEAT_RESPONSE,
+                                         client_identifier, {timestamp}));
 }
 
 // ============ 私有工具函数 ============

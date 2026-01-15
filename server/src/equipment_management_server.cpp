@@ -1,5 +1,7 @@
 #include <arpa/inet.h>
+#include <chrono>
 #include <fcntl.h>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <netinet/in.h>
@@ -346,6 +348,15 @@ void EquipmentManagementServer::process_qt_client_message(
     // 服务端不应收到响应，忽略或记录警告
     std::cout << "警告: 服务端收到QT_ENERGY_RESPONSE消息" << std::endl;
     break;
+
+  case ProtocolParser::QT_HEARTBEAT: // 新增
+    handle_qt_heartbeat(fd, parse_result.equipment_id);
+    break;
+
+  case ProtocolParser::QT_HEARTBEAT_RESPONSE: // 新增（理论上服务端不应收到）
+    std::cout << "警告：服务端收到QT_HEARTBEAT_RESPONSE消息" << std::endl;
+    break;
+
   default:
     std::cout << "未知消息类型: " << parse_result.type << " from fd=" << fd
               << std::endl;
@@ -743,6 +754,37 @@ void EquipmentManagementServer::handle_heartbeat(
   }
 }
 
+void EquipmentManagementServer::handle_qt_heartbeat(
+    int fd, const std::string &client_identifier) {
+
+  std::cout << "处理Qt客户端心跳: fd=" << fd << " client=" << client_identifier
+            << std::endl;
+
+  // 使用新的Qt客户端专用心跳更新函数
+  connections_manager_->update_qt_client_heartbeat(fd);
+
+  // 2. 构建响应（携带当前时间戳）
+  std::string timestamp = get_current_time();
+
+  std::vector<char> response = ProtocolParser::pack_message(
+      ProtocolParser::build_message_body(ProtocolParser::CLIENT_QT_CLIENT,
+                                         ProtocolParser::QT_HEARTBEAT_RESPONSE,
+                                         client_identifier, {timestamp}));
+
+  // 3. 发送响应（带有效性检查）
+  if (fd > 0 && connections_manager_->is_connection_alive(fd)) {
+    ssize_t bytes_sent =
+        send(fd, response.data(), response.size(), MSG_NOSIGNAL);
+    if (bytes_sent > 0) {
+      std::cout << "Qt客户端心跳响应已发送: " << client_identifier << std::endl;
+    } else {
+      std::cerr << "Qt客户端心跳响应发送失败: " << strerror(errno) << std::endl;
+    }
+  } else {
+    std::cout << "跳过无效连接的Qt心跳响应: fd=" << fd << std::endl;
+  }
+}
+
 void EquipmentManagementServer::handle_power_report(
     int fd, const std::string &equipment_id, const std::string &payload) {
 
@@ -906,6 +948,41 @@ void EquipmentManagementServer::handle_qt_energy_query(
   }
 }
 
+void EquipmentManagementServer::check_qt_client_heartbeat_timeout(
+    int timeout_seconds) {
+  // 获取所有连接
+  auto all_connections =
+      connections_manager_->get_all_connections(); // 需要添加此函数
+
+  time_t current_time = time(nullptr);
+  int timeout_count = 0;
+
+  for (const auto &conn : all_connections) {
+    int fd = conn.first;
+    auto client_type = connections_manager_->get_client_type(fd);
+
+    // 只检查Qt客户端
+    if (client_type == ProtocolParser::CLIENT_QT_CLIENT) {
+      if (connections_manager_->is_connection_healthy(fd)) {
+        auto last_heartbeat = connections_manager_->get_last_heartbeat(fd);
+        if (current_time - last_heartbeat > timeout_seconds) {
+          std::cout << "Qt客户端心跳超时: fd=" << fd
+                    << ", 最后心跳: " << last_heartbeat << std::endl;
+          timeout_count++;
+
+          // 关键：仅标记为不健康，**不主动清理**
+          connections_manager_->mark_connection_unhealthy(fd);
+        }
+      }
+    }
+  }
+
+  if (timeout_count > 0) {
+    std::cout << "检测到" << timeout_count
+              << "个Qt客户端心跳超时（仅标记，不清理）" << std::endl;
+  }
+}
+
 void EquipmentManagementServer::handle_connection_close(int fd) {
 
   // 先检查文件描述符是否有效
@@ -965,6 +1042,10 @@ void EquipmentManagementServer::handle_connection_close(int fd) {
 void EquipmentManagementServer::perform_maintenance_tasks() {
   // 检查心跳超时
   connections_manager_->check_heartbeat_timeout(60);
+
+  // 新增：检查Qt客户端心跳超时（180秒，更宽松）
+  // 注意：Qt客户端的超时**不清理连接**，只做日志记录
+  check_qt_client_heartbeat_timeout(180);
 
   // 打印当前状态
   std::cout << "=== 系统状态 ===" << std::endl;
@@ -1269,4 +1350,15 @@ EquipmentManagementServer::get_equipment_control_capabilities(
     const std::string &equipment_id) {
 
   return equipment_manager_->get_equipment_capabilities(equipment_id);
+}
+
+//辅助函数
+std::string EquipmentManagementServer::get_current_time() {
+  auto now = std::chrono::system_clock::now();
+  auto time_t_now = std::chrono::system_clock::to_time_t(now);
+
+  std::stringstream ss;
+  ss << std::put_time(std::localtime(&time_t_now), "%Y-%m-%d %H:%M:%S");
+
+  return ss.str();
 }

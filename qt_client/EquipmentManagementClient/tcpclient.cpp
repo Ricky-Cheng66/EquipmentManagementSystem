@@ -4,6 +4,8 @@
 TcpClient::TcpClient(QObject *parent) : QObject(parent)
     , m_socket(new QTcpSocket(this))
     , m_isProcessingData(false) // 新增初始化
+    , m_heartbeatTimer(new QTimer(this))  // 新增
+    , m_heartbeatInterval(5)              // 新增
 {
     // 连接信号与槽：当socket有数据可读时，调用我们的处理函数
     connect(m_socket, &QTcpSocket::readyRead, this, &TcpClient::onSocketReadyRead);
@@ -13,6 +15,12 @@ TcpClient::TcpClient(QObject *parent) : QObject(parent)
     connect(m_socket, &QTcpSocket::connected, this, &TcpClient::connected);
     // 连接信号与槽：当socket断开连接时，转发disconnected信号
     connect(m_socket, &QTcpSocket::disconnected, this, &TcpClient::disconnected);
+    // 新增：定时器信号连接
+    connect(m_heartbeatTimer, &QTimer::timeout, this, [this]() {
+        if (isConnected() && !m_lastEquipmentId.isEmpty()) {
+            sendHeartbeat(m_lastEquipmentId);
+        }
+    });
 }
 
 TcpClient::~TcpClient()
@@ -171,3 +179,54 @@ void TcpClient::processReceivedData(const QByteArray &data)
         // 根据策略，可以选择不断开连接，只清空缓冲区
     }
 }
+
+// 新增：启动心跳
+bool TcpClient::sendHeartbeat(const QString& equipmentId)
+{
+    if (!isConnected()) {
+        return false;
+    }
+
+    // 修改：使用新的QT_HEARTBEAT协议类型
+    // 格式: 2|107|qt_client_admin|
+    std::vector<char> packet = ProtocolParser::pack_message(
+        ProtocolParser::build_message_body(
+            ProtocolParser::CLIENT_QT_CLIENT,
+            ProtocolParser::QT_HEARTBEAT,  // 改为107
+            equipmentId.toStdString(),      // 如 "qt_client_admin"
+            {}  // 心跳无payload
+            )
+        );
+
+    qint64 sent = sendData(QByteArray(packet.data(), packet.size()));
+    if (sent > 0) {
+        qDebug() << "Qt客户端心跳已发送:" << equipmentId;
+        return true;
+    }
+    return false;
+}
+
+// 新增：启动心跳
+void TcpClient::startHeartbeat(const QString& equipmentId, int intervalSeconds)
+{
+    if (!isConnected()) {
+        qWarning() << "无法启动心跳：未连接到服务器";
+        return;
+    }
+
+    m_lastEquipmentId = equipmentId;
+    m_heartbeatInterval = intervalSeconds;
+    m_heartbeatTimer->start(intervalSeconds * 1000);
+    qDebug() << "心跳定时器已启动，间隔" << intervalSeconds << "秒";
+}
+
+// 新增：停止心跳
+void TcpClient::stopHeartbeat()
+{
+    if (m_heartbeatTimer->isActive()) {
+        m_heartbeatTimer->stop();
+        qDebug() << "心跳定时器已停止";
+    }
+}
+
+

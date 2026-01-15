@@ -150,6 +150,14 @@ MainWindow::MainWindow(QWidget *parent)
                                       });
                                   });
 
+    // 注册Qt客户端心跳响应处理器
+    m_dispatcher->registerHandler(ProtocolParser::QT_HEARTBEAT_RESPONSE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          this->handleQtHeartbeatResponse(result);
+                                      });
+                                  });
+
     ui->centralwidget->setAutoFillBackground(true); // 确保背景填充
     logMessage("客户端初始化完成。请点击'登录'按钮开始。");
 }
@@ -274,6 +282,12 @@ void MainWindow::handleLoginResponse(const ProtocolParser::ParseResult &result)
 
             m_isLoggedIn = true;
 
+            // 新增：登录成功后启动自动心跳
+            QString clientId = "qt_client_" + username;  // 如 "qt_client_admin"
+            m_tcpClient->startHeartbeat(clientId, 30);
+
+            logMessage(QString("用户 %1 的自动心跳已启动").arg(username));
+
             logMessage(QString("登录成功！欢迎，%1 (%2)").arg(username).arg(role));
             setWindowTitle(QString("设备管理系统 - 用户: %1").arg(username));
 
@@ -337,6 +351,8 @@ void MainWindow::onClientConnected()
 void MainWindow::onClientDisconnected()
 {
     logMessage("[信号] 与服务器断开连接。");
+    // 新增：停止心跳
+    m_tcpClient->stopHeartbeat();
     ui->sendHeartbeatButton->setEnabled(false);
     ui->connectButton->setText("连接服务器");
     // 切换断开按钮的功能为连接
@@ -559,6 +575,15 @@ void MainWindow::handleEnergyResponse(const ProtocolParser::ParseResult &result)
     }
 
     logMessage(QString("能耗数据接收成功，准备显示"));
+}
+
+void MainWindow::handleQtHeartbeatResponse(const ProtocolParser::ParseResult &result)
+{
+    QString clientId = QString::fromStdString(result.equipment_id);
+    QString timestamp = QString::fromStdString(result.payload);
+
+    qDebug() << "收到服务端心跳响应:" << clientId << "时间戳:" << timestamp;
+    logMessage(QString("心跳响应: %1").arg(clientId));
 }
 
 void MainWindow::showReservationWidget()

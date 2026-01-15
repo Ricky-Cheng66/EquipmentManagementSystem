@@ -58,6 +58,8 @@ private slots:
     void onEnergyQueryRequested(const QString &equipmentId, const QString &timeRange);
 
     void handleEnergyResponse(const ProtocolParser::ParseResult &result);
+
+    void handleQtHeartbeatResponse(const ProtocolParser::ParseResult &result);
 private:
     Ui::MainWindow *ui;
     TcpClient* m_tcpClient; // 声明TCP客户端指针
@@ -77,6 +79,9 @@ private:
     EnergyStatisticsWidget* m_energyStatisticsWidget;
 
     QAction* m_energyAction;
+
+    // 新增：用于心跳的客户端标识
+    QString m_clientHeartbeatId;  // 如 "qt_client_admin"
 
     void logMessage(const QString& msg); // 辅助日志函数
     void setupConnection(); // 连接信号槽

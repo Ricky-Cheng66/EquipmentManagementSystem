@@ -171,6 +171,28 @@ void ConnectionManager::update_heartbeat(int fd) {
   }
 }
 
+void ConnectionManager::update_qt_client_heartbeat(int fd) {
+  std::unique_lock lock(connection_rw_lock_);
+
+  // 1. 更新心跳时间戳
+  auto it = heartbeat_times_.find(fd);
+  if (it != heartbeat_times_.end()) {
+    it->second = time(nullptr);
+  }
+
+  // 2. 标记连接健康
+  auto healthy_it = connection_healthy_.find(fd);
+  if (healthy_it != connection_healthy_.end()) {
+    healthy_it->second = true;
+  }
+
+  // 3. 关键：不访问Equipment指针！因为Qt客户端的equipment是nullptr
+  // 设备心跳的update_heartbeat()会调用equipment->update_heartbeat()，
+  // 但Qt客户端没有对应的Equipment对象
+
+  std::cout << "Qt客户端心跳已更新: fd=" << fd << std::endl;
+}
+
 // 检查心跳超时
 void ConnectionManager::check_heartbeat_timeout(int timeout_seconds) {
   std::unique_lock lock(connection_rw_lock_);
@@ -277,6 +299,31 @@ void ConnectionManager::print_connections() const {
 bool ConnectionManager::is_connection_exist(int fd) const {
   std::shared_lock lock(connection_rw_lock_);
   return connections_.find(fd) != connections_.end();
+}
+
+time_t ConnectionManager::get_last_heartbeat(int fd) const {
+  std::shared_lock lock(connection_rw_lock_);
+  auto it = heartbeat_times_.find(fd);
+  return (it != heartbeat_times_.end()) ? it->second : 0;
+}
+
+void ConnectionManager::mark_connection_unhealthy(int fd) {
+  std::unique_lock lock(connection_rw_lock_);
+  auto it = connection_healthy_.find(fd);
+  if (it != connection_healthy_.end()) {
+    it->second = false;
+    std::cout << "连接已标记为不健康: fd=" << fd << std::endl;
+  }
+}
+
+std::vector<std::pair<int, std::shared_ptr<Equipment>>>
+ConnectionManager::get_all_connections() const {
+  std::shared_lock lock(connection_rw_lock_);
+  std::vector<std::pair<int, std::shared_ptr<Equipment>>> result;
+  for (const auto &conn : connections_) {
+    result.push_back(conn);
+  }
+  return result;
 }
 
 bool ConnectionManager::send_control_to_simulator(

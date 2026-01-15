@@ -2,6 +2,7 @@
 #define TCPCLIENT_H
 #pragma once
 #include <QObject>
+#include <QTimer>
 #include <QTcpSocket>
 #include <QHostAddress>
 #include "protocol_parser.h"
@@ -27,6 +28,10 @@ public:
 
     bool isConnected() const;
 
+    // 新增：启动/停止自动心跳
+    void startHeartbeat(const QString& equipmentId = "qt_client", int intervalSeconds = 5);
+    void stopHeartbeat();
+    bool sendHeartbeat(const QString& equipmentId);
 signals:
     // 当成功连接到服务器时发出
     void connected();
@@ -48,6 +53,11 @@ private:
     MessageBuffer m_messageBuffer; // 用于处理消息边界
     // 新增：防止在极端情况下递归处理导致栈溢出
     bool m_isProcessingData;
+
+    // 新增：心跳相关
+    QTimer* m_heartbeatTimer;          // 心跳定时器
+    int m_heartbeatInterval;           // 心跳间隔（秒）
+    QString m_lastEquipmentId;         // 用于心跳的设备ID
 };
 
 #endif // TCPCLIENT_H

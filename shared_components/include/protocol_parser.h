@@ -49,7 +49,9 @@ public:
     QT_EQUIPMENT_LIST_RESPONSE = 103, // 服务器 -> Qt客户端：返回设备列表
     QT_RESERVATION_APPLY_RESPONSE = 104, // 服务器 -> Qt客户端：预约申请响应
     QT_RESERVATION_QUERY_RESPONSE = 105, // 服务器 -> Qt客户端：预约查询响应
-    QT_RESERVATION_APPROVE_RESPONSE = 106 // 服务器 -> Qt客户端：预约审批响应
+    QT_RESERVATION_APPROVE_RESPONSE = 106, // 服务器 -> Qt客户端：预约审批响应
+    QT_HEARTBEAT = 107,         // Qt客户端→服务端：心跳保活
+    QT_HEARTBEAT_RESPONSE = 108 // 服务端→Qt客户端：心跳响应
   };
 
   // ============ 客户端类型枚举 ============
@@ -93,6 +95,16 @@ public:
                                   const std::string &message = "");
   static std::vector<char>
   build_qt_equipment_list_query(ProtocolParser::ClientType client_type);
+
+  // ============ Qt客户端心跳消息实现 ============
+  static std::vector<char>
+  build_qt_heartbeat_message(ClientType client_type,
+                             const std::string &client_identifier);
+
+  static std::vector<char>
+  build_qt_heartbeat_response(ClientType client_type,
+                              const std::string &client_identifier,
+                              const std::string &timestamp);
 
   // ============ 设备上线相关消息构建 ============
   static std::vector<char>

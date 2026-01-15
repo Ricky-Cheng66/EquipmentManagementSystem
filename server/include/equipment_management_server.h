@@ -67,6 +67,9 @@ private:
       const std::string &payload); //处理设备控制响应
   void handle_heartbeat(int fd, const std::string &equipment_id);
 
+  // 处理Qt客户端心跳
+  void handle_qt_heartbeat(int fd, const std::string &client_identifier);
+
   void handle_power_report(int fd, const std::string &equipment_id,
                            const std::string &payload);
 
@@ -104,6 +107,9 @@ private:
   std::vector<std::string>
   get_equipment_control_capabilities(const std::string &equipment_id);
 
+  //辅助函数
+  std::string get_current_time();
+
 private:
   // 处理来自客户端的控制命令
   void handle_qt_client_control_command(int fd, const std::string &equipment_id,
@@ -120,6 +126,8 @@ private:
   // 处理Qt客户端能耗查询请求
   void handle_qt_energy_query(int fd, const std::string &equipment_id,
                               const std::string &payload);
+
+  void check_qt_client_heartbeat_timeout(int timeout_seconds);
 
   //成员变量
   const int MAXCLIENTFDS = 1024;

@@ -24,6 +24,7 @@ public:
 
   // 状态管理
   void update_heartbeat(int fd);
+  void update_qt_client_heartbeat(int fd);
   void check_heartbeat_timeout(int timeout_seconds = 60);
   bool is_connection_healthy(int fd) const;
   bool is_equipment_connection_healthy(const std::string &equipment_id) const;
@@ -35,6 +36,16 @@ public:
   size_t get_connection_count() const;
   void print_connections() const;
   bool is_connection_exist(int fd) const;
+
+  // 获取连接的最后心跳时间（用于超时检查）
+  time_t get_last_heartbeat(int fd) const;
+
+  // 标记连接为不健康（不清理）
+  void mark_connection_unhealthy(int fd);
+
+  // 获取所有连接（用于遍历检查）
+  std::vector<std::pair<int, std::shared_ptr<Equipment>>>
+  get_all_connections() const;
 
   // 控制命令转发
   bool
