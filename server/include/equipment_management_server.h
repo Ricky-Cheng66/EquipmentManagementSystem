@@ -67,6 +67,10 @@ private:
       const std::string &payload); //处理设备控制响应
   void handle_heartbeat(int fd, const std::string &equipment_id);
 
+  //处理智能告警ack确认
+  void handle_qt_alert_ack(int fd, const std::string &equipment_id,
+                           const std::string &payload);
+
   // 处理Qt客户端心跳
   void handle_qt_heartbeat(int fd, const std::string &client_identifier);
 
@@ -128,6 +132,12 @@ private:
                               const std::string &payload);
 
   void check_qt_client_heartbeat_timeout(int timeout_seconds);
+
+  // 发送告警给所有Qt客户端
+  void send_alert_to_all_qt_clients(const std::string &alarm_type,
+                                    const std::string &equipment_id,
+                                    const std::string &severity,
+                                    const std::string &message);
 
   //成员变量
   const int MAXCLIENTFDS = 1024;

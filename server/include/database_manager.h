@@ -52,6 +52,13 @@ public:
       const std::string &equipment_id, const std::string &timeRange,
       const std::string &startDate, const std::string &endDate);
 
+  // 告警相关操作
+  bool insert_alarm(const std::string &alarm_type,
+                    const std::string &equipment_id,
+                    const std::string &severity, const std::string &message);
+
+  std::vector<std::vector<std::string>> get_unacknowledged_alarms();
+
   //预约相关操作
   bool add_reservation(const std::string &equipment_id, int user_id,
                        const std::string &purpose,

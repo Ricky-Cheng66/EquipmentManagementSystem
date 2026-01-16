@@ -50,8 +50,10 @@ public:
     QT_RESERVATION_APPLY_RESPONSE = 104, // 服务器 -> Qt客户端：预约申请响应
     QT_RESERVATION_QUERY_RESPONSE = 105, // 服务器 -> Qt客户端：预约查询响应
     QT_RESERVATION_APPROVE_RESPONSE = 106, // 服务器 -> Qt客户端：预约审批响应
-    QT_HEARTBEAT = 107,         // Qt客户端→服务端：心跳保活
-    QT_HEARTBEAT_RESPONSE = 108 // 服务端→Qt客户端：心跳响应
+    QT_HEARTBEAT = 107,          // Qt客户端→服务端：心跳保活
+    QT_HEARTBEAT_RESPONSE = 108, // 服务端→Qt客户端：心跳响应
+    QT_ALERT_MESSAGE = 109,      // 服务端→Qt客户端：告警消息
+    QT_ALERT_ACK = 110           // Qt客户端→服务端：告警确认
   };
 
   // ============ 客户端类型枚举 ============
@@ -180,6 +182,18 @@ public:
                              const std::string &equipment_id,
                              const std::string &power_state, int power_value,
                              const std::string &timestamp);
+
+  // ============ 告警系统消息实现 ============
+  static std::vector<char> build_alert_message(ClientType client_type,
+                                               const std::string &equipment_id,
+                                               const std::string &alarm_type,
+                                               const std::string &severity,
+                                               const std::string &message);
+
+  static std::vector<char> build_alert_ack(ClientType client_type,
+                                           const std::string &equipment_id,
+                                           int alarm_id);
+
   // 工具函数 - 构建基础消息体
   static std::string
   build_message_body(ClientType client_type, MessageType type,

@@ -339,3 +339,22 @@ std::string DatabaseManager::get_energy_statistics_by_equipment(
 
   return ss.str();
 }
+
+bool DatabaseManager::insert_alarm(const std::string &alarm_type,
+                                   const std::string &equipment_id,
+                                   const std::string &severity,
+                                   const std::string &message) {
+  std::string sql = "INSERT INTO alarms (alarm_type, equipment_id, severity, "
+                    "message) VALUES ('" +
+                    alarm_type + "', '" + equipment_id + "', '" + severity +
+                    "', '" + message + "')";
+  return execute_update(sql);
+}
+
+std::vector<std::vector<std::string>>
+DatabaseManager::get_unacknowledged_alarms() {
+  std::string sql =
+      "SELECT id, alarm_type, equipment_id, severity, message FROM alarms "
+      "WHERE is_acknowledged = FALSE ORDER BY created_time DESC LIMIT 50";
+  return execute_query(sql);
+}

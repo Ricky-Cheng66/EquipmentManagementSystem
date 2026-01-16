@@ -41,6 +41,8 @@ private slots:
     void onClientErrorOccurred(const QString& errorString);
     void handleHeartbeatResponse(const ProtocolParser::ParseResult &result);
 
+
+
     // 预约响应处理
     void handleReservationApplyResponse(const ProtocolParser::ParseResult &result);
     void handleReservationQueryResponse(const ProtocolParser::ParseResult &result);
@@ -60,6 +62,9 @@ private slots:
     void handleEnergyResponse(const ProtocolParser::ParseResult &result);
 
     void handleQtHeartbeatResponse(const ProtocolParser::ParseResult &result);
+
+    //智能告警
+    void handleAlertMessage(const ProtocolParser::ParseResult &result);
 private:
     Ui::MainWindow *ui;
     TcpClient* m_tcpClient; // 声明TCP客户端指针

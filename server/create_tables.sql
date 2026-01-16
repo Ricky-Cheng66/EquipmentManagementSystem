@@ -86,6 +86,19 @@ CREATE TABLE IF NOT EXISTS real_equipments (
     INDEX idx_equipment_type (equipment_type)
 ) ENGINE=InnoDB;
 
+-- 7. 告警记录表
+CREATE TABLE IF NOT EXISTS alarms (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    alarm_type VARCHAR(50) NOT NULL COMMENT '告警类型: offline/energy_threshold',
+    equipment_id VARCHAR(50) NOT NULL COMMENT '设备ID',
+    severity VARCHAR(20) DEFAULT 'warning' COMMENT '级别: warning/error/critical',
+    message TEXT NOT NULL,
+    is_acknowledged BOOLEAN DEFAULT FALSE,
+    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_equipment (equipment_id),
+    INDEX idx_created_time (created_time)
+) ENGINE=InnoDB;
+
 -- 插入测试用户数据
 INSERT INTO users (username, password_hash, role, real_name, department) VALUES
 ('admin', 'hashed_password', 'admin', '系统管理员', '信息技术部'),

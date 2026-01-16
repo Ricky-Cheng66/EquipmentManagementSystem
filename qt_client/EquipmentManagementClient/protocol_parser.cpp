@@ -333,3 +333,26 @@ std::vector<char> ProtocolParser::build_power_report_message(
         build_message_body(client_type, POWER_REPORT, equipment_id, {payload});
     return pack_message(body);
 }
+
+// ============ 告警系统消息实现 ============
+
+std::vector<char>
+ProtocolParser::build_alert_message(ClientType client_type,
+                                    const std::string &equipment_id,
+                                    const std::string &alarm_type,
+                                    const std::string &severity,
+                                    const std::string &message) {
+    // payload格式: "alarm_type|severity|message"
+    return pack_message(build_message_body(client_type, QT_ALERT_MESSAGE,
+                                           equipment_id,
+                                           {alarm_type, severity, message}));
+}
+
+std::vector<char>
+ProtocolParser::build_alert_ack(ClientType client_type,
+                                const std::string &equipment_id,
+                                int alarm_id) {
+    return pack_message(build_message_body(client_type, QT_ALERT_ACK,
+                                           equipment_id,
+                                           {std::to_string(alarm_id)}));
+}

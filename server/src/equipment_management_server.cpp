@@ -357,6 +357,10 @@ void EquipmentManagementServer::process_qt_client_message(
     std::cout << "警告：服务端收到QT_HEARTBEAT_RESPONSE消息" << std::endl;
     break;
 
+  case ProtocolParser::QT_ALERT_ACK:
+    handle_qt_alert_ack(fd, parse_result.equipment_id, parse_result.payload);
+    break;
+
   default:
     std::cout << "未知消息类型: " << parse_result.type << " from fd=" << fd
               << std::endl;
@@ -754,6 +758,11 @@ void EquipmentManagementServer::handle_heartbeat(
   }
 }
 
+void EquipmentManagementServer::handle_qt_alert_ack(
+    int fd, const std::string &equipment_id, const std::string &payload) {
+  std::cout << "qt端确认收到告警信息" << std::endl;
+}
+
 void EquipmentManagementServer::handle_qt_heartbeat(
     int fd, const std::string &client_identifier) {
 
@@ -827,10 +836,50 @@ void EquipmentManagementServer::handle_power_report(
   } catch (const std::exception &e) {
     std::cerr << "解析功耗值失败: " << e.what() << std::endl;
   }
+
+  try {
+    double power_value = std::stod(power_value_str);
+    double threshold = 200.0; // 阈值200W，可根据设备类型调整
+
+    if (power_value > threshold) {
+      std::string message = "设备能耗超标: " + equipment_id +
+                            " 当前功耗: " + power_value_str + "W";
+
+      // 写入数据库
+      db_manager_->insert_alarm("energy_threshold", equipment_id, "warning",
+                                message);
+
+      // 发送告警
+      send_alert_to_all_qt_clients("energy_threshold", equipment_id, "warning",
+                                   message);
+    }
+  } catch (const std::exception &e) {
+    std::cerr << "能耗阈值判断失败: " << e.what() << std::endl;
+  }
 }
 
 void EquipmentManagementServer::check_heartbeat_timeout() {
-  connections_manager_->check_heartbeat_timeout(60); // 60秒超时
+  connections_manager_->check_heartbeat_timeout(60); // 60秒设备超时
+
+  // 新增：检查Qt客户端心跳超时（180秒）
+  check_qt_client_heartbeat_timeout(180);
+
+  // 新增：为超时设备生成告警
+  auto timeout_fds = connections_manager_->get_timeout_fds(); // 需要添加此函数
+
+  for (int fd : timeout_fds) {
+    auto equipment = connections_manager_->get_equipment_by_fd(fd);
+    if (equipment) {
+      std::string equipment_id = equipment->get_equipment_id();
+      std::string message = "设备离线超时: " + equipment_id;
+
+      // 写入数据库
+      db_manager_->insert_alarm("offline", equipment_id, "warning", message);
+
+      // 发送给所有Qt客户端
+      send_alert_to_all_qt_clients("offline", equipment_id, "warning", message);
+    }
+  }
 }
 
 bool EquipmentManagementServer::accept_new_connection() {
@@ -983,8 +1032,30 @@ void EquipmentManagementServer::check_qt_client_heartbeat_timeout(
   }
 }
 
-void EquipmentManagementServer::handle_connection_close(int fd) {
+void EquipmentManagementServer::send_alert_to_all_qt_clients(
+    const std::string &alarm_type, const std::string &equipment_id,
+    const std::string &severity, const std::string &message) {
 
+  // 获取所有Qt客户端连接
+  auto qt_connections =
+      connections_manager_->get_qt_client_connections(); // 需要添加此函数
+
+  for (int fd : qt_connections) {
+    if (fd > 0 && connections_manager_->is_connection_alive(fd)) {
+      std::vector<char> alert_msg = ProtocolParser::build_alert_message(
+          ProtocolParser::CLIENT_QT_CLIENT, equipment_id, alarm_type, severity,
+          message);
+
+      ssize_t bytes_sent =
+          send(fd, alert_msg.data(), alert_msg.size(), MSG_NOSIGNAL);
+      if (bytes_sent > 0) {
+        std::cout << "告警已发送给Qt客户端 fd=" << fd << std::endl;
+      }
+    }
+  }
+}
+
+void EquipmentManagementServer::handle_connection_close(int fd) {
   // 先检查文件描述符是否有效
   if (fd <= 0) {
     std::cout << "无效的文件描述符: " << fd << std::endl;
@@ -1000,10 +1071,18 @@ void EquipmentManagementServer::handle_connection_close(int fd) {
   // 第二步：获取设备信息（必须在移除连接之前）
   auto equipment = connections_manager_->get_equipment_by_fd(fd);
   std::string equipment_id;
+  bool is_equipment_connection = false;
 
   if (equipment) {
     equipment_id = equipment->get_equipment_id();
     std::cout << "设备离线: " << equipment_id << std::endl;
+    is_equipment_connection = true;
+
+    // ===== 新增：立即生成离线告警并推送 =====
+    std::string message = "设备离线: " + equipment_id;
+    db_manager_->insert_alarm("offline", equipment_id, "warning", message);
+    send_alert_to_all_qt_clients("offline", equipment_id, "warning", message);
+    // =========================================
 
     // 更新设备状态为离线
     equipment_manager_->update_equipment_status(equipment->get_equipment_id(),

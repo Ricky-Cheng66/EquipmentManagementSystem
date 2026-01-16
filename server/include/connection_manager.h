@@ -37,6 +37,12 @@ public:
   void print_connections() const;
   bool is_connection_exist(int fd) const;
 
+  // 获取心跳超时的fd列表
+  std::vector<int> get_timeout_fds() const;
+
+  // 获取所有Qt客户端的fd列表
+  std::vector<int> get_qt_client_connections() const;
+
   // 获取连接的最后心跳时间（用于超时检查）
   time_t get_last_heartbeat(int fd) const;
 

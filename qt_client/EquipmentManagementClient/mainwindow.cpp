@@ -157,6 +157,20 @@ MainWindow::MainWindow(QWidget *parent)
                                           this->handleQtHeartbeatResponse(result);
                                       });
                                   });
+    // 在 MainWindow::MainWindow 构造函数中
+    m_dispatcher->registerHandler(ProtocolParser::QT_ALERT_MESSAGE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          this->handleAlertMessage(result);
+                                      });
+                                  });
+
+    m_dispatcher->registerHandler(ProtocolParser::QT_ALERT_MESSAGE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          this->handleAlertMessage(result);
+                                      });
+                                  });
 
     ui->centralwidget->setAutoFillBackground(true); // 确保背景填充
     logMessage("客户端初始化完成。请点击'登录'按钮开始。");
@@ -584,6 +598,30 @@ void MainWindow::handleQtHeartbeatResponse(const ProtocolParser::ParseResult &re
 
     qDebug() << "收到服务端心跳响应:" << clientId << "时间戳:" << timestamp;
     logMessage(QString("心跳响应: %1").arg(clientId));
+}
+
+void MainWindow::handleAlertMessage(const ProtocolParser::ParseResult &result)
+{
+    // 解析payload: "alarm_type|severity|message"
+    QString payload = QString::fromStdString(result.payload);
+    QStringList parts = payload.split('|');
+
+    if (parts.size() < 3) {
+        qWarning() << "告警消息格式错误:" << payload;
+        return;
+    }
+
+    QString alarmType = parts[0];
+    QString severity = parts[1];
+    QString message = parts[2];
+
+    // 弹窗显示
+    QMessageBox::warning(this, "系统告警", message);
+
+    // 日志区红色显示
+    ui->logTextEdit->setTextColor(Qt::red);
+    logMessage("[告警] " + message);
+    ui->logTextEdit->setTextColor(Qt::black);
 }
 
 void MainWindow::showReservationWidget()

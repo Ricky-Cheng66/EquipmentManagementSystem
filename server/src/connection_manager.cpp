@@ -301,6 +301,32 @@ bool ConnectionManager::is_connection_exist(int fd) const {
   return connections_.find(fd) != connections_.end();
 }
 
+std::vector<int> ConnectionManager::get_timeout_fds() const {
+  std::shared_lock lock(connection_rw_lock_);
+  std::vector<int> timeout_fds;
+  time_t current_time = time(nullptr);
+
+  for (const auto &[fd, last_heartbeat] : heartbeat_times_) {
+    if (current_time - last_heartbeat > 60) { // 60秒超时
+      timeout_fds.push_back(fd);
+    }
+  }
+  return timeout_fds;
+}
+
+std::vector<int> ConnectionManager::get_qt_client_connections() const {
+  std::shared_lock lock(connection_rw_lock_);
+  std::vector<int> qt_fds;
+
+  for (const auto &[fd, client_type] : client_types_) {
+    if (client_type == ProtocolParser::CLIENT_QT_CLIENT) {
+      qt_fds.push_back(fd);
+    }
+  }
+
+  return qt_fds;
+}
+
 time_t ConnectionManager::get_last_heartbeat(int fd) const {
   std::shared_lock lock(connection_rw_lock_);
   auto it = heartbeat_times_.find(fd);
