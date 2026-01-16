@@ -11,6 +11,9 @@
 #include <QTextStream>
 #include <QDebug>
 #include <QtCharts>
+#include <QFile>
+#include <QFileDialog>
+#include <QDate>
 
 
 EnergyStatisticsWidget::EnergyStatisticsWidget(QWidget *parent)
@@ -154,4 +157,50 @@ void EnergyStatisticsWidget::parseAndDisplayData(const QString &data)
     qDebug() << "能耗数据解析完成，共" << records.size() << "条记录";
 }
 
-void EnergyStatisticsWidget::onExportButtonClicked() {}
+void EnergyStatisticsWidget::onExportButtonClicked()
+{
+    // 1. 检查是否有数据
+    if (m_statisticsTable->rowCount() == 0) {
+        QMessageBox::information(this, "提示", "暂无可导出的数据");
+        return;
+    }
+
+    // 2. 弹出文件保存对话框
+    QString defaultName = QString("能耗统计_%1.csv").arg(QDate::currentDate().toString("yyyyMMdd"));
+    QString filePath = QFileDialog::getSaveFileName(this, "导出CSV", defaultName, "CSV (*.csv)");
+
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    // 3. 打开文件
+    QFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, "导出失败", "无法写入文件");
+        return;
+    }
+
+    // 4. 写入UTF-8 BOM（Excel兼容性）
+    file.write("\xEF\xBB\xBF");
+
+    // 5. 写入表头
+    QStringList headers = {"设备ID", "日期", "Energy (kWh)", "Avg Power (W)", "Cost (¥)"};
+    file.write(headers.join(",").toUtf8() + "\n");
+
+    // 6. 写入数据
+    for (int row = 0; row < m_statisticsTable->rowCount(); ++row) {
+        QStringList rowData;
+        for (int col = 0; col < m_statisticsTable->columnCount(); ++col) {
+            QString text = m_statisticsTable->item(row, col)->text();
+            // CSV转义：处理逗号和引号
+            if (text.contains(",") || text.contains("\"")) {
+                text = "\"" + text.replace("\"", "\"\"") + "\"";
+            }
+            rowData << text;
+        }
+        file.write(rowData.join(",").toUtf8() + "\n");
+    }
+
+    file.close();
+    QMessageBox::information(this, "导出成功", "数据已保存到:\n" + filePath);
+}

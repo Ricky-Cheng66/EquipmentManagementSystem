@@ -5,7 +5,7 @@ TcpClient::TcpClient(QObject *parent) : QObject(parent)
     , m_socket(new QTcpSocket(this))
     , m_isProcessingData(false) // 新增初始化
     , m_heartbeatTimer(new QTimer(this))  // 新增
-    , m_heartbeatInterval(5)              // 新增
+    , m_heartbeatInterval(30)              // 新增
 {
     // 连接信号与槽：当socket有数据可读时，调用我们的处理函数
     connect(m_socket, &QTcpSocket::readyRead, this, &TcpClient::onSocketReadyRead);
