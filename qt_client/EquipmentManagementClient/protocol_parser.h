@@ -53,7 +53,9 @@ public:
         QT_HEARTBEAT = 107,          // Qt客户端→服务端：心跳保活
         QT_HEARTBEAT_RESPONSE = 108, // 服务端→Qt客户端：心跳响应
         QT_ALERT_MESSAGE = 109,      // 服务端→Qt客户端：告警消息
-        QT_ALERT_ACK = 110           // Qt客户端→服务端：告警确认
+        QT_ALERT_ACK = 110,          // Qt客户端→服务端：告警确认
+        QT_PLACE_LIST_QUERY = 111, // 新增：Qt客户端 -> 服务器：查询场所列表
+        QT_PLACE_LIST_RESPONSE = 112 // 新增：服务器 -> Qt客户端：返回场所列表
     };
 
     // ============ 客户端类型枚举 ============
@@ -135,8 +137,7 @@ public:
 
     // ============ 预约系统消息构建 ============
     static std::vector<char>
-    build_reservation_message(ClientType client_type,
-                              const std::string &equipment_id,
+    build_reservation_message(ClientType client_type, const std::string &place_id,
                               const std::string &payload);
     static std::vector<char>
     build_reservation_query(ClientType client_type,

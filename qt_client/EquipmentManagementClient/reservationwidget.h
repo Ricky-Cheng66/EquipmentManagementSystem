@@ -22,13 +22,14 @@ public:
     void setUserRole(const QString &role, const QString &userId);
     void updateQueryResultTable(const QString &data);
     void loadAllReservationsForApproval(const QString &data);
-    QComboBox *m_equipmentComboQuery;
-    QComboBox *m_equipmentComboApply;
+    // 改为：
+    QComboBox *m_placeComboApply;  // 改动：重命名
+    QComboBox *m_placeComboQuery;  // 改动：重命名
     QTabWidget *m_tabWidget;
 signals:
-    void reservationApplyRequested(const QString &equipmentId, const QString &purpose,
+    void reservationApplyRequested(const QString &placeId, const QString &purpose,
                                    const QString &startTime, const QString &endTime);
-    void reservationQueryRequested(const QString &equipmentId);
+    void reservationQueryRequested(const QString &placeId);
 
     void reservationApproveRequested(int reservationId, bool approve);
     void loadAllReservationsRequested();

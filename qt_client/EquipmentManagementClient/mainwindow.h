@@ -47,10 +47,11 @@ private slots:
     void handleReservationApplyResponse(const ProtocolParser::ParseResult &result);
     void handleReservationQueryResponse(const ProtocolParser::ParseResult &result);
     void handleReservationApproveResponse(const ProtocolParser::ParseResult &result);
+    void handlePlaceListResponse(const ProtocolParser::ParseResult &result);
     // 预约相关槽函数
-    void onReservationApplyRequested(const QString &equipmentId, const QString &purpose,
+    void onReservationApplyRequested(const QString &placetId, const QString &purpose,
                                      const QString &startTime, const QString &endTime);
-    void onReservationQueryRequested(const QString &equipmentId);
+    void onReservationQueryRequested(const QString &placeId);
     void onReservationApproveRequested(int reservationId, bool approve);
 
     void showReservationWidget();

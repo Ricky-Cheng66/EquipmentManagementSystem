@@ -39,19 +39,19 @@ CREATE TABLE IF NOT EXISTS equipment_status_logs (
     FOREIGN KEY (equipment_id) REFERENCES equipments(equipment_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- 4. 预约记录表
+-- 重建预约表（场所版）
 CREATE TABLE IF NOT EXISTS reservations (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    equipment_id VARCHAR(50) NOT NULL,
+    place_id VARCHAR(50) NOT NULL COMMENT '场所ID',
     user_id INT NOT NULL,
     purpose VARCHAR(200) NOT NULL,
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,
-    status VARCHAR(20) DEFAULT 'pending',
+    status VARCHAR(20) DEFAULT 'pending' COMMENT 'pending/approved/rejected',
     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_equipment_time (equipment_id, start_time, end_time),
+    INDEX idx_place_time (place_id, start_time, end_time),
     INDEX idx_user (user_id),
-    FOREIGN KEY (equipment_id) REFERENCES equipments(equipment_id) ON DELETE CASCADE,
+    FOREIGN KEY (place_id) REFERENCES places(place_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -98,6 +98,22 @@ CREATE TABLE IF NOT EXISTS alarms (
     INDEX idx_equipment (equipment_id),
     INDEX idx_created_time (created_time)
 ) ENGINE=InnoDB;
+
+-- 8. 创建场所表
+CREATE TABLE IF NOT EXISTS places (
+    place_id VARCHAR(50) PRIMARY KEY COMMENT '场所ID',
+    place_name VARCHAR(100) NOT NULL COMMENT '场所名称',
+    equipment_ids TEXT NOT NULL COMMENT '设备ID列表（逗号分隔如: projector_101,ac_101）',
+    location VARCHAR(100) COMMENT '位置描述',
+    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+
+-- 插入测试数据
+INSERT INTO places (place_id, place_name, equipment_ids, location) VALUES
+('classroom_101', '101教室', 'projector_101,ac_101', '教学楼1楼'),
+('gymnasium_001', '体育馆', 'camera_001,light_001', '体育馆主馆'),
+('lab_201', '201实验室', 'projector_201,ac_201,door_201', '实验楼2楼');
 
 -- 插入测试用户数据
 INSERT INTO users (username, password_hash, role, real_name, department) VALUES

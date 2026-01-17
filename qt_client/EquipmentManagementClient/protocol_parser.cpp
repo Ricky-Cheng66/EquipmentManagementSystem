@@ -299,10 +299,10 @@ std::vector<char> ProtocolParser::build_reservation_approve_response(
 
 std::vector<char>
 ProtocolParser::build_reservation_message(ClientType client_type,
-                                          const std::string &equipment_id,
+                                          const std::string &place_id,
                                           const std::string &payload) {
     std::string body = build_message_body(
-        client_type, MessageType::RESERVATION_APPLY, equipment_id, {payload});
+        client_type, MessageType::RESERVATION_APPLY, place_id, {payload});
     return pack_message(body);
 }
 

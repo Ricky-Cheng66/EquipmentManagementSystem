@@ -146,14 +146,15 @@ std::string DatabaseManager::get_last_error() const {
   return mysql_error(mysql_conn_);
 }
 
-bool DatabaseManager::add_reservation(const std::string &equipment_id,
-                                      int user_id, const std::string &purpose,
+bool DatabaseManager::add_reservation(const std::string &place_id, int user_id,
+                                      const std::string &purpose,
                                       const std::string &start_time,
                                       const std::string &end_time) {
-  std::string query = "INSERT INTO reservations (equipment_id, user_id, "
+  // 改动点：equipment_id → place_id
+  std::string query = "INSERT INTO reservations (place_id, user_id, "
                       "purpose, start_time, end_time, status) "
                       "VALUES ('" +
-                      equipment_id + "', " + std::to_string(user_id) + ", '" +
+                      place_id + "', " + std::to_string(user_id) + ", '" +
                       purpose + "', '" + start_time + "', '" + end_time +
                       "', 'pending')";
   return execute_update(query);
@@ -167,12 +168,11 @@ bool DatabaseManager::update_reservation_status(int reservation_id,
 }
 
 std::vector<std::vector<std::string>>
-DatabaseManager::get_reservations_by_equipment(
-    const std::string &equipment_id) {
+DatabaseManager::get_reservations_by_place(const std::string &place_id) {
   std::string query =
-      "SELECT id, equipment_id, user_id, purpose, start_time, end_time, status "
-      "FROM reservations WHERE equipment_id = '" +
-      equipment_id +
+      "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
+      "FROM reservations WHERE place_id = '" +
+      place_id +
       "' "
       "ORDER BY start_time";
   return execute_query(query);
@@ -180,7 +180,7 @@ DatabaseManager::get_reservations_by_equipment(
 
 std::vector<std::vector<std::string>> DatabaseManager::get_all_reservations() {
   std::string query =
-      "SELECT id, equipment_id, user_id, purpose, start_time, end_time, status "
+      "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
       "FROM reservations ORDER BY start_time";
   return execute_query(query);
 }
@@ -205,6 +205,58 @@ bool DatabaseManager::check_reservation_conflict(
   auto result = execute_query(query);
   if (!result.empty() && std::stoi(result[0][0]) > 0) {
     return true; // 存在冲突
+  }
+  return false;
+}
+
+std::vector<std::vector<std::string>> DatabaseManager::get_all_places() {
+  std::string sql = "SELECT place_id, place_name FROM places ORDER BY place_id";
+  return execute_query(sql);
+}
+
+std::vector<std::string>
+DatabaseManager::get_equipment_ids_by_place(const std::string &place_id) {
+
+  std::string sql =
+      "SELECT equipment_ids FROM places WHERE place_id = '" + place_id + "'";
+  auto results = execute_query(sql);
+  std::vector<std::string> equipment_ids;
+
+  if (!results.empty()) {
+    std::string ids_str = results[0][0];
+    // 解析逗号分隔的字符串
+    size_t pos = 0;
+    while ((pos = ids_str.find(',')) != std::string::npos) {
+      equipment_ids.push_back(ids_str.substr(0, pos));
+      ids_str.erase(0, pos + 1);
+    }
+    if (!ids_str.empty()) {
+      equipment_ids.push_back(ids_str);
+    }
+  }
+  return equipment_ids;
+}
+
+bool DatabaseManager::check_place_reservation_conflict(
+    const std::string &place_id, const std::string &start_time,
+    const std::string &end_time) {
+
+  std::string sql = "SELECT COUNT(*) FROM reservations WHERE place_id = '" +
+                    place_id +
+                    "' "
+                    "AND status IN ('pending', 'approved') "
+                    "AND ((start_time BETWEEN '" +
+                    start_time + "' AND '" + end_time +
+                    "') "
+                    "OR (end_time BETWEEN '" +
+                    start_time + "' AND '" + end_time +
+                    "') "
+                    "OR (start_time <= '" +
+                    start_time + "' AND end_time >= '" + end_time + "'))";
+
+  auto results = execute_query(sql);
+  if (!results.empty() && std::stoi(results[0][0]) > 0) {
+    return true;
   }
   return false;
 }

@@ -172,6 +172,14 @@ MainWindow::MainWindow(QWidget *parent)
                                       });
                                   });
 
+    // 明确：注册场所列表响应处理器
+    m_dispatcher->registerHandler(ProtocolParser::QT_PLACE_LIST_RESPONSE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          this->handlePlaceListResponse(result);
+                                      });
+                                  });
+
     ui->centralwidget->setAutoFillBackground(true); // 确保背景填充
     logMessage("客户端初始化完成。请点击'登录'按钮开始。");
 }
@@ -444,7 +452,7 @@ void MainWindow::enableMainUI(bool enable)
 }
 
 // 发送预约申请
-void MainWindow::onReservationApplyRequested(const QString &equipmentId, const QString &purpose,
+void MainWindow::onReservationApplyRequested(const QString &placeId, const QString &purpose,
                                              const QString &startTime, const QString &endTime)
 {
     if (!m_tcpClient || !m_tcpClient->isConnected()) {
@@ -457,10 +465,13 @@ void MainWindow::onReservationApplyRequested(const QString &equipmentId, const Q
     QString payload = QString("%1|%2|%3|%4").arg(m_currentUserId).arg(startTime).arg(endTime).arg(purpose);
 qDebug() << "DEBUG: m_currentUserId=" << m_currentUserId << ", payload=" << payload;  // 添加这行
     std::vector<char> msg = ProtocolParser::build_reservation_message(
-        ProtocolParser::CLIENT_QT_CLIENT, equipmentId.toStdString(), payload.toStdString());
+        ProtocolParser::CLIENT_QT_CLIENT,
+        placeId.toStdString(),  // 场所ID
+        payload.toStdString()
+        );
 
     m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
-    logMessage(QString("预约申请已发送: 设备[%1]").arg(equipmentId));
+    logMessage(QString("预约申请已发送: 场所id[%1]").arg(placeId));
 }
 
 // 发送预约查询
@@ -560,6 +571,30 @@ void MainWindow::handleReservationApproveResponse(const ProtocolParser::ParseRes
     }
 }
 
+void MainWindow::handlePlaceListResponse(const ProtocolParser::ParseResult &result)
+{
+    QString payload = QString::fromStdString(result.payload);
+    QStringList places = payload.split(';', Qt::SkipEmptyParts);
+
+    if (m_reservationWidget) {
+        // 明确：清空旧数据
+        m_reservationWidget->m_placeComboApply->clear();
+        m_reservationWidget->m_placeComboQuery->clear();
+        m_reservationWidget->m_placeComboQuery->addItem("全部场所", "all");
+
+        // 明确：填充场所列表
+        for (const QString &placeStr : places) {
+            QStringList fields = placeStr.split('|');
+            if (fields.size() >= 2) {
+                QString placeId = fields[0];
+                QString placeName = fields[1];
+                m_reservationWidget->m_placeComboApply->addItem(placeName, placeId);
+                m_reservationWidget->m_placeComboQuery->addItem(placeName, placeId);
+            }
+        }
+    }
+}
+
 void MainWindow::handleEnergyResponse(const ProtocolParser::ParseResult &result)
 {
     qDebug() << "=== 能耗响应接收调试 ===";
@@ -631,41 +666,26 @@ void MainWindow::showReservationWidget()
         return;
     }
 
-    // 先设置用户角色
-    m_reservationWidget->setUserRole(m_userRole, QString::number(m_currentUserId));
-
-    // 填充设备列表（保持原样）
-    QStandardItemModel* model = nullptr;
-    if (m_equipmentManagerWidget) {
-        model = m_equipmentManagerWidget->m_equipmentModel;
-    }
-
     if (m_reservationWidget) {
-        m_reservationWidget->m_equipmentComboApply->clear();
-        m_reservationWidget->m_equipmentComboQuery->clear();
-        m_reservationWidget->m_equipmentComboQuery->addItem("全部设备", "all");
+        // 明确：清空旧数据
+        m_reservationWidget->m_placeComboApply->clear();
+        m_reservationWidget->m_placeComboQuery->clear();
+        m_reservationWidget->m_placeComboQuery->addItem("全部场所", "all");
 
-        if (model) {
-            for (int row = 0; row < model->rowCount(); ++row) {
-                QString equipmentId = model->item(row, 0)->text();
-                QString equipmentType = model->item(row, 1)->text();
-                QString displayText = QString("[%1] %2").arg(equipmentType).arg(equipmentId);
-
-                m_reservationWidget->m_equipmentComboApply->addItem(displayText, equipmentId);
-                m_reservationWidget->m_equipmentComboQuery->addItem(displayText, equipmentId);
-            }
+        // 明确：向服务端请求场所列表
+        if (m_tcpClient && m_tcpClient->isConnected()) {
+            std::vector<char> msg = ProtocolParser::pack_message(
+                ProtocolParser::build_message_body(
+                    ProtocolParser::CLIENT_QT_CLIENT,
+                    ProtocolParser::QT_PLACE_LIST_QUERY,
+                    "",  // place_id为空字符串（必须有）
+                    {""} // payload为空但不能省略
+                    )
+                );
+            m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+            logMessage("已发送场所列表查询请求");
         }
     }
-
-    // 连接审批页加载信号
-    connect(m_reservationWidget, &ReservationWidget::loadAllReservationsRequested,
-            this, [this]() {
-                qDebug() << "DEBUG: 收到审批页加载请求";
-                std::vector<char> msg = ProtocolParser::build_reservation_query(
-                    ProtocolParser::CLIENT_QT_CLIENT, "all");
-                m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
-                logMessage("加载全部预约列表...");
-            });
 
     m_reservationWidget->show();
     m_reservationWidget->raise();

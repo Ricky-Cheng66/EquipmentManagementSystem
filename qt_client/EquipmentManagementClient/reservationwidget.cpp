@@ -28,7 +28,7 @@ void ReservationWidget::setupApplyTab()
     QWidget *applyTab = new QWidget(this);
     QFormLayout *formLayout = new QFormLayout(applyTab);
 
-    m_equipmentComboApply = new QComboBox(this);
+    m_placeComboApply = new QComboBox(this);  // 改动1：变量名
     m_startTimeEdit = new QDateTimeEdit(QDateTime::currentDateTime(), this);
     m_endTimeEdit = new QDateTimeEdit(QDateTime::currentDateTime().addSecs(3600), this);
     m_purposeEdit = new QLineEdit(this);
@@ -37,7 +37,7 @@ void ReservationWidget::setupApplyTab()
     m_startTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm");
     m_endTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm");
 
-    formLayout->addRow("设备:", m_equipmentComboApply);
+    formLayout->addRow("场所:", m_placeComboApply);  // 改动2：标签文本
     formLayout->addRow("开始时间:", m_startTimeEdit);
     formLayout->addRow("结束时间:", m_endTimeEdit);
     formLayout->addRow("用途:", m_purposeEdit);
@@ -54,12 +54,12 @@ void ReservationWidget::setupQueryTab()
     QVBoxLayout *vLayout = new QVBoxLayout(queryTab);
     QHBoxLayout *hLayout = new QHBoxLayout();
 
-    m_equipmentComboQuery = new QComboBox(this);
-    m_equipmentComboQuery->addItem("全部设备", "all");
+    m_placeComboQuery = new QComboBox(this);  // 改动1：变量名
+    m_placeComboQuery->addItem("全部场所", "all");  // 改动2：默认文本
     m_queryButton = new QPushButton("查询", this);
 
-    hLayout->addWidget(new QLabel("设备:", this));
-    hLayout->addWidget(m_equipmentComboQuery);
+    hLayout->addWidget(new QLabel("场所:", this));  // 改动3：标签文本
+    hLayout->addWidget(m_placeComboQuery);
     hLayout->addWidget(m_queryButton);
     hLayout->addStretch();
 
@@ -116,13 +116,13 @@ void ReservationWidget::setUserRole(const QString &role, const QString &userId)
 
 void ReservationWidget::onApplyButtonClicked()
 {
-    if (m_equipmentComboApply->currentIndex() == -1) {
-        QMessageBox::warning(this, "提示", "请先选择设备");
+    if (m_placeComboApply->currentIndex() == -1) {  // 改动1：变量名
+        QMessageBox::warning(this, "提示", "请先选择场所");  // 改动2：提示文本
         return;
     }
 
     emit reservationApplyRequested(
-        m_equipmentComboApply->currentData().toString(),
+        m_placeComboApply->currentData().toString(),  // 改动3：变量名
         m_purposeEdit->text(),
         m_startTimeEdit->dateTime().toString("yyyy-MM-dd HH:mm:ss"),
         m_endTimeEdit->dateTime().toString("yyyy-MM-dd HH:mm:ss")
@@ -131,7 +131,7 @@ void ReservationWidget::onApplyButtonClicked()
 
 void ReservationWidget::onQueryButtonClicked()
 {
-    emit reservationQueryRequested(m_equipmentComboQuery->currentData().toString());
+    emit reservationQueryRequested(m_placeComboQuery->currentData().toString());
 }
 
 

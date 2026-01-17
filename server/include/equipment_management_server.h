@@ -91,9 +91,9 @@ private:
 
   bool validate_user_exists(int user_id);
   bool validate_admin_permission(const std::string &admin_id);
-  bool check_reservation_conflict(const std::string &equipment_id,
-                                  const std::string &start_time,
-                                  const std::string &end_time);
+  bool check_place_reservation_conflict(const std::string &equipment_id,
+                                        const std::string &start_time,
+                                        const std::string &end_time);
   // 远程控制接口
   bool send_control_command(const std::string &equipment_id,
                             ProtocolParser::ControlCommandType command_type,
@@ -126,6 +126,8 @@ private:
   void handle_reservation_approve(int fd, const std::string &admin_id,
                                   const std::string &payload);
   void check_heartbeat_timeout();
+
+  void handle_qt_place_list_query(int fd);
 
   // 处理Qt客户端能耗查询请求
   void handle_qt_energy_query(int fd, const std::string &equipment_id,

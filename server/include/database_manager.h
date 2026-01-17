@@ -60,7 +60,7 @@ public:
   std::vector<std::vector<std::string>> get_unacknowledged_alarms();
 
   //预约相关操作
-  bool add_reservation(const std::string &equipment_id, int user_id,
+  bool add_reservation(const std::string &place_id, int user_id,
                        const std::string &purpose,
                        const std::string &start_time,
                        const std::string &end_time);
@@ -68,13 +68,25 @@ public:
   bool update_reservation_status(int reservation_id, const std::string &status);
 
   std::vector<std::vector<std::string>>
-  get_reservations_by_equipment(const std::string &equipment_id);
+  get_reservations_by_place(const std::string &place_id);
 
   std::vector<std::vector<std::string>> get_all_reservations();
 
   bool check_reservation_conflict(const std::string &equipment_id,
                                   const std::string &start_time,
                                   const std::string &end_time);
+
+  // 获取所有场所列表
+  std::vector<std::vector<std::string>> get_all_places();
+
+  // 根据场所ID获取设备列表
+  std::vector<std::string>
+  get_equipment_ids_by_place(const std::string &place_id);
+
+  // 修改：冲突检测改为场所级别
+  bool check_place_reservation_conflict(const std::string &place_id,
+                                        const std::string &start_time,
+                                        const std::string &end_time);
 
   // 查询操作
   std::vector<std::vector<std::string>> execute_query(const std::string &query);
