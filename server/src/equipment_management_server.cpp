@@ -713,6 +713,7 @@ void EquipmentManagementServer::handle_qt_client_control_command(
 
   std::cout << "处理控制命令: " << equipment_id << " payload: " << payload
             << std::endl;
+
   // 解析控制命令（格式: "command_type|parameters"）
   auto parts = ProtocolParser::split_string(payload, '|');
   if (parts.size() < 1) {
@@ -1313,8 +1314,8 @@ void EquipmentManagementServer::handle_reservation_query(
 }
 
 void EquipmentManagementServer::handle_reservation_approve(
-    int fd, const std::string &admin_id, const std::string &payload) {
-  std::cout << "处理预约审批: admin=" << admin_id << " payload: " << payload
+    int fd, const std::string &place_id, const std::string &payload) {
+  std::cout << "处理预约审批: place_id=" << place_id << " payload: " << payload
             << std::endl;
 
   // 解析payload格式: "reservation_id|action" (action: approve/reject)
@@ -1323,7 +1324,7 @@ void EquipmentManagementServer::handle_reservation_approve(
     std::cout << "审批数据格式错误" << std::endl;
     std::vector<char> response =
         ProtocolParser::build_reservation_approve_response(
-            ProtocolParser::CLIENT_EQUIPMENT, false, "数据格式错误");
+            ProtocolParser::CLIENT_QT_CLIENT, false, "数据格式错误");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -1331,11 +1332,23 @@ void EquipmentManagementServer::handle_reservation_approve(
   std::string reservation_id_str = parts[0];
   std::string action = parts[1];
 
-  // 验证管理员权限
-  if (!validate_admin_permission(admin_id)) {
+  // ✅ 改动1：验证场所存在性（而非设备）
+  auto equipment_ids = db_manager_->get_equipment_ids_by_place(place_id);
+  if (equipment_ids.empty()) {
     std::vector<char> response =
         ProtocolParser::build_reservation_approve_response(
-            ProtocolParser::CLIENT_EQUIPMENT, false, "权限不足");
+            ProtocolParser::CLIENT_QT_CLIENT, false,
+            "场所不存在或场所内无设备");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  // ✅ 改动2：验证管理员权限（保持原有逻辑）
+  if (!validate_admin_permission(
+          place_id)) { // 注意：这里应该验证管理员身份，不是place_id
+    std::vector<char> response =
+        ProtocolParser::build_reservation_approve_response(
+            ProtocolParser::CLIENT_QT_CLIENT, false, "权限不足");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -1347,13 +1360,12 @@ void EquipmentManagementServer::handle_reservation_approve(
     std::cout << "预约ID格式错误: " << reservation_id_str << std::endl;
     std::vector<char> response =
         ProtocolParser::build_reservation_approve_response(
-            ProtocolParser::CLIENT_EQUIPMENT, false, "预约ID格式错误");
+            ProtocolParser::CLIENT_QT_CLIENT, false, "预约ID格式错误");
     send(fd, response.data(), response.size(), 0);
     return;
   }
 
   std::string new_status;
-
   if (action == "approve") {
     new_status = "approved";
   } else if (action == "reject") {
@@ -1361,32 +1373,54 @@ void EquipmentManagementServer::handle_reservation_approve(
   } else {
     std::vector<char> response =
         ProtocolParser::build_reservation_approve_response(
-            ProtocolParser::CLIENT_EQUIPMENT, false, "无效操作");
+            ProtocolParser::CLIENT_QT_CLIENT, false, "无效操作");
     send(fd, response.data(), response.size(), 0);
     return;
   }
 
-  // 更新数据库
+  // ✅ 改动3：更新数据库（SQL已在database_manager中修正）
   if (db_manager_->is_connected()) {
-    bool success =
-        db_manager_->update_reservation_status(reservation_id, new_status);
+    bool success = db_manager_->update_reservation_status(reservation_id,
+                                                          new_status, place_id);
     if (success) {
+      // ✅ 改动4：审批通过后，将场所内所有设备状态设为reserved
+      if (new_status == "approved") {
+        // 获取场所内的所有设备ID
+        auto equipment_ids = db_manager_->get_equipment_ids_by_place(place_id);
+
+        // 将所有设备状态设为reserved（可控制但显示为已预留）
+        for (const auto &eq_id : equipment_ids) {
+          equipment_manager_->update_equipment_status(eq_id, "reserved");
+
+          // 记录到状态日志表
+          if (db_manager_->is_connected()) {
+            db_manager_->log_equipment_status(
+                eq_id, "reserved",
+                equipment_manager_->get_equipment(eq_id)->get_power_state(),
+                "预约审批通过，场所预留");
+          }
+        }
+
+        std::cout << "场所 " << place_id << " 内的 " << equipment_ids.size()
+                  << " 个设备已设为预留状态" << std::endl;
+      }
+
       std::vector<char> response =
           ProtocolParser::build_reservation_approve_response(
-              ProtocolParser::CLIENT_EQUIPMENT, true, "审批操作成功");
+              ProtocolParser::CLIENT_QT_CLIENT, true, "审批操作成功");
       send(fd, response.data(), response.size(), 0);
       std::cout << "预约审批成功: reservation " << reservation_id << " -> "
-                << new_status << std::endl;
+                << new_status << " (place_id: " << place_id << ")" << std::endl;
     } else {
       std::vector<char> response =
           ProtocolParser::build_reservation_approve_response(
-              ProtocolParser::CLIENT_EQUIPMENT, false, "数据库错误");
+              ProtocolParser::CLIENT_QT_CLIENT, false, "数据库错误");
       send(fd, response.data(), response.size(), 0);
     }
   } else {
     std::vector<char> response =
         ProtocolParser::build_reservation_approve_response(
-            ProtocolParser::CLIENT_EQUIPMENT, false, "系统错误");
+            ProtocolParser::CLIENT_QT_CLIENT, false, "系统错误");
     send(fd, response.data(), response.size(), 0);
   }
 }

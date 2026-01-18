@@ -161,10 +161,22 @@ bool DatabaseManager::add_reservation(const std::string &place_id, int user_id,
 }
 
 bool DatabaseManager::update_reservation_status(int reservation_id,
-                                                const std::string &status) {
+                                                const std::string &status,
+                                                const std::string &place_id) {
+  // ✅ 改动：增加place_id条件，确保只能审批指定场所的预约
   std::string query = "UPDATE reservations SET status = '" + status +
-                      "' WHERE id = " + std::to_string(reservation_id);
-  return execute_update(query);
+                      "' WHERE id = " + std::to_string(reservation_id) +
+                      " AND place_id = '" + place_id + "'";
+
+  bool success = execute_update(query);
+
+  if (success && mysql_affected_rows(mysql_conn_) == 0) {
+    std::cout << "未找到匹配的预约记录: id=" << reservation_id
+              << ", place_id=" << place_id << std::endl;
+    return false;
+  }
+
+  return success;
 }
 
 std::vector<std::vector<std::string>>

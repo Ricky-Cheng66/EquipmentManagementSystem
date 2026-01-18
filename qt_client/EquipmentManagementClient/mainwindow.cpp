@@ -3,6 +3,7 @@
 #include <QTime>
 #include <QMessageBox>
 #include <QLabel>
+#include <QRegularExpression>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -499,14 +500,29 @@ void MainWindow::onReservationApproveRequested(int reservationId, bool approve)
         return;
     }
 
-    // payload格式: "reservation_id|approve|reject"
+    // ✅ 获取当前选中的场所ID（调用公有方法，避免访问私有成员）
+    QString placeId = m_reservationWidget->getCurrentSelectedPlaceId();
+    if (placeId.isEmpty()) {
+        QMessageBox::warning(this, "审批失败", "请先选择要审批的预约记录");
+        return;
+    }
+
+    // payload格式: "reservation_id|action" (action: approve/reject)
     QString payload = QString("%1|%2").arg(reservationId).arg(approve ? "approve" : "reject");
 
+    // ✅ 传入place_id而非admin_id
     std::vector<char> msg = ProtocolParser::build_reservation_approve(
-        ProtocolParser::CLIENT_QT_CLIENT, m_currentUsername.toStdString(), payload.toStdString());
+        ProtocolParser::CLIENT_QT_CLIENT,
+        placeId.toStdString(),  // 第三个参数复用为place_id
+        payload.toStdString());
 
     m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
-    logMessage(QString("预约审批已发送: ID[%1] 操作[%2]").arg(reservationId).arg(approve ? "批准" : "拒绝"));
+
+    // 日志记录
+    logMessage(QString("预约审批已发送: 场所[%1] 预约ID[%2] 操作[%3]")
+                   .arg(placeId)
+                   .arg(reservationId)
+                   .arg(approve ? "批准" : "拒绝"));
 }
 
 void MainWindow::handleReservationApplyResponse(const ProtocolParser::ParseResult &result)

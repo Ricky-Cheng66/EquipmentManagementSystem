@@ -114,6 +114,8 @@ private:
   //辅助函数
   std::string get_current_time();
 
+  bool check_user_control_permission(int fd, const std::string &equipment_id);
+
 private:
   // 处理来自客户端的控制命令
   void handle_qt_client_control_command(int fd, const std::string &equipment_id,
@@ -123,7 +125,7 @@ private:
                                 const std::string &payload);
   void handle_reservation_query(int fd, const std::string &equipment_id,
                                 const std::string &payload);
-  void handle_reservation_approve(int fd, const std::string &admin_id,
+  void handle_reservation_approve(int fd, const std::string &place_id,
                                   const std::string &payload);
   void check_heartbeat_timeout();
 

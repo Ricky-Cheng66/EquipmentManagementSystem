@@ -65,7 +65,8 @@ public:
                        const std::string &start_time,
                        const std::string &end_time);
 
-  bool update_reservation_status(int reservation_id, const std::string &status);
+  bool update_reservation_status(int reservation_id, const std::string &status,
+                                 const std::string &place_id);
 
   std::vector<std::vector<std::string>>
   get_reservations_by_place(const std::string &place_id);

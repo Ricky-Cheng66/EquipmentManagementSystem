@@ -22,6 +22,10 @@ public:
     void setUserRole(const QString &role, const QString &userId);
     void updateQueryResultTable(const QString &data);
     void loadAllReservationsForApproval(const QString &data);
+    QString getPlaceNameById(const QString &placeId);
+
+    // ✅ 新增：获取当前选中的预约记录的场所ID
+    QString getCurrentSelectedPlaceId() const;
     // 改为：
     QComboBox *m_placeComboApply;  // 改动：重命名
     QComboBox *m_placeComboQuery;  // 改动：重命名

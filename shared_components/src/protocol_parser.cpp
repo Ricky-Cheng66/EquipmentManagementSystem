@@ -316,10 +316,10 @@ ProtocolParser::build_reservation_query(ClientType client_type,
 
 std::vector<char>
 ProtocolParser::build_reservation_approve(ClientType client_type,
-                                          const std::string &admin_id,
+                                          const std::string &place_id,
                                           const std::string &payload) {
   std::string body = build_message_body(
-      client_type, MessageType::RESERVATION_APPROVE, admin_id, {payload});
+      client_type, MessageType::RESERVATION_APPROVE, place_id, {payload});
   return pack_message(body);
 }
 

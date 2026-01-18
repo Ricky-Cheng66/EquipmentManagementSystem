@@ -82,7 +82,7 @@ void ReservationWidget::setupApproveTab()
     QVBoxLayout *vLayout = new QVBoxLayout(approveTab);
 
     m_approveTable = new QTableWidget(0, 8, this);
-    m_approveTable->setHorizontalHeaderLabels({"预约ID", "设备ID", "用户ID", "用途", "开始时间", "结束时间", "状态", "操作"});
+    m_approveTable->setHorizontalHeaderLabels({"预约ID", "场所ID", "用户ID", "用途", "开始时间", "结束时间", "状态", "操作"});
     m_approveTable->horizontalHeader()->setStretchLastSection(true);
     m_approveTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
@@ -191,6 +191,11 @@ void ReservationWidget::loadAllReservationsForApproval(const QString &data)
             // 填充前7列数据
             for (int j = 0; j < 7; ++j) {
                 m_approveTable->setItem(i, j, new QTableWidgetItem(fields[j]));
+                QString placeId = fields[1];
+                QString placeName = getPlaceNameById(placeId); // 需要实现此辅助函数
+                if (!placeName.isEmpty()) {
+                    m_approveTable->setItem(i, 1, new QTableWidgetItem(placeName + " (" + placeId + ")"));
+                }
             }
 
             // 第8列：操作列
@@ -236,6 +241,34 @@ void ReservationWidget::loadAllReservationsForApproval(const QString &data)
     m_approveTable->horizontalHeader()->setStretchLastSection(true);
     m_approveTable->setColumnWidth(4, 150);  // 开始时间
     m_approveTable->setColumnWidth(5, 150);  // 结束时间
+}
+
+QString ReservationWidget::getPlaceNameById(const QString &placeId) {
+    // 从m_placeComboApply中查找对应名称
+    int index = m_placeComboApply->findData(placeId);
+    if (index >= 0) {
+        return m_placeComboApply->itemText(index);
+    }
+    return placeId; // 如果没找到，返回ID本身
+}
+
+QString ReservationWidget::getCurrentSelectedPlaceId() const
+{
+    if (!m_approveTable || m_approveTable->currentRow() < 0) {
+        return QString();
+    }
+
+    // 第1列是场所ID（显示格式可能是"名称 (ID)"）
+    QString placeIdText = m_approveTable->item(m_approveTable->currentRow(), 1)->text();
+
+    // 提取括号内的ID
+    QRegularExpression rx("\\(([^)]+)\\)");
+    QRegularExpressionMatch match = rx.match(placeIdText);
+    if (match.hasMatch()) {
+        return match.captured(1);
+    }
+
+    return placeIdText; // 如果没有括号，返回原文本
 }
 
 void ReservationWidget::onApproveButtonClicked()
