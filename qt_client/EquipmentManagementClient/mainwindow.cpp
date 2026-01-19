@@ -476,20 +476,20 @@ qDebug() << "DEBUG: m_currentUserId=" << m_currentUserId << ", payload=" << payl
 }
 
 // 发送预约查询
-void MainWindow::onReservationQueryRequested(const QString &equipmentId)
+void MainWindow::onReservationQueryRequested(const QString &placeId)
 {
     if (!m_tcpClient || !m_tcpClient->isConnected()) {
         QMessageBox::warning(this, "查询失败", "网络未连接");
         return;
     }
 
-    // equipmentId为空表示查询所有设备
-    std::string eqId = equipmentId.isEmpty() ? "all" : equipmentId.toStdString();
+    // ✅ 修复：构造查询消息
     std::vector<char> msg = ProtocolParser::build_reservation_query(
-        ProtocolParser::CLIENT_QT_CLIENT, eqId);
+        ProtocolParser::CLIENT_QT_CLIENT,
+        placeId.toStdString());  // "all" 或具体场所ID
 
     m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
-    logMessage(QString("预约查询已发送: 设备[%1]").arg(equipmentId.isEmpty() ? "全部" : equipmentId));
+    logMessage(QString("预约查询已发送: 场所[%1]").arg(placeId));
 }
 
 // 发送预约审批
@@ -545,6 +545,10 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
     QString payload = QString::fromStdString(result.payload);
     QStringList parts = payload.split('|', Qt::SkipEmptyParts);
 
+    // ✅ 调试输出
+    qDebug() << "Query response payload:" << payload;
+    qDebug() << "Current tab index:" << m_reservationWidget->m_tabWidget->currentIndex();
+
     if (parts.isEmpty() || parts[0] != "success") {
         QString errorMsg = parts.size() >= 2 ? parts[1] : "查询失败";
         QMessageBox::warning(this, "查询失败", errorMsg);
@@ -555,7 +559,9 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
 
     if (!m_reservationWidget) return;
 
+    // ✅ 修复：直接根据当前标签页分发，不依赖服务端返回类型
     int currentTab = m_reservationWidget->m_tabWidget->currentIndex();
+    qDebug() << "Distributing to tab:" << currentTab;
 
     if (currentTab == 2) {  // 审批页
         m_reservationWidget->loadAllReservationsForApproval(data);
@@ -601,14 +607,24 @@ void MainWindow::handlePlaceListResponse(const ProtocolParser::ParseResult &resu
         // 明确：填充场所列表
         for (const QString &placeStr : places) {
             QStringList fields = placeStr.split('|');
-            if (fields.size() >= 2) {
+            if (fields.size() >= 3) {
                 QString placeId = fields[0];
                 QString placeName = fields[1];
+                QString equipmentIds = fields[2];
                 m_reservationWidget->m_placeComboApply->addItem(placeName, placeId);
+                // ✅ 将设备列表存储在combo box的itemData中
+                QStringList equipmentList = equipmentIds.split(',');
+                int index = m_reservationWidget->m_placeComboApply->count() - 1;
+                m_reservationWidget->m_placeComboApply->setItemData(
+                    index,
+                    equipmentList,
+                    Qt::UserRole + 1);
                 m_reservationWidget->m_placeComboQuery->addItem(placeName, placeId);
             }
         }
     }
+    // ✅ 新增：发送加载完成信号
+    emit m_reservationWidget->placeListLoaded();
 }
 
 void MainWindow::handleEnergyResponse(const ProtocolParser::ParseResult &result)
@@ -683,23 +699,33 @@ void MainWindow::showReservationWidget()
     }
 
     if (m_reservationWidget) {
-        // 明确：清空旧数据
+        // 清空旧数据
         m_reservationWidget->m_placeComboApply->clear();
         m_reservationWidget->m_placeComboQuery->clear();
         m_reservationWidget->m_placeComboQuery->addItem("全部场所", "all");
 
-        // 明确：向服务端请求场所列表
+        // 清空设备列表（通过公有接口）
+        m_reservationWidget->clearEquipmentList();
+
+        // 请求场所列表
         if (m_tcpClient && m_tcpClient->isConnected()) {
             std::vector<char> msg = ProtocolParser::pack_message(
                 ProtocolParser::build_message_body(
                     ProtocolParser::CLIENT_QT_CLIENT,
                     ProtocolParser::QT_PLACE_LIST_QUERY,
-                    "",  // place_id为空字符串（必须有）
-                    {""} // payload为空但不能省略
+                    "",  // place_id为空
+                    {""} // payload为空
                     )
                 );
             m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
             logMessage("已发送场所列表查询请求");
+
+            // ✅ 修正：使用正确的 connect 语法
+            connect(m_reservationWidget, &ReservationWidget::placeListLoaded,
+                    this,  // ✅ 添加接收者
+                    [this]() {
+                        m_reservationWidget->refreshCurrentPlaceEquipment();
+                    }, Qt::SingleShotConnection);
         }
     }
 

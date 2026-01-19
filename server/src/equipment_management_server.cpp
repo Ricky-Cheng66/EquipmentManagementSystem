@@ -896,7 +896,17 @@ void EquipmentManagementServer::handle_qt_place_list_query(int fd) {
   for (size_t i = 0; i < places.size(); ++i) {
     if (i > 0)
       ss << ";";
-    ss << places[i][0] << "|" << places[i][1]; // place_id|place_name
+    std::string place_id = places[i][0];
+    auto equipment_ids = db_manager_->get_equipment_ids_by_place(place_id);
+
+    ss << place_id << "|" << places[i][1] << "|";
+
+    // 添加设备ID列表（逗号分隔）
+    for (size_t j = 0; j < equipment_ids.size(); ++j) {
+      if (j > 0)
+        ss << ",";
+      ss << equipment_ids[j];
+    }
   }
 
   // 明确：构建协议响应消息
@@ -1442,8 +1452,8 @@ bool EquipmentManagementServer::check_place_reservation_conflict(
     const std::string &equipment_id, const std::string &start_time,
     const std::string &end_time) {
   if (db_manager_->is_connected()) {
-    return db_manager_->check_reservation_conflict(equipment_id, start_time,
-                                                   end_time);
+    return db_manager_->check_place_reservation_conflict(equipment_id,
+                                                         start_time, end_time);
   }
   return false; // 数据库不可用时默认无冲突
 }

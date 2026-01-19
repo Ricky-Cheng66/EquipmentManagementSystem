@@ -3,8 +3,11 @@
 
 #include <QWidget>
 #include <QTabWidget>
+#include <QLabel>
+#include <QTextEdit>
 #include <QTableWidget>
 #include <QComboBox>
+#include <QGroupBox>
 #include <QDateTimeEdit>
 #include <QLineEdit>
 #include <QPushButton>
@@ -24,9 +27,16 @@ public:
     void loadAllReservationsForApproval(const QString &data);
     QString getPlaceNameById(const QString &placeId);
 
+    void refreshCurrentPlaceEquipment();
+
+
+    // ✅ 新增：清空设备列表显示
+    void clearEquipmentList();
     // ✅ 新增：获取当前选中的预约记录的场所ID
     QString getCurrentSelectedPlaceId() const;
-    // 改为：
+    //获取预约ID
+    int getCurrentSelectedReservationId() const;
+
     QComboBox *m_placeComboApply;  // 改动：重命名
     QComboBox *m_placeComboQuery;  // 改动：重命名
     QTabWidget *m_tabWidget;
@@ -37,6 +47,9 @@ signals:
 
     void reservationApproveRequested(int reservationId, bool approve);
     void loadAllReservationsRequested();
+
+    // ✅ 新增：场所列表加载完成信号
+    void placeListLoaded();
 private slots:
     void onApplyButtonClicked();
     void onQueryButtonClicked();
@@ -44,12 +57,24 @@ private slots:
     void onDenyButtonClicked();
     void onTabChanged(int index);
 
+
+
 private:
     void setupApplyTab();
     void setupQueryTab();
     void setupApproveTab();
 
+    // ✅ 新增：辅助函数
+    void updateEquipmentListDisplay();
 
+    QStringList getEquipmentListForPlace(const QString &placeId) const;
+
+    // ✅ 新增：场所设备列表展示控件
+    QLabel *m_equipmentListLabel;
+    QTextEdit *m_equipmentListText;
+
+    // ✅ 新增：设备列表相关控件
+    QGroupBox *m_equipmentGroup;  // 可选，如果需要访问
 
     // 申请页控件
     QDateTimeEdit *m_startTimeEdit;
