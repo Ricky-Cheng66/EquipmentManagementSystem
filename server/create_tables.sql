@@ -110,34 +110,41 @@ CREATE TABLE IF NOT EXISTS places (
 
 
 -- 插入测试数据
-INSERT INTO places (place_id, place_name, equipment_ids, location) VALUES
-('classroom_101', '101教室', 'projector_101,ac_101', '教学楼1楼'),
-('gymnasium_001', '体育馆', 'camera_001,light_001', '体育馆主馆'),
-('lab_201', '201实验室', 'projector_201,ac_201,door_201', '实验楼2楼');
-
--- 插入测试用户数据
-INSERT INTO users (username, password_hash, role, real_name, department) VALUES
-('admin', 'hashed_password', 'admin', '系统管理员', '信息技术部'),
-('teacher1', 'hashed_password', 'teacher', '张老师', '计算机学院'),
-('student1', 'hashed_password', 'student', '李同学', '计算机学院');
-
--- 插入真实设备数据
-INSERT INTO real_equipments (equipment_id, equipment_name, equipment_type, location, manufacturer, model, register_status) VALUES
--- 已投入设备（4个，与equipments表保持一致）
+-- 3. 插入真实设备数据（设备池）
+INSERT INTO real_equipments 
+(equipment_id, equipment_name, equipment_type, location, manufacturer, model, register_status) VALUES
 ('projector_101', '投影仪101', 'projector', '教学楼101', 'Sony', 'VPL-DX120', 'registered'),
-('ac_201', '空调201', 'air_conditioner', '实验室201', 'Gree', 'KFR-35GW', 'registered'),
-('door_301', '门禁301', 'access_control', '行政楼301', 'Hikvision', 'DS-K1T341', 'registered'),
-('camera_401', '摄像头401', 'camera', '图书馆大厅', 'Dahua', 'IPC-HFW1230S', 'registered'),
--- 未投入设备（2个，作为摆设）
-('projector_501', '投影仪501', 'projector', '教学楼501', 'Epson', 'CB-X49', 'unregistered'),
-('ac_601', '空调601', 'air_conditioner', '实验室601', 'Midea', 'KFR-26GW', 'unregistered');
+('projector_201', '投影仪201', 'projector', '实验室201', 'Epson', 'EB-X49', 'registered'),
+('ac_101', '空调101', 'air_conditioner', '教学楼101', 'Gree', 'KFR-35GW', 'registered'),
+('ac_201', '空调201', 'air_conditioner', '实验室201', 'Midea', 'KFR-26GW', 'registered'),
+('camera_101', '摄像头101', 'camera', '体育馆入口', 'Hikvision', 'DS-2CD2343G0-I', 'registered'),
+('door_101', '门禁101', 'access_control', '行政楼大厅', 'Dahua', 'DH-ASI3213Y', 'registered'),
 
--- 插入系统管理设备数据（与real_equipments中的已投入设备对应，状态一致）
-INSERT INTO equipments (equipment_id, equipment_name, equipment_type, location, status, power_state) VALUES
-('projector_101', '投影仪101', 'projector', '教学楼101', 'offline', 'off'),
-('ac_201', '空调201', 'air_conditioner', '实验室201', 'offline', 'off'),
-('door_301', '门禁301', 'access_control', '行政楼301', 'offline', 'off'),
-('camera_401', '摄像头401', 'camera', '图书馆大厅', 'offline', 'off');
+-- 未投入设备（作为扩展示例）
+('projector_301', '投影仪301', 'projector', '教学楼301', 'BenQ', 'MS560', 'unregistered'),
+('ac_301', '空调301', 'air_conditioner', '教学楼301', 'Haier', 'KFR-50LW', 'unregistered');
 
--- 注意：这里的状态都设置为offline和off，因为服务器启动时会初始化所有设备状态
--- 实际运行中，设备上线后状态会被更新
+-- 4. 插入系统管理设备（仅包含已注册设备，与real_equipments保持一致）
+INSERT INTO equipments 
+(equipment_id, equipment_name, equipment_type, location, status, power_state, energy_total) VALUES
+('projector_101', '投影仪101', 'projector', '教学楼101', 'offline', 'off', 0.0000),
+('projector_201', '投影仪201', 'projector', '实验室201', 'offline', 'off', 0.0000),
+('ac_101', '空调101', 'air_conditioner', '教学楼101', 'offline', 'off', 0.0000),
+('ac_201', '空调201', 'air_conditioner', '实验室201', 'offline', 'off', 0.0000),
+('camera_101', '摄像头101', 'camera', '体育馆入口', 'offline', 'off', 0.0000),
+('door_101', '门禁101', 'access_control', '行政楼大厅', 'offline', 'off', 0.0000);
+
+-- 5. 插入场所数据（equipment_ids必须存在于equipments表）
+INSERT INTO places 
+(place_id, place_name, equipment_ids, location) VALUES
+('classroom_101', '101教室', 'projector_101,ac_101', '教学楼1楼'),
+('classroom_201', '201实验室', 'projector_201,ac_201', '实验楼2楼'),
+('gymnasium_001', '体育馆', 'camera_101', '体育馆主馆'),
+('office_001', '行政楼大厅', 'door_101', '行政楼1楼');
+
+-- 6. 插入用户账号（密码暂用明文，生产环境应使用哈希）
+INSERT INTO users 
+(username, password_hash, role, real_name, department) VALUES
+('student1', '123456', 'student', '测试学生', '计算机学院'),
+('teacher1', '123456', 'teacher', '测试老师', '信息工程学院'),
+('admin', 'admin123', 'admin', '系统管理员', '信息技术部');

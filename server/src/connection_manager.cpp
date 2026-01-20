@@ -2,6 +2,26 @@
 #include <iostream>
 #include <sys/socket.h>
 #include <unistd.h>
+void ConnectionManager::set_user_info(int fd, const std::string &username,
+                                      const std::string &role, int user_id) {
+  std::unique_lock lock(connection_rw_lock_);
+  UserInfo info;
+  info.username = username;
+  info.role = role;
+  info.user_id = user_id;
+  fd_to_user_info_[fd] = info;
+}
+
+bool ConnectionManager::get_user_info(int fd, UserInfo &user_info) {
+  std::shared_lock lock(connection_rw_lock_);
+  auto it = fd_to_user_info_.find(fd);
+  if (it != fd_to_user_info_.end()) {
+    user_info = it->second;
+    return true;
+  }
+  return false;
+}
+
 // 连接管理
 void ConnectionManager::add_connection(int fd,
                                        std::shared_ptr<Equipment> equipment,

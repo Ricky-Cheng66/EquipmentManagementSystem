@@ -274,10 +274,6 @@ void MainWindow::onLoginRequested(const QString &username, const QString &passwo
 
 void MainWindow::handleLoginResponse(const ProtocolParser::ParseResult &result)
 {
-    // 注意：按照新协议格式，result.payload 只包含"success"及后面的字段
-    // 原始消息格式：客户端类型|消息类型|设备ID|success|用户名|角色
-    // 所以 result.payload = "success|admin|管理员"
-     qDebug() << "LOGIN RESPONSE payload:" << QString::fromStdString(result.payload);
     QString payload = QString::fromStdString(result.payload);
     QStringList parts = payload.split('|');
 
@@ -291,22 +287,28 @@ void MainWindow::handleLoginResponse(const ProtocolParser::ParseResult &result)
 
         if (success) {
             // 成功时格式：success|用户名|角色
-            if (parts.size() > 1) {
-                username = parts[1];
-                m_currentUsername = username;
-                m_currentUserId = 1;  //后面需要完善
-            }
-            if (parts.size() > 2) {
-                role = parts[2];
+            if (parts.size() >= 4) {
+                m_currentUserId = parts[1].toInt();      // user_id
+                m_currentUsername = parts[2];             // username
+                m_userRole = parts[3];                    // role
 
+                qDebug() << "DEBUG: 登录成功，user_id=" << m_currentUserId
+                         << " username=" << m_currentUsername
+                         << " role=" << m_userRole;
+            } else {
+                qWarning() << "登录响应格式不完整，期望4部分，实际" << parts.size() << "部分:" << payload;
+                if (m_loginDialog) {
+                    m_loginDialog->setStatusMessage("服务器响应格式错误", true);
+                    m_loginDialog->setLoginButtonEnabled(true);
+                    m_loginDialog->setCancelButtonEnabled(true);
+                }
+                return;
             }
-            m_userRole = role;  // 确保这行存在
-            qDebug() << "DEBUG: 登录成功，role=" << m_userRole;  // 添加调试
 
             m_isLoggedIn = true;
 
-            // 新增：登录成功后启动自动心跳
-            QString clientId = "qt_client_" + username;  // 如 "qt_client_admin"
+            // 启动自动心跳
+            QString clientId = "qt_client_" + username;
             m_tcpClient->startHeartbeat(clientId, 30);
 
             logMessage(QString("用户 %1 的自动心跳已启动").arg(username));
@@ -321,12 +323,11 @@ void MainWindow::handleLoginResponse(const ProtocolParser::ParseResult &result)
 
             enableMainUI(true);
 
-            // 登录后启用预约管理菜单项
+            // ✅ 根据角色启用菜单（所有登录用户都能看到预约管理）
             if (m_reservationAction) {
                 m_reservationAction->setEnabled(true);
             }
 
-            // 启用能耗统计菜单
             if (m_energyAction) {
                 m_energyAction->setEnabled(true);
             }

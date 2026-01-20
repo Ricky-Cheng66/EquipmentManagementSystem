@@ -96,6 +96,10 @@ public:
   // 工具函数
   std::string get_last_error() const;
 
+  // 根据用户名查询用户信息
+  bool get_user_info(const std::string &username, std::string &password_hash,
+                     std::string &role, int &user_id);
+
 private:
   bool initialize_tables(); // 初始化数据库表
 

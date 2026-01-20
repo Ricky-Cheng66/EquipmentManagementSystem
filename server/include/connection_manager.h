@@ -8,6 +8,20 @@
 #include <vector>
 class ConnectionManager {
 public:
+  // 用户信息结构
+  struct UserInfo {
+    std::string username;
+    std::string role;
+    int user_id;
+  };
+
+  // 设置连接的用户信息
+  void set_user_info(int fd, const std::string &username,
+                     const std::string &role, int user_id);
+
+  // 获取连接的用户信息
+  bool get_user_info(int fd, UserInfo &user_info);
+
   // 连接管理
   void add_connection(int fd, std::shared_ptr<Equipment> equipment,
                       ProtocolParser::ClientType client_type =
@@ -82,4 +96,5 @@ private:
   std::unordered_map<int, time_t> heartbeat_times_;      // fd -> 心跳时间
   std::unordered_map<std::string, int> equipment_to_fd_; // 设备ID -> fd
   std::unordered_map<int, bool> connection_healthy_; // fd -> 连接健康状态
+  std::unordered_map<int, UserInfo> fd_to_user_info_; // fd -> 用户信息
 };

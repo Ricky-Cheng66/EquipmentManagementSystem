@@ -375,17 +375,18 @@ void EquipmentManagementServer::process_qt_client_message(
 // 处理Qt客户端登录
 void EquipmentManagementServer::handle_qt_client_login(
     int fd, const std::string &equipment_id, const std::string &payload) {
+
   // 检查连接类型
   auto client_type = connections_manager_->get_client_type(fd);
   if (client_type != ProtocolParser::CLIENT_QT_CLIENT) {
     std::cout << "连接类型错误，拒绝登录请求, fd: " << fd << std::endl;
     return;
   }
+
   // 检查是否已经登录过
   auto equipment = connections_manager_->get_equipment_by_fd(fd);
   if (equipment) {
     std::cout << "该连接已经登录过,跳过重复登录请求,fd: " << fd << std::endl;
-    // 可以返回一个成功响应，避免客户端重试
     std::vector<char> response =
         ProtocolParser::build_qt_login_response_message(
             ProtocolParser::CLIENT_QT_CLIENT, true, "already_logged_in");
@@ -407,44 +408,51 @@ void EquipmentManagementServer::handle_qt_client_login(
   }
 
   std::string username = parts[0];
-  std::string password = parts[1];
+  std::string password = parts[1]; // 当前客户端发送的是明文密码
 
-  // 2. 验证用户名和密码（此处为简化版硬编码验证，后续可替换为数据库查询）
+  // 2. 查询数据库验证用户
   bool authSuccess = false;
-  std::string role = "user"; // 默认角色，用于后续权限扩展
+  std::string role = "user"; // 默认角色
+  int user_id = -1;
 
-  // 【注意】此处仅为示例！正式使用时应从数据库验证
-  if (username == "admin" && password == "admin123") {
-    authSuccess = true;
-    role = "admin";
-    std::cout << "管理员登录成功: " << username << std::endl;
-  } else if (username == "user1" && password == "123456") {
-    authSuccess = true;
-    std::cout << "普通用户登录成功: " << username << std::endl;
+  std::string db_password_hash;
+  if (db_manager_->is_connected()) {
+    if (db_manager_->get_user_info(username, db_password_hash, role, user_id)) {
+      // 简化验证：直接比较明文（实际项目应使用密码哈希比较）
+      if (password == db_password_hash) {
+        authSuccess = true;
+        std::cout << role << "登录成功: " << username << std::endl;
+      }
+    }
+  } else {
+    std::cout << "数据库未连接，无法验证用户" << std::endl;
   }
-  // TODO: 连接数据库进行真实验证
-  // 示例SQL查询: SELECT password, role FROM users WHERE username = ?
 
   // 3. 构建并发送响应
   if (authSuccess) {
-    // 成功响应可附加角色信息，格式: “success|角色|用户名”
-    std::string successPayload = role + "|" + username;
+    // 保存用户信息
+    connections_manager_->set_user_info(fd, username, role, user_id);
+
+    // 确保格式为 "success|user_id|username|role"
+    std::string successPayload =
+        std::to_string(user_id) + "|" + username + "|" + role;
     std::vector<char> response =
         ProtocolParser::build_qt_login_response_message(
             ProtocolParser::CLIENT_QT_CLIENT, true, successPayload);
-    send(fd, response.data(), response.size(), 0);
 
-    // 【可选】将此连接标记为“已认证的Qt客户端”
-    // 例如：connections_manager_->markConnectionAsAuthenticated(fd, username,
-    // role);
-    std::cout << "已发送登录成功响应给fd: " << fd << std::endl;
+    ssize_t bytes_sent = send(fd, response.data(), response.size(), 0);
+    if (bytes_sent > 0) {
+      std::cout << "已发送登录成功响应: user_id=" << user_id
+                << ", username=" << username << std::endl;
+    } else {
+      std::cerr << "发送登录响应失败: " << strerror(errno) << std::endl;
+    }
   } else {
-    // 失败响应
+    // 失败响应保持不变
     std::vector<char> response =
         ProtocolParser::build_qt_login_response_message(
             ProtocolParser::CLIENT_QT_CLIENT, false, "用户名或密码错误");
     send(fd, response.data(), response.size(), 0);
-    std::cout << "登录验证失败，用户名: " << username << std::endl;
   }
 }
 
@@ -1325,13 +1333,13 @@ void EquipmentManagementServer::handle_reservation_query(
 
 void EquipmentManagementServer::handle_reservation_approve(
     int fd, const std::string &place_id, const std::string &payload) {
+
   std::cout << "处理预约审批: place_id=" << place_id << " payload: " << payload
             << std::endl;
 
-  // 解析payload格式: "reservation_id|action" (action: approve/reject)
+  // 解析payload格式: "reservation_id|action"
   auto parts = ProtocolParser::split_string(payload, '|');
   if (parts.size() < 2) {
-    std::cout << "审批数据格式错误" << std::endl;
     std::vector<char> response =
         ProtocolParser::build_reservation_approve_response(
             ProtocolParser::CLIENT_QT_CLIENT, false, "数据格式错误");
@@ -1342,7 +1350,20 @@ void EquipmentManagementServer::handle_reservation_approve(
   std::string reservation_id_str = parts[0];
   std::string action = parts[1];
 
-  // ✅ 改动1：验证场所存在性（而非设备）
+  // 验证管理员权限
+  ConnectionManager::UserInfo user_info;
+  if (!connections_manager_->get_user_info(fd, user_info) ||
+      user_info.role != "admin") {
+    std::vector<char> response =
+        ProtocolParser::build_reservation_approve_response(
+            ProtocolParser::CLIENT_QT_CLIENT, false, "权限不足");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  std::cout << "管理员审批验证通过: " << user_info.username << std::endl;
+
+  // 验证场所存在性
   auto equipment_ids = db_manager_->get_equipment_ids_by_place(place_id);
   if (equipment_ids.empty()) {
     std::vector<char> response =
@@ -1353,21 +1374,11 @@ void EquipmentManagementServer::handle_reservation_approve(
     return;
   }
 
-  // ✅ 改动2：验证管理员权限（保持原有逻辑）
-  if (!validate_admin_permission(
-          place_id)) { // 注意：这里应该验证管理员身份，不是place_id
-    std::vector<char> response =
-        ProtocolParser::build_reservation_approve_response(
-            ProtocolParser::CLIENT_QT_CLIENT, false, "权限不足");
-    send(fd, response.data(), response.size(), 0);
-    return;
-  }
-
+  // 解析预约ID
   int reservation_id;
   try {
     reservation_id = std::stoi(reservation_id_str);
   } catch (const std::exception &e) {
-    std::cout << "预约ID格式错误: " << reservation_id_str << std::endl;
     std::vector<char> response =
         ProtocolParser::build_reservation_approve_response(
             ProtocolParser::CLIENT_QT_CLIENT, false, "预约ID格式错误");
@@ -1375,58 +1386,55 @@ void EquipmentManagementServer::handle_reservation_approve(
     return;
   }
 
-  std::string new_status;
-  if (action == "approve") {
-    new_status = "approved";
-  } else if (action == "reject") {
-    new_status = "rejected";
-  } else {
-    std::vector<char> response =
-        ProtocolParser::build_reservation_approve_response(
-            ProtocolParser::CLIENT_QT_CLIENT, false, "无效操作");
-    send(fd, response.data(), response.size(), 0);
-    return;
-  }
+  std::string new_status = (action == "approve") ? "approved" : "rejected";
 
-  // ✅ 改动3：更新数据库（SQL已在database_manager中修正）
+  // 更新数据库预约状态
   if (db_manager_->is_connected()) {
     bool success = db_manager_->update_reservation_status(reservation_id,
                                                           new_status, place_id);
-    if (success) {
-      // ✅ 改动4：审批通过后，将场所内所有设备状态设为reserved
-      if (new_status == "approved") {
-        // 获取场所内的所有设备ID
-        auto equipment_ids = db_manager_->get_equipment_ids_by_place(place_id);
-
-        // 将所有设备状态设为reserved（可控制但显示为已预留）
-        for (const auto &eq_id : equipment_ids) {
-          equipment_manager_->update_equipment_status(eq_id, "reserved");
-
-          // 记录到状态日志表
-          if (db_manager_->is_connected()) {
-            db_manager_->log_equipment_status(
-                eq_id, "reserved",
-                equipment_manager_->get_equipment(eq_id)->get_power_state(),
-                "预约审批通过，场所预留");
-          }
-        }
-
-        std::cout << "场所 " << place_id << " 内的 " << equipment_ids.size()
-                  << " 个设备已设为预留状态" << std::endl;
-      }
-
-      std::vector<char> response =
-          ProtocolParser::build_reservation_approve_response(
-              ProtocolParser::CLIENT_QT_CLIENT, true, "审批操作成功");
-      send(fd, response.data(), response.size(), 0);
-      std::cout << "预约审批成功: reservation " << reservation_id << " -> "
-                << new_status << " (place_id: " << place_id << ")" << std::endl;
-    } else {
+    if (!success) {
       std::vector<char> response =
           ProtocolParser::build_reservation_approve_response(
               ProtocolParser::CLIENT_QT_CLIENT, false, "数据库错误");
       send(fd, response.data(), response.size(), 0);
+      return;
     }
+
+    std::cout << "预约状态更新成功: reservation_id=" << reservation_id << " -> "
+              << new_status << std::endl;
+
+    // ✅ 审批通过后，更新设备状态（增加空指针保护）
+    if (new_status == "approved") {
+      for (const auto &eq_id : equipment_ids) {
+        auto equipment = equipment_manager_->get_equipment(eq_id);
+        if (equipment) {
+          // 设备存在，更新状态
+          equipment_manager_->update_equipment_status(eq_id, "reserved");
+
+          // 记录状态日志
+          if (db_manager_->is_connected()) {
+            db_manager_->log_equipment_status(eq_id, "reserved",
+                                              equipment->get_power_state(),
+                                              "预约审批通过，场所预留");
+          }
+          std::cout << "设备状态更新为reserved: " << eq_id << std::endl;
+        } else {
+          // ✅ 设备不存在，跳过但不中断流程
+          std::cout << "警告: 设备 " << eq_id
+                    << " 不存在于equipment_manager，跳过状态更新" << std::endl;
+          // 可选：记录到系统日志或告警表
+        }
+      }
+    }
+
+    // 发送成功响应
+    std::vector<char> response =
+        ProtocolParser::build_reservation_approve_response(
+            ProtocolParser::CLIENT_QT_CLIENT, true, "审批操作成功");
+    send(fd, response.data(), response.size(), 0);
+    std::cout << "预约审批成功: reservation " << reservation_id << " -> "
+              << new_status << " (place_id: " << place_id << ")" << std::endl;
+
   } else {
     std::vector<char> response =
         ProtocolParser::build_reservation_approve_response(

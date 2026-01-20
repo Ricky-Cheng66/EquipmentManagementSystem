@@ -146,6 +146,23 @@ std::string DatabaseManager::get_last_error() const {
   return mysql_error(mysql_conn_);
 }
 
+bool DatabaseManager::get_user_info(const std::string &username,
+                                    std::string &password_hash,
+                                    std::string &role, int &user_id) {
+  std::string query =
+      "SELECT id, password_hash, role FROM users WHERE username = '" +
+      username + "'";
+  auto results = execute_query(query);
+
+  if (!results.empty() && results[0].size() >= 3) {
+    user_id = std::stoi(results[0][0]);
+    password_hash = results[0][1];
+    role = results[0][2];
+    return true;
+  }
+  return false;
+}
+
 bool DatabaseManager::add_reservation(const std::string &place_id, int user_id,
                                       const std::string &purpose,
                                       const std::string &start_time,
