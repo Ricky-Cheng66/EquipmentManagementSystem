@@ -25,7 +25,6 @@ public:
     void setUserRole(const QString &role, const QString &userId);
     void updateQueryResultTable(const QString &data);
     void loadAllReservationsForApproval(const QString &data);
-    QString getPlaceNameById(const QString &placeId);
 
     void refreshCurrentPlaceEquipment();
 
@@ -37,6 +36,12 @@ public:
     //获取预约ID
     int getCurrentSelectedReservationId() const;
 
+    // ✅ 新增：获取场所名称和设备列表
+    QString getPlaceNameById(const QString &placeId);
+    QStringList getEquipmentListForPlace(const QString &placeId) const;
+
+    void updateEquipmentListDisplay();
+
     QComboBox *m_placeComboApply;  // 改动：重命名
     QComboBox *m_placeComboQuery;  // 改动：重命名
     QTabWidget *m_tabWidget;
@@ -45,7 +50,7 @@ signals:
                                    const QString &startTime, const QString &endTime);
     void reservationQueryRequested(const QString &placeId);
 
-    void reservationApproveRequested(int reservationId, bool approve);
+    void reservationApproveRequested(int reservationId, const QString &placeId, bool approve);
     void loadAllReservationsRequested();
 
     // ✅ 新增：场所列表加载完成信号
@@ -64,10 +69,8 @@ private:
     void setupQueryTab();
     void setupApproveTab();
 
-    // ✅ 新增：辅助函数
-    void updateEquipmentListDisplay();
 
-    QStringList getEquipmentListForPlace(const QString &placeId) const;
+
 
     // ✅ 新增：场所设备列表展示控件
     QLabel *m_equipmentListLabel;

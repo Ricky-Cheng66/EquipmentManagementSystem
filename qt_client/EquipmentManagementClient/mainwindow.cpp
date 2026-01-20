@@ -478,51 +478,50 @@ qDebug() << "DEBUG: m_currentUserId=" << m_currentUserId << ", payload=" << payl
 // 发送预约查询
 void MainWindow::onReservationQueryRequested(const QString &placeId)
 {
+    qDebug() << "MainWindow::onReservationQueryRequested 收到信号，placeId =" << placeId;
+
     if (!m_tcpClient || !m_tcpClient->isConnected()) {
         QMessageBox::warning(this, "查询失败", "网络未连接");
         return;
     }
 
-    // ✅ 修复：构造查询消息
     std::vector<char> msg = ProtocolParser::build_reservation_query(
         ProtocolParser::CLIENT_QT_CLIENT,
-        placeId.toStdString());  // "all" 或具体场所ID
+        placeId.toStdString());
 
-    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
-    logMessage(QString("预约查询已发送: 场所[%1]").arg(placeId));
+    qint64 bytesSent = m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+    if (bytesSent > 0) {
+        logMessage(QString("预约查询已发送: 场所[%1]").arg(placeId));
+    } else {
+        logMessage("预约查询发送失败");
+    }
 }
 
 // 发送预约审批
-void MainWindow::onReservationApproveRequested(int reservationId, bool approve)
+void MainWindow::onReservationApproveRequested(int reservationId, const QString &placeId, bool approve)
 {
+    // ✅ 简化权限：默认所有登录用户都能审批
+    qDebug() << "接收到审批请求：预约ID" << reservationId << " 场所:" << placeId << " 操作：" << (approve ? "批准" : "拒绝");
+
     if (!m_tcpClient || !m_tcpClient->isConnected()) {
         QMessageBox::warning(this, "审批失败", "网络未连接");
         return;
     }
 
-    // ✅ 获取当前选中的场所ID（调用公有方法，避免访问私有成员）
-    QString placeId = m_reservationWidget->getCurrentSelectedPlaceId();
-    if (placeId.isEmpty()) {
-        QMessageBox::warning(this, "审批失败", "请先选择要审批的预约记录");
-        return;
-    }
 
-    // payload格式: "reservation_id|action" (action: approve/reject)
+    // ✅ 使用传递过来的 placeId 直接发送审批消息
     QString payload = QString("%1|%2").arg(reservationId).arg(approve ? "approve" : "reject");
-
-    // ✅ 传入place_id而非admin_id
     std::vector<char> msg = ProtocolParser::build_reservation_approve(
         ProtocolParser::CLIENT_QT_CLIENT,
-        placeId.toStdString(),  // 第三个参数复用为place_id
+        placeId.toStdString(),  // ✅ 直接使用参数中的 placeId
         payload.toStdString());
 
-    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
-
-    // 日志记录
-    logMessage(QString("预约审批已发送: 场所[%1] 预约ID[%2] 操作[%3]")
-                   .arg(placeId)
-                   .arg(reservationId)
-                   .arg(approve ? "批准" : "拒绝"));
+    qint64 bytesSent = m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+    if (bytesSent > 0) {
+        logMessage(QString("预约审批已发送: [%1] %2").arg(reservationId).arg(approve ? "批准" : "拒绝"));
+    } else {
+        QMessageBox::warning(this, "发送失败", "审批命令发送失败");
+    }
 }
 
 void MainWindow::handleReservationApplyResponse(const ProtocolParser::ParseResult &result)
@@ -545,27 +544,29 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
     QString payload = QString::fromStdString(result.payload);
     QStringList parts = payload.split('|', Qt::SkipEmptyParts);
 
-    // ✅ 调试输出
     qDebug() << "Query response payload:" << payload;
-    qDebug() << "Current tab index:" << m_reservationWidget->m_tabWidget->currentIndex();
 
     if (parts.isEmpty() || parts[0] != "success") {
-        QString errorMsg = parts.size() >= 2 ? parts[1] : "查询失败";
-        QMessageBox::warning(this, "查询失败", errorMsg);
+        QString err = parts.size() >= 2 ? parts[1] : "查询失败";
+        if (m_reservationWidget && m_reservationWidget->isVisible())
+            QMessageBox::warning(m_reservationWidget, "查询失败", err);
         return;
     }
 
     QString data = payload.mid(parts[0].length() + 1);
 
-    if (!m_reservationWidget) return;
+    // 关键：窗口未打开就丢弃数据，避免提前访问
+    if (!m_reservationWidget || !m_reservationWidget->isVisible()) {
+        qDebug() << "预约窗口未打开，丢弃查询结果";
+        return;
+    }
 
-    // ✅ 修复：直接根据当前标签页分发，不依赖服务端返回类型
     int currentTab = m_reservationWidget->m_tabWidget->currentIndex();
     qDebug() << "Distributing to tab:" << currentTab;
 
-    if (currentTab == 2) {  // 审批页
+    if (currentTab == 2) {            // 审批页
         m_reservationWidget->loadAllReservationsForApproval(data);
-    } else if (currentTab == 1) {  // 查询页
+    } else if (currentTab == 1) {     // 查询页
         m_reservationWidget->updateQueryResultTable(data);
     }
 }
@@ -579,13 +580,13 @@ void MainWindow::handleReservationApproveResponse(const ProtocolParser::ParseRes
         QMessageBox::information(this, "审批成功", parts[1]);
         logMessage("预约审批操作成功");
 
-        // **自动刷新审批页面**
-        if (m_reservationWidget && m_reservationWidget->m_tabWidget->currentIndex() == 2) {
-            std::vector<char> msg = ProtocolParser::build_reservation_query(
-                ProtocolParser::CLIENT_QT_CLIENT, "all");
-            m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
-            logMessage("自动刷新审批列表...");
-        }
+        // ✅ 自动刷新审批页面（延迟500ms确保数据库已更新）
+        QTimer::singleShot(500, [this]() {
+            if (m_reservationWidget && m_reservationWidget->m_tabWidget->currentIndex() == 2) {
+                emit m_reservationWidget->reservationQueryRequested("all");
+                logMessage("自动刷新审批列表...");
+            }
+        });
     } else {
         QString errorMsg = parts.size() >= 2 ? parts[1] : "未知错误";
         QMessageBox::warning(this, "审批失败", errorMsg);
@@ -699,33 +700,48 @@ void MainWindow::showReservationWidget()
     }
 
     if (m_reservationWidget) {
-        // 清空旧数据
+        // ✅ 清空旧数据
         m_reservationWidget->m_placeComboApply->clear();
         m_reservationWidget->m_placeComboQuery->clear();
         m_reservationWidget->m_placeComboQuery->addItem("全部场所", "all");
-
-        // 清空设备列表（通过公有接口）
         m_reservationWidget->clearEquipmentList();
 
-        // 请求场所列表
+        // ✅ 强制设置用户角色
+        m_reservationWidget->setUserRole(m_userRole, QString::number(m_currentUserId));
+        qDebug() << "DEBUG: 设置用户角色为" << m_userRole; // 调试输出
+        // ✅ 关键修复：使用 SingleShot 连接（只执行一次）
+        connect(m_reservationWidget, &ReservationWidget::placeListLoaded,
+                this, [this]() {
+                    qDebug() << "场所列表加载完成，自动刷新设备显示";
+                    if (m_reservationWidget->m_placeComboApply->count() > 0) {
+                        m_reservationWidget->m_placeComboApply->setCurrentIndex(0);
+                        m_reservationWidget->updateEquipmentListDisplay();
+                    }
+                }, Qt::SingleShotConnection);  // ✅ 确保只连接一次
+
+        // ✅ 请求场所列表
         if (m_tcpClient && m_tcpClient->isConnected()) {
             std::vector<char> msg = ProtocolParser::pack_message(
                 ProtocolParser::build_message_body(
                     ProtocolParser::CLIENT_QT_CLIENT,
                     ProtocolParser::QT_PLACE_LIST_QUERY,
-                    "",  // place_id为空
+                    "",  // equipment_id为空
                     {""} // payload为空
                     )
                 );
             m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
             logMessage("已发送场所列表查询请求");
+        }
 
-            // ✅ 修正：使用正确的 connect 语法
-            connect(m_reservationWidget, &ReservationWidget::placeListLoaded,
-                    this,  // ✅ 添加接收者
-                    [this]() {
-                        m_reservationWidget->refreshCurrentPlaceEquipment();
-                    }, Qt::SingleShotConnection);
+        // ✅ 如果是 admin，窗口显示后再加载审批数据
+        if (m_userRole == "admin") {
+            QTimer::singleShot(300, this, [this]() {
+                if (m_reservationWidget && m_reservationWidget->isVisible()) {
+                    // ✅ 只加载数据，不切换页面
+                    emit m_reservationWidget->reservationQueryRequested("all");
+                    qDebug() << "管理员预约数据已后台加载";
+                }
+            });
         }
     }
 

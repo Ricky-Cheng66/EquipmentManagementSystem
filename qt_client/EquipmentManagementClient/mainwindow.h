@@ -52,7 +52,7 @@ private slots:
     void onReservationApplyRequested(const QString &placetId, const QString &purpose,
                                      const QString &startTime, const QString &endTime);
     void onReservationQueryRequested(const QString &placeId);
-    void onReservationApproveRequested(int reservationId, bool approve);
+    void onReservationApproveRequested(int reservationId, const QString &placeId, bool approve);
 
     void showReservationWidget();
 

@@ -4,6 +4,8 @@
 #include <QHeaderView>
 #include <QLabel>
 
+#include <QTimer>
+
 ReservationWidget::ReservationWidget(QWidget *parent)
     : QWidget(parent), m_tabWidget(new QTabWidget(this))
 {
@@ -107,8 +109,11 @@ void ReservationWidget::setupApproveTab()
     QWidget *approveTab = new QWidget(this);
     QVBoxLayout *vLayout = new QVBoxLayout(approveTab);
 
-    m_approveTable = new QTableWidget(0, 8, this);
-    m_approveTable->setHorizontalHeaderLabels({"预约ID", "场所ID", "用户ID", "用途", "开始时间", "结束时间", "状态", "操作"});
+    m_approveTable = new QTableWidget(0, 9, this);
+
+    m_approveTable->setHorizontalHeaderLabels({
+        "预约ID", "场所", "用户ID", "用途", "开始时间", "结束时间", "状态", "包含设备", "操作"
+    });
     m_approveTable->horizontalHeader()->setStretchLastSection(true);
     m_approveTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
@@ -204,85 +209,109 @@ void ReservationWidget::loadAllReservationsForApproval(const QString &data)
     qDebug() << "=== 审批页数据加载 ===";
     qDebug() << "原始数据:" << data;
 
-    // ✅ 彻底清空并重置表格
+    // ✅ 第1步：彻底清空表格，但保留表头
     m_approveTable->clearContents();
     m_approveTable->setRowCount(0);
 
-    // ✅ 确保表头正确
-    m_approveTable->setHorizontalHeaderLabels({"预约ID", "场所ID", "用户ID", "用途", "开始时间", "结束时间", "状态", "操作"});
+    // ✅ 第2步：重新定义9列表头（确保与setupApproveTab一致）
+    m_approveTable->setHorizontalHeaderLabels({
+        "预约ID", "场所", "用户ID", "用途", "开始时间", "结束时间", "状态", "包含设备", "操作"
+    });
 
-    if (data.isEmpty() || data == "暂无预约记录") {
+    // ✅ 第3步：处理空数据情况
+    if (data.isEmpty() || data == "暂无预约记录" || data == "fail|暂无数据") {
         m_approveTable->insertRow(0);
-        m_approveTable->setItem(0, 0, new QTableWidgetItem("暂无预约记录"));
+        QTableWidgetItem *emptyItem = new QTableWidgetItem("暂无预约记录");
+        emptyItem->setTextAlignment(Qt::AlignCenter);
+        m_approveTable->setItem(0, 0, emptyItem);
+        m_approveTable->setSpan(0, 0, 1, 9); // 跨9列显示
+        qDebug() << "审批数据为空，显示提示信息";
         return;
     }
 
-    // 解析所有预约记录
+    // ✅ 第4步：解析并填充数据
     QStringList reservations = data.split(';', Qt::SkipEmptyParts);
-    int row = 0;
+    int validRows = 0;
 
     for (int i = 0; i < reservations.size(); ++i) {
         QStringList fields = reservations[i].split('|');
+        // ✅ 保护：确保至少有7个基础字段
         if (fields.size() >= 7) {
-            m_approveTable->insertRow(row);
+            m_approveTable->insertRow(validRows);
 
-            // 填充前7列
-            for (int j = 0; j < 7; ++j) {
-                m_queryResultTable->setItem(row, j, new QTableWidgetItem(fields[j]));
+            // 第0列：预约ID
+            m_approveTable->setItem(validRows, 0, new QTableWidgetItem(fields[0]));
+
+            // 第1列：场所名称（从ID转换）
+            QString placeId = fields[1];
+            QString placeName = getPlaceNameById(placeId);
+            m_approveTable->setItem(validRows, 1, new QTableWidgetItem(placeName));
+
+            // 第2-6列：其他信息
+            for (int j = 2; j < 7; ++j) {
+                m_approveTable->setItem(validRows, j, new QTableWidgetItem(fields[j]));
             }
 
-            // ✅ 第8列：操作列（显示所有状态）
-            QString status = fields[6];
+            // 第7列：设备列表
+            QStringList equipmentList = getEquipmentListForPlace(placeId);
+            QString equipmentText = equipmentList.isEmpty() ? "无设备" : equipmentList.join(", ");
+            m_approveTable->setItem(validRows, 7, new QTableWidgetItem(equipmentText));
 
+            // 第8列：操作按钮（关键修复）
+            QString status = fields[6].trimmed().toLower();
             QWidget *opWidget = new QWidget(this);
             QHBoxLayout *opLayout = new QHBoxLayout(opWidget);
-            opLayout->setContentsMargins(0, 0, 0, 0);
-            opLayout->setSpacing(2);
+            opLayout->setContentsMargins(5, 0, 5, 0);
+            opLayout->setSpacing(5);
 
-            if (status == "pending") {
+            // ✅ 增强判断：pending/待审批/未审批 都显示按钮
+            if (status == "pending" || status == "待审批" || status == "未审批") {
                 QPushButton *approveBtn = new QPushButton("批准", this);
-                approveBtn->setProperty("reservationId", fields[0]);
-                approveBtn->setProperty("action", "approve");
+                approveBtn->setProperty("reservationId", fields[0].toInt());
+                approveBtn->setProperty("placeId", placeId);
+                approveBtn->setStyleSheet("QPushButton { background-color: #4CAF50; color: white; padding: 5px 10px; border: none; border-radius: 3px; }");
                 connect(approveBtn, &QPushButton::clicked, this, &ReservationWidget::onApproveButtonClicked);
 
                 QPushButton *rejectBtn = new QPushButton("拒绝", this);
-                rejectBtn->setProperty("reservationId", fields[0]);
-                rejectBtn->setProperty("action", "reject");
+                rejectBtn->setProperty("reservationId", fields[0].toInt());
+                rejectBtn->setProperty("placeId", placeId);
+                rejectBtn->setStyleSheet("QPushButton { background-color: #f44336; color: white; padding: 5px 10px; border: none; border-radius: 3px; }");
                 connect(rejectBtn, &QPushButton::clicked, this, &ReservationWidget::onDenyButtonClicked);
 
                 opLayout->addWidget(approveBtn);
                 opLayout->addWidget(rejectBtn);
             } else {
+                // ✅ 已审批的显示状态标签
                 QLabel *statusLabel = new QLabel(status.toUpper(), this);
                 statusLabel->setAlignment(Qt::AlignCenter);
-                if (status == "approved") {
+                if (status == "approved" || status == "通过") {
                     statusLabel->setStyleSheet("color: green; font-weight: bold;");
-                } else if (status == "rejected") {
+                } else if (status == "rejected" || status == "拒绝") {
                     statusLabel->setStyleSheet("color: red; font-weight: bold;");
                 }
                 opLayout->addWidget(statusLabel);
             }
 
-            m_approveTable->setCellWidget(row, 7, opWidget);
-            row++;
+            m_approveTable->setCellWidget(validRows, 8, opWidget); // ✅ 第9列索引为8
+            validRows++;
+        } else {
+            qDebug() << "跳过格式错误的记录:" << reservations[i];
         }
     }
 
-    // ✅ 强制刷新视图
-    m_approveTable->viewport()->update();
-
-    // ✅ 调整列宽
+    // ✅ 第5步：调整列宽和样式
     m_approveTable->resizeColumnsToContents();
-    m_approveTable->horizontalHeader()->setStretchLastSection(true);
-}
+    m_approveTable->horizontalHeader()->setStretchLastSection(false);
+    m_approveTable->setColumnWidth(0, 80);   // 预约ID
+    m_approveTable->setColumnWidth(1, 120);  // 场所
+    m_approveTable->setColumnWidth(2, 80);   // 用户ID
+    m_approveTable->setColumnWidth(4, 140);  // 开始时间
+    m_approveTable->setColumnWidth(5, 140);  // 结束时间
+    m_approveTable->setColumnWidth(6, 80);   // 状态
+    m_approveTable->setColumnWidth(7, 200);  // 设备列表
+    m_approveTable->setColumnWidth(8, 120);  // 操作
 
-QString ReservationWidget::getPlaceNameById(const QString &placeId) {
-    // 从m_placeComboApply中查找对应名称
-    int index = m_placeComboApply->findData(placeId);
-    if (index >= 0) {
-        return m_placeComboApply->itemText(index);
-    }
-    return placeId; // 如果没找到，返回ID本身
+    qDebug() << "审批数据加载完成，有效行数:" << validRows;
 }
 
 // ✅ 新增公有方法：强制刷新当前场所设备
@@ -338,13 +367,52 @@ int ReservationWidget::getCurrentSelectedReservationId() const
     return -1;
 }
 
+QString ReservationWidget::getPlaceNameById(const QString &placeId)
+{
+    if (placeId.isEmpty()) return "未知场所";
+
+    // 从申请页的下拉框查找（数据已加载）
+    int index = m_placeComboApply->findData(placeId);
+    if (index >= 0) {
+        return m_placeComboApply->itemText(index);
+    }
+
+    // 从查询页下拉框查找
+    index = m_placeComboQuery->findData(placeId);
+    if (index >= 0) {
+        return m_placeComboQuery->itemText(index);
+    }
+
+    return QString("场所%1").arg(placeId);
+}
+
+QStringList ReservationWidget::getEquipmentListForPlace(const QString &placeId) const
+{
+    if (placeId.isEmpty()) return QStringList();
+
+    // ✅ 从申请页下拉框的用户角色数据中获取设备列表
+    for (int i = 0; i < m_placeComboApply->count(); ++i) {
+        if (m_placeComboApply->itemData(i).toString() == placeId) {
+            QVariant equipmentData = m_placeComboApply->itemData(i, Qt::UserRole + 1);
+            return equipmentData.toStringList();
+        }
+    }
+    return QStringList();
+}
+
 void ReservationWidget::onApproveButtonClicked()
 {
     QPushButton *btn = qobject_cast<QPushButton*>(sender());
     if (!btn) return;
 
+    // ✅ 获取预约ID和场所ID（从按钮属性）
     int reservationId = btn->property("reservationId").toInt();
-    emit reservationApproveRequested(reservationId, true);
+    QString placeId = btn->property("placeId").toString();
+
+    qDebug() << "批准预约:" << reservationId << "场所:" << placeId;
+
+    // ✅ 修改：发出信号时传递 placeId
+    emit reservationApproveRequested(reservationId, placeId, true);
 }
 
 void ReservationWidget::onDenyButtonClicked()
@@ -353,19 +421,30 @@ void ReservationWidget::onDenyButtonClicked()
     if (!btn) return;
 
     int reservationId = btn->property("reservationId").toInt();
-    emit reservationApproveRequested(reservationId, false);
+    QString placeId = btn->property("placeId").toString();
+
+    qDebug() << "拒绝预约:" << reservationId << "场所:" << placeId;
+
+    // ✅ 修改：发出信号时传递 placeId
+    emit reservationApproveRequested(reservationId, placeId, false);
 }
 
 void ReservationWidget::onTabChanged(int index)
 {
     qDebug() << "DEBUG: Tab changed to index" << index;
+    qDebug() << "DEBUG: m_userRole =" << m_userRole;
 
-    // ✅ 修复：使用已连接的 reservationQueryRequested 信号
+
+    // ✅ 切换到审批页（索引2）时，自动请求所有预约数据
     if (index == 2 && m_userRole == "admin") {
-        qDebug() << "DEBUG: 切换到审批页，请求加载所有预约记录";
+        qDebug() << "DEBUG: 切换到审批页，准备请求数据...";
 
-        // 发出查询所有场所的请求（包括已审批的）
-        emit reservationQueryRequested("all");
+        // ✅ 延迟100ms确保页面渲染完成
+        QTimer::singleShot(100, [this]() {
+            qDebug() << "DEBUG: 发射 reservationQueryRequested('all')";
+            emit reservationQueryRequested("all");
+            qDebug() << "DEBUG: 信号已发射";
+        });
     }
 }
 
@@ -378,7 +457,6 @@ void ReservationWidget::updateEquipmentListDisplay()
         return;
     }
 
-    // 从combo box的itemData中获取预存的设备列表（需在加载场所时存储）
     QVariant placeData = m_placeComboApply->currentData(Qt::UserRole + 1);
     QStringList equipmentList = placeData.toStringList();
 
@@ -387,17 +465,7 @@ void ReservationWidget::updateEquipmentListDisplay()
     } else {
         m_equipmentListText->setText(equipmentList.join("\n"));
     }
+
 }
 
-// ✅ 新增：根据placeId获取设备列表（从combo box缓存中获取）
-QStringList ReservationWidget::getEquipmentListForPlace(const QString &placeId) const
-{
-    // 从m_placeComboApply的itemData中查找
-    for (int i = 0; i < m_placeComboApply->count(); ++i) {
-        if (m_placeComboApply->itemData(i).toString() == placeId) {
-            QVariant placeData = m_placeComboApply->itemData(i, Qt::UserRole + 1);
-            return placeData.toStringList();
-        }
-    }
-    return QStringList();  // 未找到返回空列表
-}
+
