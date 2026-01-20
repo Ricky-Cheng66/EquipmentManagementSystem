@@ -14,91 +14,68 @@ MainWindow::MainWindow(QWidget *parent)
     , m_isLoggedIn(false)
     , m_currentUsername("")
     , m_equipmentManagerWidget(nullptr)
-    , m_reservationWidget(nullptr)      // 确保初始化为nullptr
-    , m_energyStatisticsWidget(nullptr) // 确保初始化为nullptr
+    , m_reservationWidget(nullptr)
+    , m_energyStatisticsWidget(nullptr)
+    , m_currentUserId(0)
+    , m_reservationAction(nullptr)
+    , m_energyAction(nullptr)
+    , m_clientHeartbeatId("")
 {
     ui->setupUi(this);
+    setMinimumSize(1024, 768);
     setWindowTitle("设备管理系统 - 未连接");
 
-    // ===== 修复：先创建所有Widget实例 =====
-    // 创建设备管理界面
+    // 创建主布局
+    QVBoxLayout *mainLayout = new QVBoxLayout(ui->centralwidget);
+    mainLayout->setContentsMargins(20, 20, 20, 20);
+    mainLayout->setSpacing(15);
+
+    // 连接控制区域
+    QGroupBox *connGroup = new QGroupBox("服务器连接", this);
+    QFormLayout *connLayout = new QFormLayout(connGroup);
+    connLayout->addRow("主机:", ui->hostLineEdit);
+    connLayout->addRow("端口:", ui->portSpinBox);
+
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addWidget(ui->connectButton);
+    btnLayout->addSpacing(20);
+    btnLayout->addWidget(ui->sendHeartbeatButton);
+    btnLayout->addStretch();
+
+    connLayout->addRow(btnLayout);
+    mainLayout->addWidget(connGroup);
+
+    // 日志区域
+    ui->logTextEdit->setMaximumHeight(150);
+    mainLayout->addWidget(ui->logTextEdit);
+
+    // 设备管理区域
     m_equipmentManagerWidget = new EquipmentManagerWidget(m_tcpClient, m_dispatcher, this);
     m_equipmentManagerWidget->setVisible(false);
+    mainLayout->addWidget(m_equipmentManagerWidget);
+    mainLayout->setStretch(2, 3);
 
-    // 创建预约管理窗口（原代码缺失！）
-    m_reservationWidget = new ReservationWidget(this);  // 修复核心问题
+    // 预约和能耗窗口
+    m_reservationWidget = new ReservationWidget(this);
     m_reservationWidget->setVisible(false);
 
-    // 创建能耗统计窗口
     m_energyStatisticsWidget = new EnergyStatisticsWidget(this);
     m_energyStatisticsWidget->setVisible(false);
 
-    // --- 新增：为centralWidget创建垂直布局 ---
-    // 1. 创建一个垂直布局
-    QVBoxLayout* mainLayout = new QVBoxLayout(ui->centralwidget);
+    // 创建菜单栏
+    QMenuBar *menuBar = this->menuBar();
+    QMenu *managementMenu = menuBar->addMenu("管理");
 
-    // 2. 创建一个容器Widget来放置原来的测试控件，保持它们的位置
-    QWidget* testControlsWidget = new QWidget(this);
-    // 将原来的测试控件重新设置父对象到这个容器中
-    // 注意：需要逐个设置，因为ui文件中的控件父对象原本就是centralWidget
+    m_reservationAction = managementMenu->addAction(QChar(0xf271) + QString(" 预约管理"));
+    m_reservationAction->setEnabled(false);
 
-    // 创建一个表单布局用于放置连接相关的控件
-    QFormLayout* connectionLayout = new QFormLayout();
-    connectionLayout->addRow("主机:", ui->hostLineEdit);
-    connectionLayout->addRow("端口:", ui->portSpinBox);
+    m_energyAction = managementMenu->addAction(QChar(0xf1e3) + QString(" 能耗统计"));
+    m_energyAction->setEnabled(false);
 
-    // 创建一个水平布局用于放置连接按钮和测试按钮
-    QHBoxLayout* buttonLayout = new QHBoxLayout();
-    buttonLayout->addWidget(ui->connectButton);
-    buttonLayout->addWidget(ui->sendHeartbeatButton);
-    buttonLayout->addStretch(); // 添加弹性空间
-
-    // 将表单布局和按钮布局添加到测试控件容器中
-    QVBoxLayout* testWidgetLayout = new QVBoxLayout(testControlsWidget);
-    testWidgetLayout->addLayout(connectionLayout);
-    testWidgetLayout->addLayout(buttonLayout);
-    testWidgetLayout->addWidget(ui->logTextEdit); // 日志框在下方
-
-    // 3. 创建设备管理界面
-    m_equipmentManagerWidget = new EquipmentManagerWidget(m_tcpClient, m_dispatcher, this);
-    m_equipmentManagerWidget->setVisible(false); // 登录前隐藏
-
-    // 4. 将测试控件区域和设备管理界面添加到主布局中
-    mainLayout->addWidget(testControlsWidget);
-    mainLayout->addWidget(m_equipmentManagerWidget);
-
-    // 设置布局比例，让设备管理界面占据更多空间
-    mainLayout->setStretch(0, 1); // 测试控件区域占1份
-    mainLayout->setStretch(1, 3); // 设备管理界面占3份
-
-    // 修改按钮文本和连接
-    ui->connectButton->setText("登录");
-    disconnect(ui->connectButton, nullptr, nullptr, nullptr); // 断开旧连接
-    connect(ui->connectButton, &QPushButton::clicked, this, &MainWindow::onLoginButtonClicked);
-
-    // 禁用发送测试按钮，直到登录成功
-    ui->sendHeartbeatButton->setEnabled(false);
-
-    // 在构造函数中一次性创建菜单（初始禁用菜单项）
-    QMenuBar* menuBar = this->menuBar();
-    QMenu* managementMenu = menuBar->addMenu("管理");
-
-    m_reservationAction = managementMenu->addAction("预约管理");
-    m_reservationAction->setEnabled(false); // 初始禁用
+    // 连接信号
     connect(m_reservationAction, &QAction::triggered, this, &MainWindow::showReservationWidget);
+    connect(m_energyAction, &QAction::triggered, this, &MainWindow::showEnergyStatisticsWidget);
 
-    // 添加能耗统计菜单项（新增）
-    QAction* energyAction = managementMenu->addAction("能耗统计");
-    energyAction->setEnabled(false); // 初始禁用
-    connect(energyAction, &QAction::triggered, this, &MainWindow::showEnergyStatisticsWidget);
-
-    // 保存指针以便登录后启用（新增）
-    m_energyAction = energyAction;
-
-    // 连接网络相关信号
-    setupConnection();
-
-    // 连接预约窗口的信号到主窗口的发送槽
     connect(m_reservationWidget, &ReservationWidget::reservationApplyRequested,
             this, &MainWindow::onReservationApplyRequested);
     connect(m_reservationWidget, &ReservationWidget::reservationQueryRequested,
@@ -106,22 +83,72 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_reservationWidget, &ReservationWidget::reservationApproveRequested,
             this, &MainWindow::onReservationApproveRequested);
 
-    // 创建能耗统计窗口（新增）
-    m_energyStatisticsWidget = new EnergyStatisticsWidget(this);
-    m_energyStatisticsWidget->setVisible(false);
-
-    // 连接能耗查询信号（新增）
     connect(m_energyStatisticsWidget, &EnergyStatisticsWidget::energyQueryRequested,
             this, &MainWindow::onEnergyQueryRequested);
 
-    // 注册消息处理器（心跳响应已注册，新增登录响应）
+    // 网络信号
+    connect(m_tcpClient, &TcpClient::connected, this, [this]() {
+        logMessage("[网络] 已连接到服务器");
+        if (!m_isLoggedIn && !m_loginDialog) {
+            showLoginDialog();
+        }
+    });
+
+    connect(m_tcpClient, &TcpClient::disconnected, this, [this]() {
+        logMessage("[网络] 与服务器断开连接");
+        m_isLoggedIn = false;
+        enableMainUI(false);
+        ui->connectButton->setText("登录");
+        ui->sendHeartbeatButton->setEnabled(false);
+        setWindowTitle("设备管理系统 - 未连接");
+    });
+
+    connect(m_tcpClient, &TcpClient::errorOccurred, this, [this](const QString& errorString) {
+        logMessage(QString("[网络错误] %1").arg(errorString));
+    });
+
+    // 注册消息处理器
     m_dispatcher->registerHandler(ProtocolParser::QT_LOGIN_RESPONSE,
                                   [this](const ProtocolParser::ParseResult &result) {
                                       QMetaObject::invokeMethod(this, [this, result]() {
                                           this->handleLoginResponse(result);
                                       });
                                   });
-    // 注册预约响应处理器
+
+    m_dispatcher->registerHandler(ProtocolParser::QT_EQUIPMENT_LIST_RESPONSE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          if (m_equipmentManagerWidget) {
+                                              m_equipmentManagerWidget->handleEquipmentListResponse(result);
+                                          }
+                                      });
+                                  });
+
+    m_dispatcher->registerHandler(ProtocolParser::STATUS_UPDATE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          if (m_equipmentManagerWidget) {
+                                              m_equipmentManagerWidget->handleEquipmentStatusUpdate(result);
+                                          }
+                                      });
+                                  });
+
+    m_dispatcher->registerHandler(ProtocolParser::CONTROL_RESPONSE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          if (m_equipmentManagerWidget) {
+                                              m_equipmentManagerWidget->handleControlResponse(result);
+                                          }
+                                      });
+                                  });
+
+    m_dispatcher->registerHandler(ProtocolParser::QT_PLACE_LIST_RESPONSE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          this->handlePlaceListResponse(result);
+                                      });
+                                  });
+
     m_dispatcher->registerHandler(ProtocolParser::RESERVATION_APPLY,
                                   [this](const ProtocolParser::ParseResult &result) {
                                       QMetaObject::invokeMethod(this, [this, result]() {
@@ -143,7 +170,6 @@ MainWindow::MainWindow(QWidget *parent)
                                       });
                                   });
 
-    // 注册能耗查询响应处理器（添加到其他registerHandler之后）
     m_dispatcher->registerHandler(ProtocolParser::QT_ENERGY_RESPONSE,
                                   [this](const ProtocolParser::ParseResult &result) {
                                       QMetaObject::invokeMethod(this, [this, result]() {
@@ -151,20 +177,12 @@ MainWindow::MainWindow(QWidget *parent)
                                       });
                                   });
 
-    // 注册Qt客户端心跳响应处理器
     m_dispatcher->registerHandler(ProtocolParser::QT_HEARTBEAT_RESPONSE,
                                   [this](const ProtocolParser::ParseResult &result) {
                                       QMetaObject::invokeMethod(this, [this, result]() {
                                           this->handleQtHeartbeatResponse(result);
                                       });
                                   });
-    // 在 MainWindow::MainWindow 构造函数中
-    m_dispatcher->registerHandler(ProtocolParser::QT_ALERT_MESSAGE,
-                                  [this](const ProtocolParser::ParseResult &result) {
-                                      QMetaObject::invokeMethod(this, [this, result]() {
-                                          this->handleAlertMessage(result);
-                                      });
-                                  });
 
     m_dispatcher->registerHandler(ProtocolParser::QT_ALERT_MESSAGE,
                                   [this](const ProtocolParser::ParseResult &result) {
@@ -173,15 +191,18 @@ MainWindow::MainWindow(QWidget *parent)
                                       });
                                   });
 
-    // 明确：注册场所列表响应处理器
-    m_dispatcher->registerHandler(ProtocolParser::QT_PLACE_LIST_RESPONSE,
-                                  [this](const ProtocolParser::ParseResult &result) {
-                                      QMetaObject::invokeMethod(this, [this, result]() {
-                                          this->handlePlaceListResponse(result);
-                                      });
-                                  });
+    // 按钮文本和状态
+    // 设置按钮文本为：图标 + 文字
+    ui->connectButton->setText(QChar(0xf1eb) + QString(" 登录"));  // Wi-Fi图标
+    ui->sendHeartbeatButton->setText(QChar(0xf21e) + QString(" 心跳")); // 心跳图标
 
-    ui->centralwidget->setAutoFillBackground(true); // 确保背景填充
+    // ✅ 关键：设置按钮字体为Font Awesome
+    QFont font;
+    font.setFamily("Font Awesome 5 Free");  // 字体名称根据你下载的版本调整
+    font.setPointSize(10);
+    ui->connectButton->setFont(font);
+    ui->sendHeartbeatButton->setFont(font);
+
     logMessage("客户端初始化完成。请点击'登录'按钮开始。");
 }
 
