@@ -28,41 +28,89 @@ ReservationWidget::ReservationWidget(QWidget *parent)
 void ReservationWidget::setupApplyTab()
 {
     QWidget *applyTab = new QWidget(this);
-    QVBoxLayout *mainLayout = new QVBoxLayout(applyTab);  // ✅ 改用垂直布局
+    QVBoxLayout *mainLayout = new QVBoxLayout(applyTab);
 
     // 基本信息表单
     QFormLayout *formLayout = new QFormLayout();
+
+    // 修复：创建水平布局容器来包装每个表单项
+    QWidget *placeWidget = new QWidget(this);
+    QHBoxLayout *placeLayout = new QHBoxLayout(placeWidget);
+    placeLayout->setContentsMargins(0, 0, 0, 0);
     m_placeComboApply = new QComboBox(this);
+    m_placeComboApply->setProperty("class", "form-control");  // 添加CSS类名
+    placeLayout->addWidget(m_placeComboApply);
+    placeWidget->setMinimumHeight(36);  // 设置最小高度
+
+    QWidget *startTimeWidget = new QWidget(this);
+    QHBoxLayout *startTimeLayout = new QHBoxLayout(startTimeWidget);
+    startTimeLayout->setContentsMargins(0, 0, 0, 0);
     m_startTimeEdit = new QDateTimeEdit(QDateTime::currentDateTime(), this);
+    m_startTimeEdit->setProperty("class", "form-control");  // 添加CSS类名
+    startTimeLayout->addWidget(m_startTimeEdit);
+    startTimeWidget->setMinimumHeight(36);  // 设置最小高度
+
+    QWidget *endTimeWidget = new QWidget(this);
+    QHBoxLayout *endTimeLayout = new QHBoxLayout(endTimeWidget);
+    endTimeLayout->setContentsMargins(0, 0, 0, 0);
     m_endTimeEdit = new QDateTimeEdit(QDateTime::currentDateTime().addSecs(3600), this);
+    m_endTimeEdit->setProperty("class", "form-control");  // 添加CSS类名
+    endTimeLayout->addWidget(m_endTimeEdit);
+    endTimeWidget->setMinimumHeight(36);  // 设置最小高度
+
+    QWidget *purposeWidget = new QWidget(this);
+    QHBoxLayout *purposeLayout = new QHBoxLayout(purposeWidget);
+    purposeLayout->setContentsMargins(0, 0, 0, 0);
     m_purposeEdit = new QLineEdit(this);
+    m_purposeEdit->setProperty("class", "form-control");  // 添加CSS类名
+    purposeLayout->addWidget(m_purposeEdit);
+    purposeWidget->setMinimumHeight(36);  // 设置最小高度
+
     m_applyButton = new QPushButton(this);
     m_applyButton->setProperty("class", "icon-font");
-    m_applyButton->setText(QChar(0xf271) + QString(" 提交预约")); // 日历图标
+    m_applyButton->setText(QChar(0xf271) + QString(" 提交预约"));
+    m_applyButton->setProperty("class", "primary-button");  // 添加主要按钮样式
 
+    // 设置时间格式
     m_startTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm");
     m_endTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm");
 
-    formLayout->addRow("场所:", m_placeComboApply);
-    formLayout->addRow("开始时间:", m_startTimeEdit);
-    formLayout->addRow("结束时间:", m_endTimeEdit);
-    formLayout->addRow("用途:", m_purposeEdit);
+    // 使用容器控件作为表单项
+    formLayout->addRow("场所:", placeWidget);
+    formLayout->addRow("开始时间:", startTimeWidget);
+    formLayout->addRow("结束时间:", endTimeWidget);
+    formLayout->addRow("用途:", purposeWidget);
     formLayout->addRow("", m_applyButton);
+
+    // 设置表单间距
+    formLayout->setSpacing(12);  // 行之间的间距
+    formLayout->setContentsMargins(0, 0, 0, 0);
+
+    // 修复：设置标签的最小宽度，确保对齐
+    for (int i = 0; i < formLayout->rowCount(); ++i) {
+        QLayoutItem *labelItem = formLayout->itemAt(i, QFormLayout::LabelRole);
+        if (labelItem) {
+            QWidget *labelWidget = labelItem->widget();
+            if (labelWidget) {
+                labelWidget->setMinimumWidth(80);  // 设置标签最小宽度
+            }
+        }
+    }
 
     mainLayout->addLayout(formLayout);
 
-    // ✅ 新增：设备列表分组框（更醒目的显示）
+    // 设备列表分组框
     QGroupBox *equipmentGroup = new QGroupBox("场所包含设备", this);
     QVBoxLayout *equipmentLayout = new QVBoxLayout(equipmentGroup);
 
     m_equipmentListText = new QTextEdit(this);
     m_equipmentListText->setReadOnly(true);
-    m_equipmentListText->setMinimumHeight(120);  // ✅ 设置最小高度
+    m_equipmentListText->setMinimumHeight(120);
     m_equipmentListText->setMaximumHeight(150);
     m_equipmentListText->setPlaceholderText("选择场所后自动加载设备列表");
 
     equipmentLayout->addWidget(m_equipmentListText);
-    mainLayout->addWidget(equipmentGroup);  // ✅ 添加到主布局
+    mainLayout->addWidget(equipmentGroup);
 
     m_tabWidget->addTab(applyTab, "预约申请");
 
@@ -71,11 +119,10 @@ void ReservationWidget::setupApplyTab()
     // 场所选择变化时自动加载设备列表
     connect(m_placeComboApply, QOverload<int>::of(&QComboBox::currentIndexChanged),
             [this](int index) {
-                Q_UNUSED(index);
-                updateEquipmentListDisplay();
+                if (index >= 0) {
+                    updateEquipmentListDisplay();
+                }
             });
-
-     m_placeComboApply->setCurrentIndex(-1);  // 重置索引
 }
 
 void ReservationWidget::setupQueryTab()
@@ -126,20 +173,25 @@ void ReservationWidget::setupApproveTab()
 
 void ReservationWidget::setUserRole(const QString &role, const QString &userId)
 {
-
     m_userRole = role;
+    m_currentUserId = userId;  // 新增：保存用户ID
     qDebug() << "DEBUG: setUserRole called, role=" << role << ", userId=" << userId;
+
     // 确保 setupApproveTab 已创建审批页（在构造函数中已调用）
     if (role == "admin") {
         qDebug() << "DEBUG: 管理员，显示审批页";
-        // 如果审批页被移除了，重新添加
-        if (m_tabWidget->count() <= 2) {
-            setupApproveTab();  // 重新创建审批页
+        // 如果审批页不存在，添加它
+        if (m_tabWidget->count() < 3) {
+            setupApproveTab();  // 创建审批页
         }
     } else {
         qDebug() << "DEBUG: 非管理员，移除审批页";
-        if (m_tabWidget->count() > 2) {
-            m_tabWidget->removeTab(2);
+        // 检查是否已经有审批页
+        for (int i = 0; i < m_tabWidget->count(); i++) {
+            if (m_tabWidget->tabText(i) == "预约审批") {
+                m_tabWidget->removeTab(i);
+                break;
+            }
         }
     }
 }

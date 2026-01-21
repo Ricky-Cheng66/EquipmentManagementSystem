@@ -51,6 +51,8 @@ private:
 
     QString m_currentSelectedEquipmentId; // 当前在表格中选中的设备ID
 
+    bool m_isRequesting;  // 新增：标记是否正在请求中
+
     void logMessage(const QString &msg);
     void setupTableView();
     void sendControlCommand(const QString& equipmentId, ProtocolParser::ControlCommandType command);

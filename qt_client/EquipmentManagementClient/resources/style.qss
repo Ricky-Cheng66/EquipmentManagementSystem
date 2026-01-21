@@ -1,10 +1,8 @@
 /* ==================== 全局字体设置 ==================== */
-/* 注意：Font Awesome字体必须放在第一位 */
 * {
     font-family: "Font Awesome 6 Free", "Microsoft YaHei", "PingFang SC";
 }
 
-/* 所有控件的默认字体（不包括图标控件） */
 QWidget {
     font-family: "Microsoft YaHei", "PingFang SC", "Source Han Sans CN";
     font-size: 13px;
@@ -12,33 +10,7 @@ QWidget {
 }
 
 /* ==================== 图标专用样式 ==================== */
-/* 所有需要显示Font Awesome图标的控件 */
 .icon-font {
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900; /* Solid样式必须900 */
-}
-
-/* 图标按钮 */
-QPushButton.icon-font {
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-}
-
-/* 图标标签 */
-QLabel.icon-font {
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-}
-
-/* 图标复选框 */
-QCheckBox.icon-font,
-QRadioButton.icon-font {
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-}
-
-/* 工具栏按钮图标 */
-QToolButton.icon-font {
     font-family: "Font Awesome 6 Free";
     font-weight: 900;
 }
@@ -49,7 +21,6 @@ QMainWindow {
 }
 
 /* ==================== 按钮样式 ==================== */
-/* 普通按钮 */
 QPushButton {
     background-color: #4a69bd;
     color: white;
@@ -58,7 +29,6 @@ QPushButton {
     padding: 8px 16px;
     min-width: 80px;
     min-height: 28px;
-    font-family: "Microsoft YaHei", "PingFang SC"; /* 明确指定非图标字体 */
 }
 
 QPushButton:hover {
@@ -74,65 +44,104 @@ QPushButton:disabled {
     color: #8395a7;
 }
 
-/* 危险操作按钮（如拒绝、删除） */
-QPushButton[danger="true"] {
-    background-color: #ee5a6f;
-}
-
-QPushButton[danger="true"]:hover {
-    background-color: #e74c3c;
-}
-
-/* 纯图标按钮（只有图标的按钮） */
-QPushButton.icon-only {
-    min-width: 32px;
-    min-height: 32px;
-    padding: 4px;
-    background-color: transparent;
+/* 主要按钮样式 */
+.primary-button {
+    background-color: #4a69bd;
+    color: white;
     border: none;
-    font-family: "Font Awesome 6 Free"; /* 纯图标按钮使用Font Awesome */
-    font-weight: 900;
-    font-size: 16px;
-    color: #4a69bd;
-}
-
-QPushButton.icon-only:hover {
-    background-color: #e3e8f7;
     border-radius: 4px;
+    padding: 10px 20px;
+    min-height: 40px;
+    font-size: 14px;
+    font-weight: bold;
 }
 
-/* ==================== 输入框 ==================== */
-QLineEdit, QDateEdit, QDateTimeEdit, QComboBox, QSpinBox {
+.primary-button:hover {
+    background-color: #3c5aa6;
+}
+
+.primary-button:pressed {
+    background-color: #2c4a96;
+}
+
+/* 次要按钮样式 */
+.secondary-button {
+    background-color: #95a5a6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 20px;
+    min-height: 40px;
+    font-size: 14px;
+}
+
+.secondary-button:hover {
+    background-color: #7f8c8d;
+}
+
+/* 危险按钮样式 */
+.danger-button {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    min-height: 28px;
+}
+
+.danger-button:hover {
+    background-color: #c0392b;
+}
+
+/* ==================== 输入框样式 ==================== */
+.form-control {
     border: 1px solid #dcdde1;
     border-radius: 3px;
     padding: 6px 8px;
     background-color: white;
-    font-family: "Microsoft YaHei", "PingFang SC"; /* 明确指定非图标字体 */
+    min-height: 28px;
 }
 
-QLineEdit:focus, QComboBox:focus {
+.form-control:focus {
     border-color: #4a69bd;
 }
 
-/* ==================== 表格 ==================== */
+/* QComboBox 下拉箭头 */
+QComboBox::drop-down {
+    border: none;
+    padding-right: 5px;
+}
+
+/* ==================== 表格样式 ==================== */
 QTableWidget {
     border: 1px solid #e0e0e0;
-    gridline-color: #f0f0f0;
     background-color: white;
-    selection-background-color: #e3f2fd;
-    selection-color: #1976d2;
+    alternate-background-color: #f9f9f9;
+    gridline-color: #f0f0f0;
 }
 
 QTableWidget::item {
     padding: 6px;
-    font-family: "Microsoft YaHei", "PingFang SC"; /* 表格使用正常字体 */
 }
 
-/* ==================== 标签页 ==================== */
+QTableWidget::item:selected {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+QHeaderView::section {
+    background-color: #f5f6fa;
+    padding: 8px;
+    border: none;
+    border-right: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+    font-weight: bold;
+}
+
+/* ==================== 标签页样式 ==================== */
 QTabWidget::pane {
     border: 1px solid #e0e0e0;
     background-color: white;
-    padding: 4px;
 }
 
 QTabBar::tab {
@@ -141,7 +150,8 @@ QTabBar::tab {
     margin-right: 2px;
     border-top-left-radius: 3px;
     border-top-right-radius: 3px;
-    font-family: "Microsoft YaHei", "PingFang SC"; /* 标签页使用正常字体 */
+    min-width: 80px;
+    text-align: center;
 }
 
 QTabBar::tab:selected {
@@ -149,11 +159,14 @@ QTabBar::tab:selected {
     color: white;
 }
 
-/* ==================== 菜单栏 ==================== */
+QTabBar::tab:hover:!selected {
+    background-color: #e3e8f7;
+}
+
+/* ==================== 菜单栏样式 ==================== */
 QMenuBar {
-    background-color: #ffffff;
+    background-color: white;
     border-bottom: 1px solid #e0e0e0;
-    font-family: "Microsoft YaHei", "PingFang SC"; /* 菜单栏使用正常字体 */
 }
 
 QMenuBar::item:selected {
@@ -161,67 +174,101 @@ QMenuBar::item:selected {
 }
 
 QMenu {
-    font-family: "Microsoft YaHei", "PingFang SC"; /* 菜单使用正常字体 */
-}
-
-/* ==================== 文本编辑框 ==================== */
-QTextEdit {
     border: 1px solid #e0e0e0;
-    border-radius: 3px;
-    background-color: #fafafa;
+    background-color: white;
     padding: 4px;
-    font-family: "Microsoft YaHei", "PingFang SC"; /* 文本编辑使用正常字体 */
 }
 
-/* ==================== 状态标签 ==================== */
-QLabel[status="online"] {
+QMenu::item {
+    padding: 4px 20px 4px 10px;
+}
+
+QMenu::item:selected {
+    background-color: #4a69bd;
+    color: white;
+}
+
+/* ==================== 状态栏样式 ==================== */
+QStatusBar {
+    background-color: white;
+    border-top: 1px solid #e0e0e0;
+    color: #666666;
+}
+
+/* ==================== 停靠窗口样式 ==================== */
+QDockWidget {
+    background-color: white;
+    border: 1px solid #e0e0e0;
+}
+
+QDockWidget::title {
+    background-color: #f5f6fa;
+    padding: 5px;
+    border: none;
+}
+
+/* ==================== 工具栏样式 ==================== */
+QToolBar {
+    background-color: white;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 3px;
+}
+
+QToolButton {
+    padding: 5px;
+    border-radius: 3px;
+}
+
+QToolButton:hover {
+    background-color: #e3e8f7;
+}
+
+/* ==================== 分组框样式 ==================== */
+QGroupBox {
+    font-weight: bold;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    margin-top: 10px;
+    padding-top: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 10px;
+    padding: 0 5px;
+}
+
+/* ==================== 滚动条样式 ==================== */
+QScrollBar:vertical {
+    border: none;
+    background-color: #f0f0f0;
+    width: 10px;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #c0c0c0;
+    border-radius: 5px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #a0a0a0;
+}
+
+/* ==================== 状态标签样式 ==================== */
+.status-online {
     color: #27ae60;
     font-weight: bold;
 }
 
-QLabel[status="offline"] {
+.status-offline {
     color: #e74c3c;
     font-weight: bold;
 }
 
-QLabel[status="reserved"] {
+.status-reserved {
     color: #f39c12;
     font-weight: bold;
-}
-
-/* ==================== 特殊图标样式 ==================== */
-/* 导航栏图标 */
-.nav-icon {
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-    font-size: 16px;
-    color: #4a69bd;
-}
-
-/* 操作按钮图标 */
-.action-icon {
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-    font-size: 14px;
-}
-
-/* 状态图标 */
-.status-icon {
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-    font-size: 12px;
-}
-
-/* 小图标 */
-.small-icon {
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-    font-size: 12px;
-}
-
-/* 大图标 */
-.large-icon {
-    font-family: "Font Awesome 6 Free";
-    font-weight: 900;
-    font-size: 24px;
 }

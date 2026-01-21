@@ -12,46 +12,35 @@
 #include <QStatusBar>
 
 EquipmentManagerWidget::EquipmentManagerWidget(TcpClient* tcpClient, MessageDispatcher* dispatcher, QWidget *parent) :
-    QWidget(parent), // 注意：父对象需要是QWidget*，这里先设为nullptr，在MainWindow中设置
+    QWidget(parent),
     ui(new Ui::EquipmentManagerWidget),
     m_tcpClient(tcpClient),
     m_dispatcher(dispatcher),
     m_equipmentModel(new QStandardItemModel(this)),
-    m_currentSelectedEquipmentId()
+    m_currentSelectedEquipmentId(),
+    m_isRequesting(false)
 {
     ui->setupUi(this);
     setupTableView();
 
-    // 刷新按钮
+    // 按钮样式设置
     ui->refreshButton->setProperty("class", "icon-font");
-    ui->refreshButton->setText(QChar(0xf021) + QString(" 刷新")); // 刷新图标
+    ui->refreshButton->setText(QChar(0xf021) + QString(" 刷新"));
 
-    // 开机按钮
     ui->turnOnButton->setProperty("class", "icon-font");
-    ui->turnOnButton->setText(QChar(0xf011) + QString(" 开机")); // 电源图标
+    ui->turnOnButton->setText(QChar(0xf011) + QString(" 开机"));
 
-    // 关机按钮
     ui->turnOffButton->setProperty("class", "icon-font");
-    ui->turnOffButton->setText(QChar(0xf011) + QString(" 关机")); // 电源图标
+    ui->turnOffButton->setText(QChar(0xf011) + QString(" 关机"));
 
     // 连接按钮信号
     connect(ui->refreshButton, &QPushButton::clicked, this, &EquipmentManagerWidget::on_refreshButton_clicked);
     connect(ui->turnOnButton, &QPushButton::clicked, this, &EquipmentManagerWidget::on_turnOnButton_clicked);
     connect(ui->turnOffButton, &QPushButton::clicked, this, &EquipmentManagerWidget::on_turnOffButton_clicked);
 
-    // 连接表格选择变化信号
+    // 连接表格选择变化信号 - 修复：只连接一个处理函数
     connect(ui->equipmentTableView->selectionModel(), &QItemSelectionModel::selectionChanged,
-            [this](const QItemSelection &selected, const QItemSelection &deselected) {
-                Q_UNUSED(deselected);
-                bool hasSelection = !selected.isEmpty();
-                this->updateControlButtonsState(hasSelection);
-                if (hasSelection) {
-                    QModelIndex index = selected.indexes().first(); // 获取选中行第一列的索引
-                    m_currentSelectedEquipmentId = m_equipmentModel->data(index.siblingAtColumn(0)).toString(); // 第0列是设备ID
-                } else {
-                    m_currentSelectedEquipmentId.clear();
-                }
-            });
+            this, &EquipmentManagerWidget::onSelectionChanged);
 
     // 向消息分发器注册本Widget的处理函数
     if (m_dispatcher) {
@@ -62,14 +51,14 @@ EquipmentManagerWidget::EquipmentManagerWidget(TcpClient* tcpClient, MessageDisp
                                               this->handleEquipmentStatusUpdate(result);
                                           });
                                       });
-        // 注册控制响应处理 (类型已在协议中定义，例如 CONTROL_RESPONSE = 7)
+        // 注册控制响应处理
         m_dispatcher->registerHandler(ProtocolParser::CONTROL_RESPONSE,
                                       [this](const ProtocolParser::ParseResult &result) {
                                           QMetaObject::invokeMethod(this, [this, result]() {
                                               this->handleControlResponse(result);
                                           });
                                       });
-        // 注册设备列表响应处理 (需先在协议中定义，例如 QT_EQUIPMENT_LIST_RESPONSE = 102)
+        // 注册设备列表响应处理
         m_dispatcher->registerHandler(ProtocolParser::QT_EQUIPMENT_LIST_RESPONSE,
                                       [this](const ProtocolParser::ParseResult &result) {
                                           QMetaObject::invokeMethod(this, [this, result]() {
@@ -92,24 +81,55 @@ void EquipmentManagerWidget::setupTableView() {
     ui->equipmentTableView->horizontalHeader()->setStretchLastSection(true);
     ui->equipmentTableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
-    // ✅ 美化表格行高和字体
+    // 设置表格字体，避免字体警告
+    QFont tableFont = ui->equipmentTableView->font();
+    if (tableFont.pointSize() <= 0) {
+        tableFont.setPointSize(9);
+    }
+    ui->equipmentTableView->setFont(tableFont);
+
+    // 设置表头字体
+    QFont headerFont = ui->equipmentTableView->horizontalHeader()->font();
+    if (headerFont.pointSize() <= 0) {
+        headerFont.setPointSize(9);
+        headerFont.setBold(true);
+    }
+    ui->equipmentTableView->horizontalHeader()->setFont(headerFont);
+
+    // 美化表格行高和字体
     ui->equipmentTableView->verticalHeader()->setDefaultSectionSize(36); // 行高36px
     ui->equipmentTableView->setAlternatingRowColors(true); // 斑马纹
 
-    // ✅ 设置状态列的颜色（通过QSS属性）
-    ui->equipmentTableView->setItemDelegate(new StatusItemDelegate(this));
+    // 设置状态列的颜色（通过QSS属性）
+    StatusItemDelegate *delegate = new StatusItemDelegate(this);
+    ui->equipmentTableView->setItemDelegate(delegate);
 
+    // 确保字体有效
+    qDebug() << "表格字体大小:" << ui->equipmentTableView->font().pointSize();
+    qDebug() << "表头字体大小:" << ui->equipmentTableView->horizontalHeader()->font().pointSize();
 }
 
 void EquipmentManagerWidget::requestEquipmentList() {
+    // 防止重复请求
+    if (m_isRequesting) {
+        qDebug() << "设备列表请求正在进行中，跳过重复请求";
+        return;
+    }
+
     if (m_tcpClient && m_tcpClient->isConnected()) {
-        // 发送设备列表查询请求，格式必须为：类型|设备ID|payload
-        // 设备ID可以为空，但必须有三部分：102||
+        m_isRequesting = true;
+
         std::vector<char> message = ProtocolParser::build_qt_equipment_list_query(ProtocolParser::CLIENT_QT_CLIENT);
         m_tcpClient->sendData(QByteArray(message.data(), message.size()));
         qDebug() << "已发送设备列表查询请求";
+
+        // 设置超时重置标志
+        QTimer::singleShot(3000, this, [this]() {
+            m_isRequesting = false;
+        });
     } else {
         qWarning() << "网络未连接，无法查询设备列表";
+        m_isRequesting = false;
     }
 }
 
@@ -216,27 +236,72 @@ void EquipmentManagerWidget::handleControlResponse(const ProtocolParser::ParseRe
 // handleEquipmentListResponse 函数留待协议定义后实现
 void EquipmentManagerWidget::handleEquipmentListResponse(const ProtocolParser::ParseResult &result)
 {
-    qDebug() << "收到设备列表响应，载荷长度:" << result.payload.length();
+    QString rawPayload = QString::fromStdString(result.payload);
+    qDebug() << "原始设备列表数据:" << rawPayload;
+
+    // 详细分析每个设备的数据
+    QStringList deviceList = rawPayload.split(";", Qt::SkipEmptyParts);
+    for (int i = 0; i < deviceList.size(); ++i) {
+        QString deviceStr = deviceList[i];
+        qDebug() << "设备" << i << "原始字符串:" << deviceStr;
+
+        QStringList fields = deviceStr.split("|");
+        if (fields.size() >= 5) {
+            qDebug() << "  状态字段[" << i << "]:" << fields[3] << "长度:" << fields[3].length();
+
+            // 显示状态字段的十六进制表示，以查看是否有隐藏字符
+            QByteArray statusBytes = fields[3].toUtf8();
+            qDebug() << "  状态字段十六进制:";
+            for (int j = 0; j < statusBytes.length(); ++j) {
+                qDebug() << "    [" << j << "]: 0x" << QString::number((unsigned char)statusBytes[j], 16);
+            }
+        }
+    }
+
     // 1. 清空现有模型数据
     m_equipmentModel->removeRows(0, m_equipmentModel->rowCount());
 
-    // 2. 解析payload（假设服务端返回格式: "id1|type1|loc1|status1|power1;id2|type2|..."）
-    QString payload = QString::fromStdString(result.payload);
-    QStringList deviceList = payload.split(";", Qt::SkipEmptyParts);
-
+    // 2. 解析payload
     for (const QString& deviceStr : deviceList) {
         QStringList fields = deviceStr.split("|");
         if (fields.size() >= 5) {
+            // 清理状态字段 - 彻底清理
+            QString status = fields[3];
+
+            // 去除所有空白字符
+            status = status.trimmed();
+
+            // 检查并修复常见的重复问题
+            if (status.contains("online")) {
+                // 如果包含"online"，提取第一个"online"并删除其他内容
+                int index = status.indexOf("online");
+                if (index >= 0) {
+                    status = "online";
+                }
+            } else if (status.contains("offline")) {
+                // 如果包含"offline"，提取第一个"offline"并删除其他内容
+                int index = status.indexOf("offline");
+                if (index >= 0) {
+                    status = "offline";
+                }
+            }
+
+            // 如果状态字段仍然有问题，强制设置为offline
+            if (status.isEmpty() || status.length() > 10) {
+                status = "offline";
+            }
+
             QList<QStandardItem*> row;
             row << new QStandardItem(fields[0])  // ID
                 << new QStandardItem(fields[1])  // 类型
                 << new QStandardItem(fields[2])  // 位置
-                << new QStandardItem(fields[3])  // 状态
+                << new QStandardItem(status)      // 状态
                 << new QStandardItem(fields[4])  // 电源
-                << new QStandardItem(QDateTime::currentDateTime().toString("hh:mm:ss")); // 最后更新
+                << new QStandardItem(QDateTime::currentDateTime().toString("hh:mm:ss"));
             m_equipmentModel->appendRow(row);
         }
     }
+
     qDebug() << "设备列表更新完成，共" << m_equipmentModel->rowCount() << "个设备";
 }
 
