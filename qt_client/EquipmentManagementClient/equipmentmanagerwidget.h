@@ -36,6 +36,7 @@ private slots:
     void on_refreshButton_clicked();
     void on_turnOnButton_clicked();
     void on_turnOffButton_clicked();
+public slots:
     // 处理从网络层传来的设备状态更新
     void handleEquipmentStatusUpdate(const ProtocolParser::ParseResult& result);
     // 处理从网络层传来的设备列表响应

@@ -39,6 +39,9 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         reservationwidget.h reservationwidget.cpp
         energystatisticswidget.h energystatisticswidget.cpp
         resources/style.qss
+        resources/fonts/fontawesome-webfont.ttf
+        statusitemdelegate.h statusitemdelegate.cpp
+        resources.qrc
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET EquipmentManagementClient APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

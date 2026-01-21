@@ -3,6 +3,7 @@
 #include "tcpclient.h"
 #include "messagedispatcher.h"
 #include "protocol_parser.h"
+#include "statusitemdelegate.h"
 #include "logindialog.h"
 #include <QMessageBox>
 #include <QDebug>
@@ -20,6 +21,18 @@ EquipmentManagerWidget::EquipmentManagerWidget(TcpClient* tcpClient, MessageDisp
 {
     ui->setupUi(this);
     setupTableView();
+
+    // 刷新按钮
+    ui->refreshButton->setProperty("class", "icon-font");
+    ui->refreshButton->setText(QChar(0xf021) + QString(" 刷新")); // 刷新图标
+
+    // 开机按钮
+    ui->turnOnButton->setProperty("class", "icon-font");
+    ui->turnOnButton->setText(QChar(0xf011) + QString(" 开机")); // 电源图标
+
+    // 关机按钮
+    ui->turnOffButton->setProperty("class", "icon-font");
+    ui->turnOffButton->setText(QChar(0xf011) + QString(" 关机")); // 电源图标
 
     // 连接按钮信号
     connect(ui->refreshButton, &QPushButton::clicked, this, &EquipmentManagerWidget::on_refreshButton_clicked);
@@ -76,8 +89,16 @@ void EquipmentManagerWidget::setupTableView() {
     m_equipmentModel->setHorizontalHeaderLabels({"设备ID", "类型", "位置", "状态", "电源", "最后更新"});
     ui->equipmentTableView->setModel(m_equipmentModel);
     ui->equipmentTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
-    ui->equipmentTableView->horizontalHeader()->setStretchLastSection(true); // 最后一列填充
-    ui->equipmentTableView->setEditTriggers(QAbstractItemView::NoEditTriggers); // 不可编辑
+    ui->equipmentTableView->horizontalHeader()->setStretchLastSection(true);
+    ui->equipmentTableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
+    // ✅ 美化表格行高和字体
+    ui->equipmentTableView->verticalHeader()->setDefaultSectionSize(36); // 行高36px
+    ui->equipmentTableView->setAlternatingRowColors(true); // 斑马纹
+
+    // ✅ 设置状态列的颜色（通过QSS属性）
+    ui->equipmentTableView->setItemDelegate(new StatusItemDelegate(this));
+
 }
 
 void EquipmentManagerWidget::requestEquipmentList() {

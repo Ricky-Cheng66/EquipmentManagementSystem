@@ -36,7 +36,9 @@ void ReservationWidget::setupApplyTab()
     m_startTimeEdit = new QDateTimeEdit(QDateTime::currentDateTime(), this);
     m_endTimeEdit = new QDateTimeEdit(QDateTime::currentDateTime().addSecs(3600), this);
     m_purposeEdit = new QLineEdit(this);
-    m_applyButton = new QPushButton("提交预约", this);
+    m_applyButton = new QPushButton(this);
+    m_applyButton->setProperty("class", "icon-font");
+    m_applyButton->setText(QChar(0xf271) + QString(" 提交预约")); // 日历图标
 
     m_startTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm");
     m_endTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm");
@@ -266,16 +268,20 @@ void ReservationWidget::loadAllReservationsForApproval(const QString &data)
 
             // ✅ 增强判断：pending/待审批/未审批 都显示按钮
             if (status == "pending" || status == "待审批" || status == "未审批") {
-                QPushButton *approveBtn = new QPushButton("批准", this);
+                // 批准按钮
+                QPushButton *approveBtn = new QPushButton(this);
+                approveBtn->setProperty("class", "icon-font");
+                approveBtn->setText(QChar(0xe198) + QString(" 批准")); // 对勾方框图标
                 approveBtn->setProperty("reservationId", fields[0].toInt());
                 approveBtn->setProperty("placeId", placeId);
-                approveBtn->setStyleSheet("QPushButton { background-color: #4CAF50; color: white; padding: 5px 10px; border: none; border-radius: 3px; }");
                 connect(approveBtn, &QPushButton::clicked, this, &ReservationWidget::onApproveButtonClicked);
 
-                QPushButton *rejectBtn = new QPushButton("拒绝", this);
+                // 拒绝按钮
+                QPushButton *rejectBtn = new QPushButton(this);
+                rejectBtn->setProperty("class", "icon-font");
+                rejectBtn->setText(QChar(0xe195) + QString(" 拒绝")); // 叉号方框图标
                 rejectBtn->setProperty("reservationId", fields[0].toInt());
                 rejectBtn->setProperty("placeId", placeId);
-                rejectBtn->setStyleSheet("QPushButton { background-color: #f44336; color: white; padding: 5px 10px; border: none; border-radius: 3px; }");
                 connect(rejectBtn, &QPushButton::clicked, this, &ReservationWidget::onDenyButtonClicked);
 
                 opLayout->addWidget(approveBtn);

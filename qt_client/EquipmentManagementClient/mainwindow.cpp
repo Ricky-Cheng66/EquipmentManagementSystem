@@ -193,15 +193,18 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 按钮文本和状态
     // 设置按钮文本为：图标 + 文字
-    ui->connectButton->setText(QChar(0xf1eb) + QString(" 登录"));  // Wi-Fi图标
-    ui->sendHeartbeatButton->setText(QChar(0xf21e) + QString(" 心跳")); // 心跳图标
+    // 登录按钮
+    ui->connectButton->setProperty("class", "icon-font");
+    ui->connectButton->setText(QChar(0xf2f6) + QString(" 登录"));  // 0xf2f6 是登录图标
 
-    // ✅ 关键：设置按钮字体为Font Awesome
-    QFont font;
-    font.setFamily("Font Awesome 5 Free");  // 字体名称根据你下载的版本调整
-    font.setPointSize(10);
-    ui->connectButton->setFont(font);
-    ui->sendHeartbeatButton->setFont(font);
+    // 心跳按钮
+    ui->sendHeartbeatButton->setProperty("class", "icon-font");
+    ui->sendHeartbeatButton->setText(QChar(0xf21e) + QString(" 心跳")); // 0xf21e 是心跳图标
+    ui->sendHeartbeatButton->setEnabled(false);
+
+    // ✅ 关键修复：连接登录按钮点击信号到槽函数
+    disconnect(ui->connectButton, nullptr, nullptr, nullptr); // 断开所有旧连接
+    connect(ui->connectButton, &QPushButton::clicked, this, &MainWindow::onLoginButtonClicked);
 
     logMessage("客户端初始化完成。请点击'登录'按钮开始。");
 }
