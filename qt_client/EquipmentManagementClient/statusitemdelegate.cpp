@@ -8,12 +8,12 @@ StatusItemDelegate::StatusItemDelegate(QObject *parent) : QStyledItemDelegate(pa
 
 void StatusItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
                                const QModelIndex &index) const {
-    // 如果是第3列（状态列），完全自己绘制
+    // 如果是第3列（状态列）
     if (index.column() == 3) {
-        // 获取状态文本并清理
+        // 获取状态文本
         QString status = index.data(Qt::DisplayRole).toString();
 
-        // 彻底清理状态文本
+        // 清理状态文本
         if (status.contains("online", Qt::CaseInsensitive)) {
             status = "online";
         } else if (status.contains("offline", Qt::CaseInsensitive)) {
@@ -31,51 +31,31 @@ void StatusItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &op
         } else if (status == "reserved") {
             textColor = QColor("#f39c12");
         } else {
-            textColor = option.palette.color(QPalette::Text);
+            textColor = QColor("#333333");
         }
 
-        // 完全自己绘制，不使用基类
-        // 1. 绘制背景
+        // 保存painter状态
+        painter->save();
+
+        // 绘制背景，但确保状态文字颜色不受选中状态影响
         if (option.state & QStyle::State_Selected) {
-            painter->fillRect(option.rect, option.palette.highlight());
+            // 只绘制浅色背景，不改变文字颜色
+            painter->fillRect(option.rect, QColor(227, 242, 253, 100)); // 半透明浅蓝色
         } else if (option.state & QStyle::State_MouseOver) {
             painter->fillRect(option.rect, option.palette.alternateBase());
-        } else {
-            painter->fillRect(option.rect, option.palette.base());
         }
 
-        // 2. 绘制焦点框
-        if (option.state & QStyle::State_HasFocus) {
-            QStyleOptionFocusRect focusOption;
-            focusOption.rect = option.rect;
-            focusOption.state = option.state | QStyle::State_KeyboardFocusChange;
-            focusOption.backgroundColor = option.palette.window().color();
-            QApplication::style()->drawPrimitive(QStyle::PE_FrameFocusRect,
-                                                 &focusOption, painter);
-        }
-
-        // 3. 绘制网格线（如果需要）
-        if (option.showDecorationSelected && (option.state & QStyle::State_Selected)) {
-            QPen oldPen = painter->pen();
-            painter->setPen(option.palette.highlightedText().color());
-            painter->drawRect(option.rect.adjusted(0, 0, -1, -1));
-            painter->setPen(oldPen);
-        }
-
-        // 4. 绘制文本
-        painter->save(); // 只保存一次
-
+        // 设置文字颜色（保持原来的颜色）
         painter->setPen(textColor);
         painter->setFont(option.font);
 
-        // 调整绘制区域，避免绘制到边框上
-        QRect textRect = option.rect.adjusted(2, 0, -2, 0);
-        painter->drawText(textRect, Qt::AlignCenter, status);
+        // 绘制文字
+        painter->drawText(option.rect, Qt::AlignCenter, status);
 
-        painter->restore(); // 恢复一次
-
+        // 恢复painter状态
+        painter->restore();
     } else {
-        // 其他列使用基类绘制
+        // 其他列使用默认绘制
         QStyledItemDelegate::paint(painter, option, index);
     }
 }

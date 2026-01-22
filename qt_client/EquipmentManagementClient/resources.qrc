@@ -2,5 +2,6 @@
     <qresource prefix="/resources">
         <file>resources/fonts/fontawesome-webfont.ttf</file>
         <file>resources/style.qss</file>
+        <file>resources/images/Login_background.jpg</file>
     </qresource>
 </RCC>

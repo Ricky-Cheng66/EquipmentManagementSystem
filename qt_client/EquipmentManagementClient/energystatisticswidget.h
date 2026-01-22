@@ -32,6 +32,7 @@ public slots:
 private slots:
     void onQueryButtonClicked();
     void onExportButtonClicked();
+    void onTimeRangeChanged(int index);
 
 private:
     void setupUI();
@@ -39,8 +40,8 @@ private:
 
     QComboBox *m_equipmentCombo;
     QComboBox *m_timeRangeCombo;
-    QDateEdit *m_startDateEdit;
-    QDateEdit *m_endDateEdit;
+    QDateEdit *m_startDateEdit;  // 改为QDateEdit
+    QDateEdit *m_endDateEdit;    // 改为QDateEdit
     QPushButton *m_queryButton;
     QPushButton *m_exportButton;
     QTableWidget *m_statisticsTable;

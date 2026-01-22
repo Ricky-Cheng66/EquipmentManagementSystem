@@ -80,8 +80,11 @@ private:
     QGroupBox *m_equipmentGroup;  // 可选，如果需要访问
 
     // 申请页控件
-    QDateTimeEdit *m_startTimeEdit;
-    QDateTimeEdit *m_endTimeEdit;
+    QDateEdit *m_startDateEdit;
+    QTimeEdit *m_startTimeEdit;
+    QDateEdit *m_endDateEdit;
+    QTimeEdit *m_endTimeEdit;
+
     QLineEdit *m_purposeEdit;
     QPushButton *m_applyButton;
 

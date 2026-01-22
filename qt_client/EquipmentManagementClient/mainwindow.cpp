@@ -41,6 +41,17 @@ MainWindow::MainWindow(TcpClient* tcpClient, MessageDispatcher* dispatcher,
     , m_reservationPage(nullptr)
     , m_energyPage(nullptr)
     , m_settingsPage(nullptr)
+    // 初始化仪表板控件指针
+    , m_totalDevicesLabel(nullptr)
+    , m_onlineDevicesLabel(nullptr)
+    , m_offlineDevicesLabel(nullptr)
+    , m_reservedDevicesLabel(nullptr)
+    , m_todayEnergyLabel(nullptr)
+    , m_activeAlertsLabel(nullptr)
+    , m_todayReservationsLabel(nullptr)
+    , m_placeUsageLabel(nullptr)
+    , m_alertTextEdit(nullptr)
+    , m_activityTextEdit(nullptr)
 {
     ui->setupUi(this);
 
@@ -51,13 +62,13 @@ MainWindow::MainWindow(TcpClient* tcpClient, MessageDispatcher* dispatcher,
     // 初始化UI
     setupUI();
 
+    // 安装事件过滤器
+    installEventFilter(this);
+
     // 设置预约页面的用户角色
     if (m_reservationPage) {
         m_reservationPage->setUserRole(m_userRole, QString::number(m_currentUserId));
     }
-
-    // 注意：移除了自动请求设备列表的代码
-    // 设备列表将在用户首次切换到设备管理页面时请求
 
     logMessage(QString("系统启动完成，欢迎 %1 (ID: %2, 角色: %3)").arg(username).arg(userId).arg(role));
 }
@@ -141,13 +152,13 @@ void MainWindow::setupToolBar()
     m_toolBar = addToolBar("常用工具");
     m_toolBar->setMovable(false);
 
-    // 添加工具按钮
+    // 添加工具按钮，移除原有的"连接状态"按钮
     QAction *refreshAction = m_toolBar->addAction(QIcon(":/icons/refresh.png"), "刷新");
-    QAction *connectAction = m_toolBar->addAction(QIcon(":/icons/connect.png"), "连接状态");
     m_toolBar->addSeparator();
     QAction *dashboardAction = m_toolBar->addAction(QIcon(":/icons/dashboard.png"), "仪表板");
     QAction *equipmentAction = m_toolBar->addAction(QIcon(":/icons/equipment.png"), "设备管理");
 
+    // 移除原有的连接状态检查逻辑
     connect(refreshAction, &QAction::triggered, [this]() {
         // 根据当前页面决定刷新什么
         int currentPage = m_centralStack->currentIndex();
@@ -156,6 +167,7 @@ void MainWindow::setupToolBar()
             if (m_equipmentPage) {
                 qDebug() << "手动刷新设备列表";
                 m_equipmentPage->requestEquipmentList();
+                updateDashboardStats(); // 刷新仪表板数据
             }
             break;
         case PAGE_RESERVATION:
@@ -164,14 +176,11 @@ void MainWindow::setupToolBar()
         case PAGE_ENERGY:
             // 可以添加能耗页面的刷新逻辑
             break;
+        case PAGE_DASHBOARD:
+            // 刷新仪表板数据
+            updateDashboardStats();
+            break;
         }
-    });
-
-    connect(connectAction, &QAction::triggered, [this]() {
-        QString status = m_tcpClient->isConnected() ? "已连接" : "未连接";
-        QMessageBox::information(this, "连接状态",
-                                 QString("服务器连接状态: %1\n用户名: %2\n角色: %3")
-                                     .arg(status).arg(m_currentUsername).arg(m_userRole));
     });
 
     connect(dashboardAction, &QAction::triggered, [this]() { switchPage(PAGE_DASHBOARD); });
@@ -215,52 +224,279 @@ void MainWindow::setupCentralStack()
 {
     m_centralStack = new QStackedWidget(this);
 
-    // 1. 仪表板页面
+    // 1. 仪表板页面 - 完全重写
     m_dashboardPage = new QWidget();
-    QVBoxLayout *dashboardLayout = new QVBoxLayout(m_dashboardPage);
+    m_dashboardPage->setObjectName("dashboardPage");
 
-    QLabel *welcomeLabel = new QLabel(
-        QString("<h1>欢迎使用校园设备综合管理系统</h1>"
-                "<p>当前用户: <b>%1</b> (%2)</p>"
-                "<p>登录时间: %3</p>")
+    // 设置主布局
+    QVBoxLayout *mainLayout = new QVBoxLayout(m_dashboardPage);
+    mainLayout->setContentsMargins(20, 15, 20, 15);
+    mainLayout->setSpacing(20);
+
+    // 顶部欢迎区域
+    QWidget *welcomeSection = new QWidget(m_dashboardPage);
+    welcomeSection->setObjectName("welcomeSection");
+    QHBoxLayout *welcomeLayout = new QHBoxLayout(welcomeSection);
+    welcomeLayout->setContentsMargins(0, 0, 0, 0);
+
+    QLabel *welcomeText = new QLabel(
+        QString("<h1 style='margin:0;'>欢迎回来，%1</h1>"
+                "<p style='color:#7f8c8d; margin:5px 0 0 0;'>上次登录时间: %2</p>")
             .arg(m_currentUsername)
-            .arg(m_userRole)
-            .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss")));
-    welcomeLabel->setAlignment(Qt::AlignCenter);
+            .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss")),
+        welcomeSection);
 
-    // 添加一些快速操作按钮
-    QHBoxLayout *quickActions = new QHBoxLayout();
-    QPushButton *quickRefresh = new QPushButton("刷新设备列表");
-    QPushButton *quickReserve = new QPushButton("快速预约");
-    QPushButton *quickEnergy = new QPushButton("查看能耗");
+    QPushButton *quickRefreshBtn = new QPushButton(QIcon(":/icons/refresh.svg"), "刷新数据", welcomeSection);
+    quickRefreshBtn->setProperty("class", "primary-button");
+    quickRefreshBtn->setMinimumSize(120, 36);
 
-    connect(quickRefresh, &QPushButton::clicked, [this]() {
-        if (m_equipmentPage) {
-            m_equipmentPage->requestEquipmentList();
-            logMessage("已从仪表板刷新设备列表");
+    welcomeLayout->addWidget(welcomeText);
+    welcomeLayout->addStretch();
+    welcomeLayout->addWidget(quickRefreshBtn);
+
+    // 统计卡片区域 - 2行网格
+    QWidget *statsSection = new QWidget(m_dashboardPage);
+    QGridLayout *statsGrid = new QGridLayout(statsSection);
+    statsGrid->setContentsMargins(0, 0, 0, 0);
+    statsGrid->setHorizontalSpacing(15);
+    statsGrid->setVerticalSpacing(15);
+
+    // 创建统计卡片函数
+    auto createStatCard = [statsSection, this](const QString &title, const QString &value,
+                                               const QString &icon, const QString &color,
+                                               QLabel **valueLabelPtr = nullptr) -> QWidget* {
+        QWidget *card = new QWidget(statsSection);
+        card->setMinimumHeight(120);
+        card->setStyleSheet(QString(
+                                "QWidget {"
+                                "    background-color: white;"
+                                "    border-radius: 8px;"
+                                "    border: 1px solid #e0e0e0;"
+                                "}"
+                                "QWidget:hover {"
+                                "    border-color: %1;"
+                                "    background-color: #f8f9fa;"
+                                "    cursor: pointer;"
+                                "}"
+                                ).arg(color));
+
+        // 为卡片添加点击事件
+        card->installEventFilter(this);
+        card->setProperty("cardType", title);
+
+        QVBoxLayout *cardLayout = new QVBoxLayout(card);
+        cardLayout->setContentsMargins(20, 20, 20, 20);
+        cardLayout->setSpacing(12);
+
+        // 图标和标题
+        QHBoxLayout *headerLayout = new QHBoxLayout();
+        headerLayout->setContentsMargins(0, 0, 0, 0);
+
+        QLabel *iconLabel = new QLabel(card);
+        iconLabel->setStyleSheet(QString(
+                                     "QLabel {"
+                                     "    font-family: 'Font Awesome 6 Free';"
+                                     "    font-size: 20px;"
+                                     "    color: %1;"
+                                     "}"
+                                     ).arg(color));
+
+        // 简单模拟图标，实际使用FontAwesome
+        if (icon == "devices") iconLabel->setText("📱");
+        else if (icon == "online") iconLabel->setText("🟢");
+        else if (icon == "offline") iconLabel->setText("🔴");
+        else if (icon == "reserved") iconLabel->setText("🟡");
+        else if (icon == "energy") iconLabel->setText("⚡");
+        else if (icon == "alert") iconLabel->setText("🚨");
+        else if (icon == "reservation") iconLabel->setText("📅");
+        else if (icon == "usage") iconLabel->setText("📊");
+
+        QLabel *titleLabel = new QLabel(title, card);
+        titleLabel->setStyleSheet("font-weight: bold; color: #666; font-size: 14px;");
+
+        headerLayout->addWidget(iconLabel);
+        headerLayout->addWidget(titleLabel);
+        headerLayout->addStretch();
+
+        // 数值
+        QLabel *valueLabel = new QLabel(value, card);
+        valueLabel->setStyleSheet("font-size: 28px; font-weight: bold; color: #2c3e50;");
+
+        // 保存数值标签指针
+        if (valueLabelPtr) {
+            *valueLabelPtr = valueLabel;
         }
-    });
 
-    connect(quickReserve, &QPushButton::clicked, [this]() {
-        switchPage(PAGE_RESERVATION);
-    });
+        // 底部描述
+        QLabel *descLabel = new QLabel("点击查看详情", card);
+        descLabel->setStyleSheet("color: #95a5a6; font-size: 12px;");
 
-    connect(quickEnergy, &QPushButton::clicked, [this]() {
-        switchPage(PAGE_ENERGY);
-    });
+        cardLayout->addLayout(headerLayout);
+        cardLayout->addWidget(valueLabel);
+        cardLayout->addWidget(descLabel);
+        cardLayout->addStretch();
 
-    quickActions->addWidget(quickRefresh);
-    quickActions->addWidget(quickReserve);
-    quickActions->addWidget(quickEnergy);
-    quickActions->addStretch();
+        return card;
+    };
 
-    dashboardLayout->addWidget(welcomeLabel);
-    dashboardLayout->addLayout(quickActions);
-    dashboardLayout->addStretch();
+    // 修改统计卡片创建，保存指针
+    statsGrid->addWidget(createStatCard("设备总数", "0", "devices", "#3498db", &m_totalDevicesLabel), 0, 0);
+    statsGrid->addWidget(createStatCard("在线设备", "0", "online", "#27ae60", &m_onlineDevicesLabel), 0, 1);
+    statsGrid->addWidget(createStatCard("离线设备", "0", "offline", "#e74c3c", &m_offlineDevicesLabel), 0, 2);
+    statsGrid->addWidget(createStatCard("预约中", "0", "reserved", "#f39c12", &m_reservedDevicesLabel), 0, 3);
+
+    // 第二行：能耗和告警卡片
+    statsGrid->addWidget(createStatCard("今日能耗", "0 kWh", "energy", "#9b59b6", &m_todayEnergyLabel), 1, 0);
+    statsGrid->addWidget(createStatCard("待处理告警", "0", "alert", "#e67e22", &m_activeAlertsLabel), 1, 1);
+    statsGrid->addWidget(createStatCard("今日预约", "0", "reservation", "#1abc9c", &m_todayReservationsLabel), 1, 2);
+    statsGrid->addWidget(createStatCard("场所使用率", "0%", "usage", "#34495e", &m_placeUsageLabel), 1, 3);
+
+    // 在实时信息区域保存控件指针
+    //m_alertTextEdit = alertList;
+    //m_activityTextEdit = logList;
+
+    // 快速操作区域
+    QWidget *quickActionsSection = new QWidget(m_dashboardPage);
+    QVBoxLayout *actionsLayout = new QVBoxLayout(quickActionsSection);
+    actionsLayout->setContentsMargins(0, 0, 0, 0);
+
+    QLabel *actionsTitle = new QLabel("快速操作");
+    actionsTitle->setStyleSheet("font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 15px;");
+
+    QGridLayout *actionsGrid = new QGridLayout();
+    actionsGrid->setSpacing(15);
+
+    // 创建快速操作按钮
+    auto createActionButton = [quickActionsSection](const QString &text, const QString &icon,
+                                                    const QString &desc) -> QPushButton* {
+        QPushButton *btn = new QPushButton(quickActionsSection);
+        btn->setMinimumSize(200, 80);
+        btn->setStyleSheet(
+            "QPushButton {"
+            "    background-color: white;"
+            "    border: 1px solid #e0e0e0;"
+            "    border-radius: 8px;"
+            "    text-align: left;"
+            "    padding: 15px;"
+            "}"
+            "QPushButton:hover {"
+            "    border-color: #4a69bd;"
+            "    background-color: #f8f9fa;"
+            "}"
+            );
+
+        QHBoxLayout *btnLayout = new QHBoxLayout(btn);
+        btnLayout->setContentsMargins(10, 10, 10, 10);
+
+        // 图标
+        QLabel *iconLabel = new QLabel(btn);
+        iconLabel->setStyleSheet("font-size: 24px; color: #4a69bd;");
+        if (icon == "refresh") iconLabel->setText("🔄");
+        else if (icon == "reserve") iconLabel->setText("📅");
+        else if (icon == "energy") iconLabel->setText("📊");
+        else if (icon == "control") iconLabel->setText("🎛️");
+        else if (icon == "report") iconLabel->setText("📈");
+
+        // 文本
+        QVBoxLayout *textLayout = new QVBoxLayout();
+        textLayout->setSpacing(4);
+
+        QLabel *titleLabel = new QLabel(text, btn);
+        titleLabel->setStyleSheet("font-weight: bold; font-size: 14px; color: #2c3e50;");
+
+        QLabel *descLabel = new QLabel(desc, btn);
+        descLabel->setStyleSheet("color: #7f8c8d; font-size: 12px;");
+
+        textLayout->addWidget(titleLabel);
+        textLayout->addWidget(descLabel);
+        textLayout->addStretch();
+
+        btnLayout->addWidget(iconLabel);
+        btnLayout->addLayout(textLayout);
+        btnLayout->addStretch();
+
+        return btn;
+    };
+
+    actionsGrid->addWidget(createActionButton("刷新设备列表", "refresh", "获取最新设备状态"), 0, 0);
+    actionsGrid->addWidget(createActionButton("预约会议室", "reserve", "快速预约设备/场所"), 0, 1);
+    actionsGrid->addWidget(createActionButton("能耗分析", "energy", "查看能耗统计数据"), 0, 2);
+    actionsGrid->addWidget(createActionButton("设备控制", "control", "批量开关设备"), 1, 0);
+    actionsGrid->addWidget(createActionButton("生成报告", "report", "导出设备使用报告"), 1, 1);
+    actionsGrid->addWidget(createActionButton("查看告警", "alert", "查看系统告警信息"), 1, 2);
+
+    actionsLayout->addWidget(actionsTitle);
+    actionsLayout->addLayout(actionsGrid);
+
+    // 实时信息区域
+    QWidget *realtimeSection = new QWidget(m_dashboardPage);
+    QHBoxLayout *realtimeLayout = new QHBoxLayout(realtimeSection);
+    realtimeLayout->setContentsMargins(0, 0, 0, 0);
+    realtimeLayout->setSpacing(15);
+
+    // 最近告警卡片
+    QWidget *alertCard = new QWidget(realtimeSection);
+    alertCard->setMinimumHeight(200);
+    alertCard->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e0e0e0;");
+
+    QVBoxLayout *alertLayout = new QVBoxLayout(alertCard);
+    alertLayout->setContentsMargins(20, 15, 20, 15);
+
+    QLabel *alertTitle = new QLabel("最近告警");
+    alertTitle->setStyleSheet("font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 10px;");
+
+    QTextEdit *alertList = new QTextEdit(alertCard);
+    alertList->setReadOnly(true);
+    alertList->setPlaceholderText("暂无告警信息");
+    alertList->setStyleSheet(
+        "QTextEdit {"
+        "    border: none;"
+        "    background-color: transparent;"
+        "    font-size: 12px;"
+        "}"
+        );
+
+    alertLayout->addWidget(alertTitle);
+    alertLayout->addWidget(alertList);
+
+    // 设备活动日志卡片
+    QWidget *logCard = new QWidget(realtimeSection);
+    logCard->setMinimumHeight(200);
+    logCard->setStyleSheet("background-color: white; border-radius: 8px; border: 1px solid #e0e0e0;");
+
+    QVBoxLayout *logLayout = new QVBoxLayout(logCard);
+    logLayout->setContentsMargins(20, 15, 20, 15);
+
+    QLabel *logTitle = new QLabel("最近活动");
+    logTitle->setStyleSheet("font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 10px;");
+
+    QTextEdit *logList = new QTextEdit(logCard);
+    logList->setReadOnly(true);
+    logList->setPlaceholderText("暂无活动记录");
+    logList->setStyleSheet(
+        "QTextEdit {"
+        "    border: none;"
+        "    background-color: transparent;"
+        "    font-size: 12px;"
+        "}"
+        );
+
+    logLayout->addWidget(logTitle);
+    logLayout->addWidget(logList);
+
+    realtimeLayout->addWidget(alertCard);
+    realtimeLayout->addWidget(logCard);
+
+    // 添加到主布局
+    mainLayout->addWidget(welcomeSection);
+    mainLayout->addWidget(statsSection);
+    mainLayout->addWidget(quickActionsSection);
+    mainLayout->addWidget(realtimeSection);
+    mainLayout->addStretch();
 
     m_centralStack->addWidget(m_dashboardPage);
 
-    // 2. 设备管理页面
+    // 2. 设备管理页面（保持不变）
     m_equipmentPage = new EquipmentManagerWidget(m_tcpClient, m_dispatcher, this);
     m_centralStack->addWidget(m_equipmentPage);
 
@@ -280,7 +516,7 @@ void MainWindow::setupCentralStack()
             this, &MainWindow::onEnergyQueryRequested);
     m_centralStack->addWidget(m_energyPage);
 
-    // 5. 系统设置页面
+    // 5. 系统设置页面（暂时留空）
     m_settingsPage = new QWidget();
     QVBoxLayout *settingsLayout = new QVBoxLayout(m_settingsPage);
     QLabel *settingsLabel = new QLabel("<h2>系统设置</h2>");
@@ -288,6 +524,32 @@ void MainWindow::setupCentralStack()
     settingsLayout->addWidget(settingsLabel);
     settingsLayout->addStretch();
     m_centralStack->addWidget(m_settingsPage);
+
+    // 连接快速操作按钮的信号
+    QList<QPushButton*> actionButtons = quickActionsSection->findChildren<QPushButton*>();
+    for (QPushButton* btn : actionButtons) {
+        if (btn->text().contains("刷新设备列表")) {
+            connect(btn, &QPushButton::clicked, this, [this]() {
+                if (m_equipmentPage) {
+                    m_equipmentPage->requestEquipmentList();
+                    logMessage("已从仪表板刷新设备列表");
+                }
+            });
+        } else if (btn->text().contains("预约会议室")) {
+            connect(btn, &QPushButton::clicked, this, [this]() {
+                switchPage(PAGE_RESERVATION);
+            });
+        } else if (btn->text().contains("能耗分析")) {
+            connect(btn, &QPushButton::clicked, this, [this]() {
+                switchPage(PAGE_ENERGY);
+            });
+        }
+    }
+    // 设置仪表板信号连接
+    setupDashboardConnections();
+
+    // 初始更新仪表板数据
+    updateDashboardStats();
 }
 
 void MainWindow::setupNavigation()
@@ -368,6 +630,12 @@ void MainWindow::switchPage(int pageIndex)
 
         // 页面切换时的特殊处理
         switch (pageIndex) {
+        case PAGE_DASHBOARD:
+            // 切换到仪表板时自动刷新数据
+            updateDashboardStats();
+            logMessage("仪表板数据已刷新");
+            break;
+
         case PAGE_EQUIPMENT:
             if (m_equipmentPage) {
                 // 只有在首次切换到设备页面或手动刷新时才请求
@@ -474,6 +742,152 @@ void MainWindow::logMessage(const QString& msg)
 
     // 也可以同时输出到控制台
     qDebug() << "[MainWindow]" << msg;
+}
+
+// 更新仪表板统计数据
+void MainWindow::updateDashboardStats()
+{
+    // 从设备管理页面获取数据
+    if (m_equipmentPage && m_equipmentPage->m_equipmentModel) {
+        QStandardItemModel* model = m_equipmentPage->m_equipmentModel;
+        int totalDevices = model->rowCount();
+        int onlineDevices = 0;
+        int offlineDevices = 0;
+        int reservedDevices = 0;
+
+        // 统计设备状态
+        for (int i = 0; i < totalDevices; ++i) {
+            QString status = model->item(i, 3)->text(); // 第3列是状态
+            if (status == "online") {
+                onlineDevices++;
+            } else if (status == "offline") {
+                offlineDevices++;
+            } else if (status == "reserved") {
+                reservedDevices++;
+            }
+        }
+
+        // 更新卡片显示
+        if (m_totalDevicesLabel) m_totalDevicesLabel->setText(QString::number(totalDevices));
+        if (m_onlineDevicesLabel) m_onlineDevicesLabel->setText(QString::number(onlineDevices));
+        if (m_offlineDevicesLabel) m_offlineDevicesLabel->setText(QString::number(offlineDevices));
+        if (m_reservedDevicesLabel) m_reservedDevicesLabel->setText(QString::number(reservedDevices));
+
+        // 更新状态栏的设备数量
+        QLabel *deviceLabel = m_statusBar->findChild<QLabel*>("deviceCountLabel");
+        if (deviceLabel) {
+            deviceLabel->setText(QString("设备: %1").arg(totalDevices));
+        }
+    }
+
+    // 更新其他统计信息（这里先使用模拟数据）
+    if (m_todayEnergyLabel) m_todayEnergyLabel->setText("125.6 kWh");
+    if (m_activeAlertsLabel) m_activeAlertsLabel->setText("3");
+    if (m_todayReservationsLabel) m_todayReservationsLabel->setText("8");
+    if (m_placeUsageLabel) m_placeUsageLabel->setText("65%");
+
+    // 更新最近告警和活动日志
+    updateRecentAlerts();
+    updateActivityLog();
+}
+
+// 更新最近告警
+void MainWindow::updateRecentAlerts()
+{
+    if (!m_alertTextEdit) return;
+
+    // 模拟告警数据
+    QStringList alerts;
+    alerts << "10:25 设备 projector_101 离线"
+           << "09:15 会议室 classroom_101 能耗异常"
+           << "08:30 空调 aircon_202 温度过高";
+
+    m_alertTextEdit->clear();
+    for (const QString &alert : alerts) {
+        m_alertTextEdit->append(alert);
+    }
+}
+
+// 更新活动日志
+void MainWindow::updateActivityLog()
+{
+    if (!m_activityTextEdit) return;
+
+    // 模拟活动数据
+    QStringList activities;
+    activities << "10:30 用户 admin 登录系统"
+               << "10:15 设备 projector_101 被开机"
+               << "09:45 会议室 classroom_102 预约成功"
+               << "09:20 能耗数据已更新"
+               << "08:50 设备 camera_301 离线告警";
+
+    m_activityTextEdit->clear();
+    for (const QString &activity : activities) {
+        m_activityTextEdit->append(activity);
+    }
+}
+
+// 设置仪表板信号连接
+void MainWindow::setupDashboardConnections()
+{
+    // 在设备列表更新时刷新仪表板
+    if (m_equipmentPage) {
+        connect(m_equipmentPage, &EquipmentManagerWidget::showStatusMessage,
+                this, [this](const QString &msg) {
+                    // 如果是设备列表相关消息，更新仪表板
+                    if (msg.contains("设备") || msg.contains("更新")) {
+                        QTimer::singleShot(500, this, &MainWindow::updateDashboardStats);
+                    }
+                });
+    }
+}
+
+// 重写事件过滤器，处理卡片点击
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+        if (mouseEvent->button() == Qt::LeftButton) {
+            // 检查是否是仪表板卡片
+            QString cardType = watched->property("cardType").toString();
+            if (!cardType.isEmpty()) {
+                // 根据卡片类型执行不同操作
+                if (cardType == "设备总数" || cardType == "在线设备" ||
+                    cardType == "离线设备" || cardType == "预约中") {
+                    switchPage(PAGE_EQUIPMENT);
+                    logMessage(QString("切换到设备管理页面，查看%1").arg(cardType));
+                }
+                else if (cardType == "今日能耗") {
+                    switchPage(PAGE_ENERGY);
+                    logMessage("切换到能耗统计页面");
+                }
+                else if (cardType == "待处理告警") {
+                    // 可以在这里弹出一个告警详情对话框
+                    QMessageBox::information(this, "系统告警",
+                                             "当前有3条待处理告警：\n"
+                                             "1. 设备 projector_101 离线\n"
+                                             "2. 会议室 classroom_101 能耗异常\n"
+                                             "3. 空调 aircon_202 温度过高");
+                    logMessage("查看待处理告警");
+                }
+                else if (cardType == "今日预约") {
+                    switchPage(PAGE_RESERVATION);
+                    logMessage("切换到预约管理页面");
+                }
+                else if (cardType == "场所使用率") {
+                    QMessageBox::information(this, "场所使用率统计",
+                                             "今日场所使用情况：\n"
+                                             "• 教室: 80%\n"
+                                             "• 实验室: 60%\n"
+                                             "• 会议室: 55%\n"
+                                             "• 体育场馆: 45%");
+                    logMessage("查看场所使用率");
+                }
+                return true;
+            }
+        }
+    }
+    return QMainWindow::eventFilter(watched, event);
 }
 
 
@@ -915,9 +1329,9 @@ void MainWindow::onEnergyQueryRequested(const QString &equipmentId, const QStrin
         return;
     }
 
-    // 修复：直接调用widget的公有方法，避免findChild
-    QString startDate = m_energyPage->getStartDate().toString("yyyy-MM-dd");  // 改为 m_energyPage
-    QString endDate = m_energyPage->getEndDate().toString("yyyy-MM-dd");  // 改为 m_energyPage
+    // 修复：直接调用widget的公有方法
+    QString startDate = m_energyPage->getStartDate().toString("yyyy-MM-dd");
+    QString endDate = m_energyPage->getEndDate().toString("yyyy-MM-dd");
 
     qDebug() << "发送能耗查询:" << equipmentId << timeRange << startDate << endDate;
 

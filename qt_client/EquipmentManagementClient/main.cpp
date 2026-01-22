@@ -16,18 +16,106 @@
 // 全局样式和字体加载函数
 bool setupApplicationStyle(QApplication &app)
 {
-    // 1. 加载QSS样式 - 使用Qt资源系统
+    // 1. 加载QSS样式
     QString qssPath = ":/resources/resources/style.qss";
     QFile styleFile(qssPath);
 
     if (styleFile.open(QFile::ReadOnly)) {
         QString styleSheet = QString::fromUtf8(styleFile.readAll());
+
+        // 添加修复下拉框的样式
+        styleSheet += "\n\n/* ========== 登录界面特殊样式 ========== */\n"
+                      "#LoginDialog {\n"
+                      "    background-color: transparent;\n"  // 透明背景，使用自己的背景图
+                      "}\n"
+                      "\n"
+                      "/* ========== 修复下拉框样式 ========== */\n"
+                      "QComboBox {\n"
+                      "    border: 1px solid #dcdde1;\n"
+                      "    border-radius: 4px;\n"
+                      "    padding: 6px 30px 6px 12px;\n"
+                      "    background-color: white;\n"
+                      "    min-height: 28px;\n"
+                      "}\n"
+                      "QComboBox::drop-down {\n"
+                      "    border: none;\n"
+                      "    width: 24px;\n"
+                      "    border-left: 1px solid #dcdde1;\n"
+                      "    border-top-right-radius: 4px;\n"
+                      "    border-bottom-right-radius: 4px;\n"
+                      "    background-color: #f8f9fa;\n"
+                      "}\n"
+                      "QComboBox::down-arrow {\n"
+                      "    image: none;\n"
+                      "    font-family: 'Font Awesome 6 Free';\n"
+                      "    font-weight: 900;\n"
+                      "    content: '\\f078';\n"
+                      "    color: #4a69bd;\n"
+                      "    font-size: 12px;\n"
+                      "}\n"
+                      "QComboBox QAbstractItemView {\n"
+                      "    border: 1px solid #dcdde1;\n"
+                      "    border-radius: 4px;\n"
+                      "    background-color: white;\n"
+                      "    selection-background-color: #4a69bd;\n"
+                      "    selection-color: white;\n"
+                      "}\n"
+                      "\n"
+                      "/* QDateTimeEdit 下拉框样式 */\n"
+                      "QDateTimeEdit {\n"
+                      "    border: 1px solid #dcdde1;\n"
+                      "    border-radius: 4px;\n"
+                      "    padding: 6px 30px 6px 12px;\n"
+                      "    background-color: white;\n"
+                      "    min-height: 28px;\n"
+                      "}\n"
+                      "QDateTimeEdit::drop-down {\n"
+                      "    border: none;\n"
+                      "    width: 24px;\n"
+                      "    border-left: 1px solid #dcdde1;\n"
+                      "    border-top-right-radius: 4px;\n"
+                      "    border-bottom-right-radius: 4px;\n"
+                      "    background-color: #f8f9fa;\n"
+                      "}\n"
+                      "QDateTimeEdit::down-arrow {\n"
+                      "    image: none;\n"
+                      "    font-family: 'Font Awesome 6 Free';\n"
+                      "    font-weight: 900;\n"
+                      "    content: '\\f078';\n"
+                      "    color: #4a69bd;\n"
+                      "    font-size: 12px;\n"
+                      "}\n"
+                      "\n"
+                      "/* QDateEdit 下拉框样式 */\n"
+                      "QDateEdit {\n"
+                      "    border: 1px solid #dcdde1;\n"
+                      "    border-radius: 4px;\n"
+                      "    padding: 6px 30px 6px 12px;\n"
+                      "    background-color: white;\n"
+                      "    min-height: 28px;\n"
+                      "}\n"
+                      "QDateEdit::drop-down {\n"
+                      "    border: none;\n"
+                      "    width: 24px;\n"
+                      "    border-left: 1px solid #dcdde1;\n"
+                      "    border-top-right-radius: 4px;\n"
+                      "    border-bottom-right-radius: 4px;\n"
+                      "    background-color: #f8f9fa;\n"
+                      "}\n"
+                      "QDateEdit::down-arrow {\n"
+                      "    image: none;\n"
+                      "    font-family: 'Font Awesome 6 Free';\n"
+                      "    font-weight: 900;\n"
+                      "    content: '\\f078';\n"
+                      "    color: #4a69bd;\n"
+                      "    font-size: 12px;\n"
+                      "}";
+
         app.setStyleSheet(styleSheet);
         styleFile.close();
-        qDebug() << "✅ QSS样式从资源文件加载成功";
+        qDebug() << "✅ QSS样式加载成功（包含下拉框修复）";
     } else {
         qDebug() << "❌ QSS样式加载失败，路径:" << qssPath;
-        qDebug() << "❌ 错误信息:" << styleFile.errorString();
     }
 
     // 2. 加载字体文件
@@ -35,7 +123,6 @@ bool setupApplicationStyle(QApplication &app)
 
     int fontId = QFontDatabase::addApplicationFont(fontPath);
     if (fontId == -1) {
-        // 尝试备选路径
         fontPath = QCoreApplication::applicationDirPath() + "/resources/fonts/fontawesome-webfont.ttf";
         fontId = QFontDatabase::addApplicationFont(fontPath);
         if (fontId == -1) {
@@ -44,19 +131,11 @@ bool setupApplicationStyle(QApplication &app)
         }
     }
 
-    // 获取加载的字体族
-    QStringList loadedFamilies = QFontDatabase::applicationFontFamilies(fontId);
-    qDebug() << "✅ 字体加载成功!";
-    for (int i = 0; i < loadedFamilies.size(); ++i) {
-        qDebug() << "  字体族 [" << i << "]: " << loadedFamilies.at(i);
-    }
-
-    // 3. 设置应用程序默认字体，避免字体警告
+    // 3. 设置应用程序默认字体
     QFont defaultFont("Microsoft YaHei", 9);
     app.setFont(defaultFont);
 
-    qDebug() << "✅ 应用程序默认字体已设置: " << defaultFont.family()
-             << ", 大小: " << defaultFont.pointSize();
+    qDebug() << "✅ 应用程序默认字体已设置";
 
     return true;
 }
@@ -75,7 +154,13 @@ int main(int argc, char *argv[]) {
                               "应用程序样式加载失败，请检查资源文件路径。\n程序将继续运行。");
         // 不返回，继续运行程序
     }
-
+    QPixmap test(":/resources/resources/images/Login_background.jpg");
+    if(!test.isNull()) {
+        qDebug() << "✅ 图片加载成功";
+    }
+    else {
+        qDebug() << "图片加载失败";
+    }
     int exitCode = 0;
 
     do {

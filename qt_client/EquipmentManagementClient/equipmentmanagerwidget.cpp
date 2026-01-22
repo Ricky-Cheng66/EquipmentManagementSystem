@@ -4,6 +4,7 @@
 #include "messagedispatcher.h"
 #include "protocol_parser.h"
 #include "statusitemdelegate.h"
+#include "centeraligndelegate.h"
 #include "logindialog.h"
 #include <QMessageBox>
 #include <QDebug>
@@ -81,32 +82,47 @@ void EquipmentManagerWidget::setupTableView() {
     ui->equipmentTableView->horizontalHeader()->setStretchLastSection(true);
     ui->equipmentTableView->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
-    // 设置表格字体，避免字体警告
-    QFont tableFont = ui->equipmentTableView->font();
-    if (tableFont.pointSize() <= 0) {
-        tableFont.setPointSize(9);
-    }
-    ui->equipmentTableView->setFont(tableFont);
-
-    // 设置表头字体
-    QFont headerFont = ui->equipmentTableView->horizontalHeader()->font();
-    if (headerFont.pointSize() <= 0) {
-        headerFont.setPointSize(9);
-        headerFont.setBold(true);
-    }
-    ui->equipmentTableView->horizontalHeader()->setFont(headerFont);
-
     // 美化表格行高和字体
-    ui->equipmentTableView->verticalHeader()->setDefaultSectionSize(36); // 行高36px
-    ui->equipmentTableView->setAlternatingRowColors(true); // 斑马纹
+    ui->equipmentTableView->verticalHeader()->setDefaultSectionSize(36);
+    ui->equipmentTableView->setAlternatingRowColors(false); // 统一颜色
 
-    // 设置状态列的颜色（通过QSS属性）
-    StatusItemDelegate *delegate = new StatusItemDelegate(this);
-    ui->equipmentTableView->setItemDelegate(delegate);
+    // 设置状态列的委托
+    StatusItemDelegate *statusDelegate = new StatusItemDelegate(this);
+    ui->equipmentTableView->setItemDelegateForColumn(3, statusDelegate); // 只对状态列使用
 
-    // 确保字体有效
-    qDebug() << "表格字体大小:" << ui->equipmentTableView->font().pointSize();
-    qDebug() << "表头字体大小:" << ui->equipmentTableView->horizontalHeader()->font().pointSize();
+    // 对其他列使用居中对齐委托
+    CenterAlignDelegate *centerDelegate = new CenterAlignDelegate(this);
+    for (int col = 0; col < m_equipmentModel->columnCount(); ++col) {
+        if (col != 3) { // 状态列已经设置了委托
+            ui->equipmentTableView->setItemDelegateForColumn(col, centerDelegate);
+        }
+    }
+
+    // 设置表格样式
+    ui->equipmentTableView->setStyleSheet(
+        "QTableView {"
+        "    background-color: white;"
+        "    gridline-color: #f0f0f0;"
+        "}"
+        "QTableView::item {"
+        "    padding: 6px;"
+        "    border-bottom: 1px solid #f0f0f0;"
+        "}"
+        "QTableView::item:selected {"
+        "    background-color: #e3f2fd;"
+        "    color: #1976d2;"
+        "}"
+        "QHeaderView::section {"
+        "    background-color: #f5f6fa;"
+        "    padding: 8px;"
+        "    border: none;"
+        "    border-right: 1px solid #e0e0e0;"
+        "    border-bottom: 2px solid #e0e0e0;"
+        "    font-weight: bold;"
+        "    text-align: center;"
+        "}");
+
+    qDebug() << "表格设置完成";
 }
 
 void EquipmentManagerWidget::requestEquipmentList() {
@@ -236,59 +252,34 @@ void EquipmentManagerWidget::handleControlResponse(const ProtocolParser::ParseRe
 // handleEquipmentListResponse 函数留待协议定义后实现
 void EquipmentManagerWidget::handleEquipmentListResponse(const ProtocolParser::ParseResult &result)
 {
-    QString rawPayload = QString::fromStdString(result.payload);
-    qDebug() << "原始设备列表数据:" << rawPayload;
+    qDebug() << "收到设备列表响应";
 
-    // 详细分析每个设备的数据
-    QStringList deviceList = rawPayload.split(";", Qt::SkipEmptyParts);
-    for (int i = 0; i < deviceList.size(); ++i) {
-        QString deviceStr = deviceList[i];
-        qDebug() << "设备" << i << "原始字符串:" << deviceStr;
-
-        QStringList fields = deviceStr.split("|");
-        if (fields.size() >= 5) {
-            qDebug() << "  状态字段[" << i << "]:" << fields[3] << "长度:" << fields[3].length();
-
-            // 显示状态字段的十六进制表示，以查看是否有隐藏字符
-            QByteArray statusBytes = fields[3].toUtf8();
-            qDebug() << "  状态字段十六进制:";
-            for (int j = 0; j < statusBytes.length(); ++j) {
-                qDebug() << "    [" << j << "]: 0x" << QString::number((unsigned char)statusBytes[j], 16);
-            }
-        }
-    }
-
-    // 1. 清空现有模型数据
+    // 清空现有模型数据
     m_equipmentModel->removeRows(0, m_equipmentModel->rowCount());
 
-    // 2. 解析payload
+    // 解析payload
+    QString payload = QString::fromStdString(result.payload);
+    QStringList deviceList = payload.split(";", Qt::SkipEmptyParts);
+
     for (const QString& deviceStr : deviceList) {
         QStringList fields = deviceStr.split("|");
         if (fields.size() >= 5) {
-            // 清理状态字段 - 彻底清理
-            QString status = fields[3];
-
-            // 去除所有空白字符
-            status = status.trimmed();
-
-            // 检查并修复常见的重复问题
+            // 清理状态字段
+            QString status = fields[3].trimmed();
             if (status.contains("online")) {
-                // 如果包含"online"，提取第一个"online"并删除其他内容
-                int index = status.indexOf("online");
-                if (index >= 0) {
-                    status = "online";
-                }
+                status = "online";
             } else if (status.contains("offline")) {
-                // 如果包含"offline"，提取第一个"offline"并删除其他内容
-                int index = status.indexOf("offline");
-                if (index >= 0) {
-                    status = "offline";
-                }
+                status = "offline";
             }
 
-            // 如果状态字段仍然有问题，强制设置为offline
-            if (status.isEmpty() || status.length() > 10) {
-                status = "offline";
+            // 清理电源字段
+            QString power = fields[4].trimmed();
+            if (power.contains("on")) {
+                power = "开";
+            } else if (power.contains("off")) {
+                power = "关";
+            } else if (power.isEmpty()) {
+                power = "关";
             }
 
             QList<QStandardItem*> row;
@@ -296,8 +287,9 @@ void EquipmentManagerWidget::handleEquipmentListResponse(const ProtocolParser::P
                 << new QStandardItem(fields[1])  // 类型
                 << new QStandardItem(fields[2])  // 位置
                 << new QStandardItem(status)      // 状态
-                << new QStandardItem(fields[4])  // 电源
+                << new QStandardItem(power)       // 电源（已清理）
                 << new QStandardItem(QDateTime::currentDateTime().toString("hh:mm:ss"));
+
             m_equipmentModel->appendRow(row);
         }
     }

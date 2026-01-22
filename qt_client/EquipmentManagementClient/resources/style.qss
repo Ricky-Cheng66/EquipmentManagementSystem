@@ -85,11 +85,46 @@ QPushButton:disabled {
     color: white;
     border: none;
     border-radius: 4px;
-    padding: 8px 16px;
+    padding: 6px 12px;
     min-height: 28px;
+    font-size: 12px;
+    font-weight: bold;
 }
 
 .danger-button:hover {
+    background-color: #c0392b;
+}
+
+.danger-button:pressed {
+    background-color: #a93226;
+}
+
+/* 审批表格按钮样式 */
+.approve-btn {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-weight: bold;
+    min-width: 60px;
+}
+
+.approve-btn:hover {
+    background-color: #219653;
+}
+
+.reject-btn {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-weight: bold;
+    min-width: 60px;
+}
+
+.reject-btn:hover {
     background-color: #c0392b;
 }
 
@@ -106,17 +141,146 @@ QPushButton:disabled {
     border-color: #4a69bd;
 }
 
-/* QComboBox 下拉箭头 */
+/* 日期时间选择器样式 */
+QDateTimeEdit {
+    border: 1px solid #dcdde1;
+    border-radius: 4px;
+    padding: 6px 30px 6px 12px;
+    background-color: white;
+    min-height: 28px;
+    font-size: 9pt;
+}
+
+QDateTimeEdit:focus {
+    border-color: #4a69bd;
+}
+
+QDateTimeEdit::up-button, QDateTimeEdit::down-button {
+    width: 20px;
+    border: none;
+    background-color: #f8f9fa;
+}
+
+QDateTimeEdit::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    border-top-right-radius: 4px;
+    border-left: 1px solid #dcdde1;
+}
+
+QDateTimeEdit::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+    border-bottom-right-radius: 4px;
+    border-left: 1px solid #dcdde1;
+    border-top: 1px solid #dcdde1;
+}
+
+QDateTimeEdit::up-arrow, QDateTimeEdit::down-arrow {
+    width: 8px;
+    height: 8px;
+}
+
+/* QDateEdit/QTimeEdit 专用样式 */
+QDateEdit, QTimeEdit {
+    border: 1px solid #dcdde1;
+    border-radius: 4px;
+    padding: 6px 30px 6px 12px;
+    background-color: white;
+    min-height: 28px;
+}
+
+QDateEdit::drop-down, QTimeEdit::drop-down {
+    border: none;
+    width: 24px;
+    border-left: 1px solid #dcdde1;
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+    background-color: #f8f9fa;
+}
+
+QDateEdit::down-arrow, QTimeEdit::down-arrow {
+    image: none;
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    content: '\f078';  /* fa-chevron-down */
+    color: #4a69bd;
+    font-size: 12px;
+}
+
+QDateEdit::down-arrow:hover, QTimeEdit::down-arrow:hover {
+    color: #3c5aa6;
+}
+
+/* 时间选择器的上下箭头 */
+QTimeEdit::up-button, QTimeEdit::down-button {
+    width: 16px;
+    background-color: #f8f9fa;
+    border: none;
+}
+
+QTimeEdit::up-button {
+    subcontrol-origin: border;
+    subcontrol-position: top right;
+    border-bottom: 1px solid #dcdde1;
+}
+
+QTimeEdit::down-button {
+    subcontrol-origin: border;
+    subcontrol-position: bottom right;
+}
+
+QTimeEdit::up-arrow, QTimeEdit::down-arrow {
+    width: 8px;
+    height: 8px;
+}
+
+/* 日期选择器日历弹出窗口 */
+QCalendarWidget QWidget {
+    alternate-background-color: white;
+}
+
+QCalendarWidget QToolButton {
+    color: #333;
+    font-weight: bold;
+}
+
+QCalendarWidget QMenu {
+    background-color: white;
+}
+
+/* 修复QComboBox下拉框（优化版） */
+QComboBox {
+    padding-right: 24px; /* 适配加宽的下拉箭头区域 */
+}
+
 QComboBox::drop-down {
     border: none;
-    padding-right: 5px;
+    width: 24px;
+    background-color: #f8f9fa;
+    border-left: 1px solid #dcdde1;
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+QComboBox::down-arrow {
+    image: none;
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 12px;
+    content: "\f078"; /* fa-chevron-down 更明显的箭头 */
+    color: #4a69bd;
+}
+
+QComboBox::down-arrow:hover {
+    color: #3c5aa6;
 }
 
 /* ==================== 表格样式 ==================== */
 QTableWidget {
     border: 1px solid #e0e0e0;
     background-color: white;
-    alternate-background-color: #f9f9f9;
+    alternate-background-color: white;
     gridline-color: #f0f0f0;
 }
 
@@ -127,6 +291,18 @@ QTableWidget::item {
 QTableWidget::item:selected {
     background-color: #e3f2fd;
     color: #1976d2;
+}
+
+/* 修复操作列按钮样式 */
+QTableWidget QPushButton {
+    margin: 2px;
+}
+
+/* 表单提示文本样式 */
+QLabel[class="hint"] {
+    color: #666;
+    font-size: 11px;
+    font-style: italic;
 }
 
 QHeaderView::section {
@@ -258,6 +434,7 @@ QScrollBar::handle:vertical:hover {
 }
 
 /* ==================== 状态标签样式 ==================== */
+/* 原有状态标签 */
 .status-online {
     color: #27ae60;
     font-weight: bold;
@@ -271,4 +448,58 @@ QScrollBar::handle:vertical:hover {
 .status-reserved {
     color: #f39c12;
     font-weight: bold;
+}
+
+/* 新增审批状态标签（带背景和边框） */
+.status-approved {
+    color: #27ae60;
+    font-weight: bold;
+    background-color: #e8f6f3;
+    border: 1px solid #27ae60;
+    border-radius: 3px;
+    padding: 4px 8px;
+}
+
+.status-rejected {
+    color: #e74c3c;
+    font-weight: bold;
+    background-color: #fdedec;
+    border: 1px solid #e74c3c;
+    border-radius: 3px;
+    padding: 4px 8px;
+}
+
+.status-pending {
+    color: #f39c12;
+    font-weight: bold;
+    background-color: #fef9e7;
+    border: 1px solid #f39c12;
+    border-radius: 3px;
+    padding: 4px 8px;
+}
+
+/* ==================== 仪表板样式 ==================== */
+#dashboardPage {
+    background-color: #f5f6fa;
+}
+
+#welcomeSection {
+    background-color: white;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+}
+
+/* 统计卡片悬停效果 */
+QPushButton[class="stat-card"] {
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    text-align: left;
+    padding: 15px;
+}
+
+QPushButton[class="stat-card"]:hover {
+    border-color: #4a69bd;
+    background-color: #f8f9fa;
 }

@@ -95,6 +95,26 @@ private:
     QAction* m_energyAction;
     QString m_clientHeartbeatId;
 
+    // 仪表板相关控件指针
+    QLabel *m_totalDevicesLabel;
+    QLabel *m_onlineDevicesLabel;
+    QLabel *m_offlineDevicesLabel;
+    QLabel *m_reservedDevicesLabel;
+    QLabel *m_todayEnergyLabel;
+    QLabel *m_activeAlertsLabel;
+    QLabel *m_todayReservationsLabel;
+    QLabel *m_placeUsageLabel;
+
+    QTextEdit *m_alertTextEdit;
+    QTextEdit *m_activityTextEdit;
+
+    // 仪表板相关函数
+    void updateDashboardStats();  // 更新仪表板统计数据
+    void updateRecentAlerts();    // 更新最近告警
+    void updateActivityLog();     // 更新活动日志
+    void setupDashboardConnections(); // 设置仪表板信号连接
+    bool eventFilter(QObject *watched, QEvent *event);
+
     void logMessage(const QString& msg);
     void setupUI();                     // 主UI设置函数
     void setupNavigation();             // 设置导航栏

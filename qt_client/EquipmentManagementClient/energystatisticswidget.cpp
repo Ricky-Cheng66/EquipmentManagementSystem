@@ -31,7 +31,7 @@ EnergyStatisticsWidget::EnergyStatisticsWidget(QWidget *parent)
 
 void EnergyStatisticsWidget::setupUI()
 {
-    setWindowTitle("Equipment Energy Statistics");
+    setWindowTitle("Energy Statistics");
     resize(1000, 700);
 
     // 创建控件
@@ -44,12 +44,23 @@ void EnergyStatisticsWidget::setupUI()
     m_timeRangeCombo->addItem("Month", "month");
     m_timeRangeCombo->addItem("Year", "year");
 
+    // 开始日期选择
+    QLabel *startDateLabel = new QLabel("Start Date:", this);
     m_startDateEdit = new QDateEdit(QDate::currentDate().addDays(-7), this);
-    m_endDateEdit = new QDateEdit(QDate::currentDate(), this);
+    m_startDateEdit->setProperty("class", "form-control");
+    m_startDateEdit->setMinimumHeight(36);
+    m_startDateEdit->setDisplayFormat("yyyy-MM-dd");
+    m_startDateEdit->setCalendarPopup(true);
+    m_startDateEdit->setDate(QDate::currentDate().addDays(-7));
 
-    // 修复：必须设置objectName，否则MainWindow::findChild会返回nullptr导致崩溃
-    m_startDateEdit->setObjectName("m_startDateEdit");
-    m_endDateEdit->setObjectName("m_endDateEdit");
+    // 结束日期选择
+    QLabel *endDateLabel = new QLabel("End Date:", this);
+    m_endDateEdit = new QDateEdit(QDate::currentDate(), this);
+    m_endDateEdit->setProperty("class", "form-control");
+    m_endDateEdit->setMinimumHeight(36);
+    m_endDateEdit->setDisplayFormat("yyyy-MM-dd");
+    m_endDateEdit->setCalendarPopup(true);
+    m_endDateEdit->setDate(QDate::currentDate());
 
     m_queryButton = new QPushButton("Query", this);
     m_exportButton = new QPushButton("Export CSV", this);
@@ -66,8 +77,8 @@ void EnergyStatisticsWidget::setupUI()
     QFormLayout *formLayout = new QFormLayout();
     formLayout->addRow("Equipment:", m_equipmentCombo);
     formLayout->addRow("Time Range:", m_timeRangeCombo);
-    formLayout->addRow("Start Date:", m_startDateEdit);
-    formLayout->addRow("End Date:", m_endDateEdit);
+    formLayout->addRow(startDateLabel, m_startDateEdit);
+    formLayout->addRow(endDateLabel, m_endDateEdit);
 
     QHBoxLayout *buttonLayout = new QHBoxLayout();
     buttonLayout->addWidget(m_queryButton);
@@ -83,6 +94,10 @@ void EnergyStatisticsWidget::setupUI()
     // 连接信号
     connect(m_queryButton, &QPushButton::clicked, this, &EnergyStatisticsWidget::onQueryButtonClicked);
     connect(m_exportButton, &QPushButton::clicked, this, &EnergyStatisticsWidget::onExportButtonClicked);
+
+    // 时间范围变化时自动调整日期
+    connect(m_timeRangeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &EnergyStatisticsWidget::onTimeRangeChanged);
 }
 
 void EnergyStatisticsWidget::setEquipmentList(const QStringList &equipmentIds)
@@ -203,4 +218,30 @@ void EnergyStatisticsWidget::onExportButtonClicked()
 
     file.close();
     QMessageBox::information(this, "导出成功", "数据已保存到:\n" + filePath);
+}
+
+void EnergyStatisticsWidget::onTimeRangeChanged(int index)
+{
+    if (index < 0) return;
+
+    QString timeRange = m_timeRangeCombo->itemData(index).toString();
+    QDate currentDate = QDate::currentDate();
+
+    if (timeRange == "day") {
+        // 按日统计：默认查询当天
+        m_startDateEdit->setDate(currentDate);
+        m_endDateEdit->setDate(currentDate);
+    } else if (timeRange == "week") {
+        // 按周统计：默认查询最近一周
+        m_startDateEdit->setDate(currentDate.addDays(-7));
+        m_endDateEdit->setDate(currentDate);
+    } else if (timeRange == "month") {
+        // 按月统计：默认查询最近一个月
+        m_startDateEdit->setDate(currentDate.addMonths(-1));
+        m_endDateEdit->setDate(currentDate);
+    } else if (timeRange == "year") {
+        // 按年统计：默认查询最近一年
+        m_startDateEdit->setDate(currentDate.addYears(-1));
+        m_endDateEdit->setDate(currentDate);
+    }
 }
