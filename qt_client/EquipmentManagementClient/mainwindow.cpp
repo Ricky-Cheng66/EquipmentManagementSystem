@@ -246,7 +246,7 @@ void MainWindow::setupCentralStack()
             .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss")),
         welcomeSection);
 
-    QPushButton *quickRefreshBtn = new QPushButton(QIcon(":/icons/refresh.svg"), "刷新数据", welcomeSection);
+    QPushButton *quickRefreshBtn = new QPushButton("🔄 刷新数据", welcomeSection);
     quickRefreshBtn->setProperty("class", "primary-button");
     quickRefreshBtn->setMinimumSize(120, 36);
 

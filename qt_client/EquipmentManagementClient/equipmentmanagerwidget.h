@@ -4,7 +4,12 @@
 #include <QWidget>
 #include <QStandardItemModel>
 #include <QItemSelection>
+#include <QScrollArea>
+#include <QButtonGroup>
+#include <QStackedWidget>
 #include "protocol_parser.h"
+#include "devicecard.h"
+#include "filtertoolbar.h"
 
 // 前向声明
 class ProtocolParser;
@@ -27,7 +32,9 @@ public:
 
     // 提供给外部调用的刷新接口
     void requestEquipmentList();
-
+protected:
+    void resizeEvent(QResizeEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
 signals:
     void showStatusMessage(const QString &msg);
@@ -36,12 +43,16 @@ private slots:
     void on_refreshButton_clicked();
     void on_turnOnButton_clicked();
     void on_turnOffButton_clicked();
+
+    // 新增槽函数
+    void onCardClicked(const QString &deviceId);
+    void onPowerControlRequested(const QString &deviceId, bool turnOn);
+    void onFilterChanged();
+    void onViewModeChanged();
+
 public slots:
-    // 处理从网络层传来的设备状态更新
     void handleEquipmentStatusUpdate(const ProtocolParser::ParseResult& result);
-    // 处理从网络层传来的设备列表响应
     void handleEquipmentListResponse(const ProtocolParser::ParseResult& result);
-    // 处理从网络层传来的控制响应
     void handleControlResponse(const ProtocolParser::ParseResult& result);
 
 private:
@@ -49,12 +60,34 @@ private:
     TcpClient* m_tcpClient;
     MessageDispatcher* m_dispatcher;
 
-    QString m_currentSelectedEquipmentId; // 当前在表格中选中的设备ID
+    QString m_currentSelectedEquipmentId;
+    bool m_isRequesting;
 
-    bool m_isRequesting;  // 新增：标记是否正在请求中
+    // 新增成员变量
+    FilterToolBar *m_filterToolBar;
+    QScrollArea *m_scrollArea;
+    QWidget *m_cardContainer;
+    QVBoxLayout *m_containerLayout;
+    QButtonGroup *m_viewModeGroup;
+    QStackedWidget *m_viewStack;
 
+    QList<DeviceCard*> m_deviceCards;
+    QMap<QString, DeviceCard*> m_deviceCardMap;
+
+    QGridLayout *m_gridLayout;  // 网格布局
+    QTimer *m_refreshTimer;     // 延迟刷新定时器
+    bool m_isRefreshing;        // 是否正在刷新
+
+    // 新增私有方法
     void logMessage(const QString &msg);
+    void setupUI();
     void setupTableView();
+    void setupCardView();
+    void clearCardView();
+    void applyFilters();
+    void refreshCardView();
+    void setupViewModeToggle();
+
     void sendControlCommand(const QString& equipmentId, ProtocolParser::ControlCommandType command);
     void updateControlButtonsState(bool hasSelection);
     void updateEquipmentItem(const QString& equipmentId, int statusCol, const QString& status, int powerCol, const QString& powerState);
