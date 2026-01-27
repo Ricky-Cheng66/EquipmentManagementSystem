@@ -1007,30 +1007,43 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
     QString payload = QString::fromStdString(result.payload);
     QStringList parts = payload.split('|', Qt::SkipEmptyParts);
 
-    qDebug() << "Query response payload:" << payload;
+    qDebug() << "=== 查询响应处理 ===";
+    qDebug() << "原始payload:" << payload;
+    qDebug() << "解析parts:" << parts;
 
-    if (parts.isEmpty() || parts[0] != "success") {
+    // 检查是否为错误响应
+    if (parts.isEmpty() || parts[0] == "fail") {
         QString err = parts.size() >= 2 ? parts[1] : "查询失败";
-        if (m_reservationPage && m_reservationPage->isVisible())  // 改为 m_reservationPage
-            QMessageBox::warning(m_reservationPage, "查询失败", err);
+        qDebug() << "查询失败:" << err;
         return;
     }
 
-    QString data = payload.mid(parts[0].length() + 1);
+    QString data;
+    if (parts[0] == "success" && parts.size() > 1) {
+        data = payload.mid(parts[0].length() + 1);
+    } else {
+        data = payload;
+    }
 
-    // 改为 m_reservationPage
-    if (!m_reservationPage || !m_reservationPage->isVisible()) {
-        qDebug() << "预约窗口未打开，丢弃查询结果";
+    qDebug() << "处理后的数据:" << data;
+
+    if (!m_reservationPage) {
+        qDebug() << "错误: ReservationWidget 未初始化";
         return;
     }
 
-    int currentTab = m_reservationPage->m_tabWidget->currentIndex();  // 改为 m_reservationPage
-    qDebug() << "Distributing to tab:" << currentTab;
+    // 根据当前标签页分发数据
+    int currentTab = m_reservationPage->m_tabWidget->currentIndex();
+    qDebug() << "当前标签页:" << currentTab;
 
     if (currentTab == 2) {            // 审批页
-        m_reservationPage->loadAllReservationsForApproval(data);  // 改为 m_reservationPage
+        qDebug() << "分发到审批页";
+        m_reservationPage->loadAllReservationsForApproval(data);
     } else if (currentTab == 1) {     // 查询页
-        m_reservationPage->updateQueryResultTable(data);  // 改为 m_reservationPage
+        qDebug() << "分发到查询页";
+        m_reservationPage->updateQueryResultTable(data);
+    } else {
+        qDebug() << "数据未处理，当前标签页:" << currentTab;
     }
 }
 
@@ -1059,22 +1072,49 @@ void MainWindow::handleReservationApproveResponse(const ProtocolParser::ParseRes
 
 void MainWindow::handlePlaceListResponse(const ProtocolParser::ParseResult &result)
 {
+    qDebug() << "=== 处理场所列表响应 ===";
     QString payload = QString::fromStdString(result.payload);
-    QStringList places = payload.split(';', Qt::SkipEmptyParts);
+    qDebug() << "场所列表数据:" << payload;
 
-    if (m_reservationPage) {
-        // 清空旧数据
+    QStringList places = payload.split(';', Qt::SkipEmptyParts);
+    qDebug() << "解析出场所数量:" << places.size();
+
+    if (!m_reservationPage) {
+        qDebug() << "错误: reservationPage 为空指针!";
+        return;
+    }
+
+    qDebug() << "开始填充场所列表...";
+
+    // 清空旧数据
+    if (m_reservationPage->m_placeComboApply) {
         m_reservationPage->m_placeComboApply->clear();
+    } else {
+        qDebug() << "警告: m_placeComboApply 为空，创建新的";
+        m_reservationPage->m_placeComboApply = new QComboBox(m_reservationPage);
+        m_reservationPage->m_placeComboApply->setVisible(false);
+    }
+
+    if (m_reservationPage->m_placeComboQuery) {
         m_reservationPage->m_placeComboQuery->clear();
         m_reservationPage->m_placeComboQuery->addItem("全部场所", "all");
+    } else {
+        qDebug() << "警告: m_placeComboQuery 为空";
+    }
 
-        // 填充场所列表
-        for (const QString &placeStr : places) {
-            QStringList fields = placeStr.split('|');
-            if (fields.size() >= 3) {
-                QString placeId = fields[0];
-                QString placeName = fields[1];
-                QString equipmentIds = fields[2];
+    int validPlaces = 0;
+
+    // 填充场所列表
+    for (const QString &placeStr : places) {
+        QStringList fields = placeStr.split('|');
+        if (fields.size() >= 3) {
+            QString placeId = fields[0];
+            QString placeName = fields[1];
+            QString equipmentIds = fields[2];
+
+            qDebug() << "添加场所:" << placeName << "ID:" << placeId;
+
+            if (m_reservationPage->m_placeComboApply) {
                 m_reservationPage->m_placeComboApply->addItem(placeName, placeId);
                 QStringList equipmentList = equipmentIds.split(',');
                 int index = m_reservationPage->m_placeComboApply->count() - 1;
@@ -1082,17 +1122,40 @@ void MainWindow::handlePlaceListResponse(const ProtocolParser::ParseResult &resu
                     index,
                     equipmentList,
                     Qt::UserRole + 1);
+            }
+
+            if (m_reservationPage->m_placeComboQuery) {
                 m_reservationPage->m_placeComboQuery->addItem(placeName, placeId);
             }
-        }
 
-        // 修复：如果有场所，自动选中第一个并显示设备信息
-        if (m_reservationPage->m_placeComboApply->count() > 0) {
-            m_reservationPage->m_placeComboApply->setCurrentIndex(0);
-            // 延迟一点时间确保UI更新完成
-            QTimer::singleShot(100, m_reservationPage, &ReservationWidget::updateEquipmentListDisplay);
+            validPlaces++;
+        } else {
+            qDebug() << "警告: 无效的场所数据格式:" << placeStr;
         }
     }
+
+    qDebug() << "成功加载场所数量:" << validPlaces;
+
+    if (m_reservationPage->m_placeComboApply) {
+        qDebug() << "m_placeComboApply 项目数:" << m_reservationPage->m_placeComboApply->count();
+    }
+
+    // 确保在主线程执行UI更新
+    QMetaObject::invokeMethod(m_reservationPage, [this]() {
+        if (m_reservationPage) {
+            qDebug() << "在主线程中更新场所卡片...";
+            try {
+                m_reservationPage->updatePlaceCards();
+                qDebug() << "场所卡片更新完成";
+            } catch (const std::exception &e) {
+                qDebug() << "更新场所卡片时发生异常:" << e.what();
+            } catch (...) {
+                qDebug() << "更新场所卡片时发生未知异常";
+            }
+        } else {
+            qDebug() << "错误: reservationPage 在延迟调用中变为空!";
+        }
+    });
 
     emit m_reservationPage->placeListLoaded();
 }

@@ -22,13 +22,19 @@ bool setupApplicationStyle(QApplication &app)
 
     if (styleFile.open(QFile::ReadOnly)) {
         QString styleSheet = QString::fromUtf8(styleFile.readAll());
-        // 添加修复下拉框的样式
-        styleSheet += "\n\n/* ========== 登录界面特殊样式 ========== */\n"
-                      "#LoginDialog {\n"
-                      "    background-color: transparent;\n"  // 透明背景，使用自己的背景图
-                      "}\n"
-                      "\n"
-                      "/* ========== 修复下拉框样式 ========== */\n"
+
+        // 移除所有包含 content 的样式
+        QStringList styleLines = styleSheet.split('\n');
+        QStringList cleanLines;
+        for (const QString &line : styleLines) {
+            if (!line.contains("content:")) {
+                cleanLines.append(line);
+            }
+        }
+        styleSheet = cleanLines.join('\n');
+
+        // 添加基本的下拉框样式（不含content属性）
+        styleSheet += "\n\n/* ========== 下拉框基本样式 ========== */\n"
                       "QComboBox {\n"
                       "    border: 1px solid #dcdde1;\n"
                       "    border-radius: 4px;\n"
@@ -44,12 +50,6 @@ bool setupApplicationStyle(QApplication &app)
                       "    border-bottom-right-radius: 4px;\n"
                       "    background-color: #f8f9fa;\n"
                       "}\n"
-                      "QComboBox::down-arrow {\n"
-                      "    border: none;"
-                      "    width: 12px;"
-                      "    height: 12px;"
-                      "    background-color: transparent;"
-                      "}\n"
                       "QComboBox QAbstractItemView {\n"
                       "    border: 1px solid #dcdde1;\n"
                       "    border-radius: 4px;\n"
@@ -57,75 +57,20 @@ bool setupApplicationStyle(QApplication &app)
                       "    selection-background-color: #4a69bd;\n"
                       "    selection-color: white;\n"
                       "}\n"
-                      "\n"
-                      "/* QDateTimeEdit 下拉框样式 */\n"
-                      "QDateTimeEdit {\n"
-                      "    border: none;"
-                      "    width: 12px;"
-                      "    height: 12px;"
-                      "    background-color: transparent;"
+                      "QDateEdit, QTimeEdit, QDateTimeEdit {\n"
+                      "    border: 1px solid #dcdde1;\n"
+                      "    border-radius: 4px;\n"
+                      "    padding: 6px 30px 6px 12px;\n"
+                      "    background-color: white;\n"
+                      "    min-height: 28px;\n"
                       "}\n"
-                      "QDateTimeEdit::drop-down {\n"
+                      "QDateEdit::drop-down, QTimeEdit::drop-down, QDateTimeEdit::drop-down {\n"
                       "    border: none;\n"
                       "    width: 24px;\n"
                       "    border-left: 1px solid #dcdde1;\n"
                       "    border-top-right-radius: 4px;\n"
                       "    border-bottom-right-radius: 4px;\n"
                       "    background-color: #f8f9fa;\n"
-                      "}\n"
-                      "QDateTimeEdit::down-arrow {\n"
-                      "    image: none;\n"
-                      "    font-family: 'Font Awesome 6 Free';\n"
-                      "    font-weight: 900;\n"
-                      "    content: '\\f078';\n"
-                      "    color: #4a69bd;\n"
-                      "    font-size: 12px;\n"
-                      "}\n"
-                      "\n"
-                      "/* QDateEdit 下拉框样式 */\n"
-                      "QDateEdit {\n"
-                      "    border: none;"
-                      "    width: 12px;"
-                      "    height: 12px;"
-                      "    background-color: transparent;"
-                      "}\n"
-                      "QDateEdit::drop-down {\n"
-                      "    border: none;\n"
-                      "    width: 24px;\n"
-                      "    border-left: 1px solid #dcdde1;\n"
-                      "    border-top-right-radius: 4px;\n"
-                      "    border-bottom-right-radius: 4px;\n"
-                      "    background-color: #f8f9fa;\n"
-                      "}\n"
-                      "QDateEdit::down-arrow {\n"
-                      "    image: none;\n"
-                      "    font-family: 'Font Awesome 6 Free';\n"
-                      "    font-weight: 900;\n"
-                      "    content: '\\f078';\n"
-                      "    color: #4a69bd;\n"
-                      "    font-size: 12px;\n"
-                      "}\n"
-                      // （移除content，仅保留基础样式）
-                      "\n/* ========== AI修复下拉框样式（覆盖原有down-arrow） ========== */\n"
-                      "QComboBox::down-arrow {\n"
-                      "    border: none;\n"
-                      "    width: 12px;\n"
-                      "    height: 12px;\n"
-                      "    background-color: transparent;\n"
-                      "}\n"
-                      "\n"
-                      "QDateTimeEdit::down-arrow {\n"
-                      "    border: none;\n"
-                      "    width: 12px;\n"
-                      "    height: 12px;\n"
-                      "    background-color: transparent;\n"
-                      "}\n"
-                      "\n"
-                      "QDateEdit::down-arrow {\n"
-                      "    border: none;\n"
-                      "    width: 12px;\n"
-                      "    height: 12px;\n"
-                      "    background-color: transparent;\n"
                       "}";
 
         app.setStyleSheet(styleSheet);
@@ -156,6 +101,7 @@ bool setupApplicationStyle(QApplication &app)
 
     return true;
 }
+
 
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
