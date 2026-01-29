@@ -943,7 +943,12 @@ void MainWindow::onReservationQueryRequested(const QString &placeId)
 {
     qDebug() << "MainWindow::onReservationQueryRequested 收到信号，placeId =" << placeId;
 
-    if (!m_tcpClient || !m_tcpClient->isConnected()) {
+    if (!m_tcpClient) {
+        qCritical() << "错误: TCP客户端未初始化";
+        return;
+    }
+
+    if (!m_tcpClient->isConnected()) {
         QMessageBox::warning(this, "查询失败", "网络未连接");
         return;
     }
@@ -957,6 +962,7 @@ void MainWindow::onReservationQueryRequested(const QString &placeId)
         logMessage(QString("预约查询已发送: 场所[%1]").arg(placeId));
     } else {
         logMessage("预约查询发送失败");
+        QMessageBox::warning(this, "发送失败", "预约查询请求发送失败");
     }
 }
 
@@ -1002,25 +1008,31 @@ void MainWindow::handleReservationApplyResponse(const ProtocolParser::ParseResul
     }
 }
 
+// 在 mainwindow.cpp 中修改这个函数
 void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResult &result)
 {
     QString payload = QString::fromStdString(result.payload);
-    QStringList parts = payload.split('|', Qt::SkipEmptyParts);
 
     qDebug() << "=== 查询响应处理 ===";
     qDebug() << "原始payload:" << payload;
-    qDebug() << "解析parts:" << parts;
 
     // 检查是否为错误响应
-    if (parts.isEmpty() || parts[0] == "fail") {
-        QString err = parts.size() >= 2 ? parts[1] : "查询失败";
-        qDebug() << "查询失败:" << err;
+    if (payload.isEmpty() || payload.startsWith("fail|")) {
+        QString errorMsg = payload.isEmpty() ? "查询失败" : payload.mid(5);
+        qDebug() << "查询失败:" << errorMsg;
+
+        if (m_reservationPage) {
+            QMetaObject::invokeMethod(m_reservationPage, [this]() {
+                m_reservationPage->updateQueryResultTable("");
+            }, Qt::QueuedConnection);
+        }
         return;
     }
 
+    // 处理响应数据
     QString data;
-    if (parts[0] == "success" && parts.size() > 1) {
-        data = payload.mid(parts[0].length() + 1);
+    if (payload.startsWith("success|")) {
+        data = payload.mid(8); // "success|" 长度是8
     } else {
         data = payload;
     }
@@ -1038,15 +1050,18 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
 
     if (currentTab == 2) {            // 审批页
         qDebug() << "分发到审批页";
-        m_reservationPage->loadAllReservationsForApproval(data);
+        QMetaObject::invokeMethod(m_reservationPage, [this, data]() {
+            m_reservationPage->loadAllReservationsForApproval(data);
+        }, Qt::QueuedConnection);
     } else if (currentTab == 1) {     // 查询页
         qDebug() << "分发到查询页";
-        m_reservationPage->updateQueryResultTable(data);
+        QMetaObject::invokeMethod(m_reservationPage, [this, data]() {
+            m_reservationPage->updateQueryResultTable(data);
+        }, Qt::QueuedConnection);
     } else {
         qDebug() << "数据未处理，当前标签页:" << currentTab;
     }
 }
-
 void MainWindow::handleReservationApproveResponse(const ProtocolParser::ParseResult &result)
 {
     QString payload = QString::fromStdString(result.payload);

@@ -14,7 +14,7 @@ class ReservationCard : public QWidget
     Q_OBJECT
 
 public:
-    explicit ReservationCard(const QString &reservationId, const QString &place,
+    explicit ReservationCard(const QString &reservationId, const QString &placeId, const QString &placeName,
                              const QString &userId, const QString &purpose,
                              const QString &startTime, const QString &endTime,
                              const QString &status, const QString &equipmentList,
@@ -22,7 +22,8 @@ public:
 
     // 获取预约信息的公共方法
     QString reservationId() const { return m_reservationId; }
-    QString place() const { return m_place; }
+    QString placeId() const { return m_placeId; }
+    QString placeName() const { return m_placeName; }
     QString userId() const { return m_userId; }
     QString purpose() const { return m_purpose; }
     QString startTime() const { return m_startTime; }
@@ -61,7 +62,8 @@ private:
 
     // 成员变量
     QString m_reservationId;
-    QString m_place;
+    QString m_placeId;
+    QString m_placeName;
     QString m_userId;
     QString m_purpose;
     QString m_startTime;

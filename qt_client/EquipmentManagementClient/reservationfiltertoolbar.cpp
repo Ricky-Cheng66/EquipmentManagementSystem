@@ -4,6 +4,8 @@
 
 ReservationFilterToolBar::ReservationFilterToolBar(QWidget *parent)
     : QWidget(parent)
+    , m_filterTimer(nullptr)
+    , m_isPlaceListMode(false)  // 默认不是场所列表模式
 {
     setObjectName("reservationFilterToolBar");
 
@@ -12,11 +14,43 @@ ReservationFilterToolBar::ReservationFilterToolBar(QWidget *parent)
     m_mainLayout->setContentsMargins(10, 5, 10, 5);
     m_mainLayout->setSpacing(15);
 
+    // 返回按钮（初始隐藏）
+    m_backButton = new QPushButton("← 返回场所列表", this);
+    m_backButton->setFixedWidth(120);
+    m_backButton->setVisible(false);
+    m_backButton->setStyleSheet(
+        "QPushButton {"
+        "    background-color: #95a5a6;"
+        "    color: white;"
+        "    border: none;"
+        "    border-radius: 4px;"
+        "    padding: 6px 12px;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #7f8c8d;"
+        "}"
+        );
+
+    // 场所类型筛选（新增）
+    QLabel *placeTypeLabel = new QLabel("类型:", this);
+    m_placeTypeCombo = new QComboBox(this);
+    m_placeTypeCombo->addItem("全部类型", "all");
+    m_placeTypeCombo->addItem("教室", "classroom");
+    m_placeTypeCombo->addItem("实验室", "lab");
+    m_placeTypeCombo->addItem("会议室", "meeting");
+    m_placeTypeCombo->addItem("办公室", "office");
+    m_placeTypeCombo->addItem("体育馆", "gym");
+    m_placeTypeCombo->addItem("图书馆", "library");
+    m_placeTypeCombo->addItem("其他", "other");
+    m_placeTypeCombo->setFixedWidth(100);
+    m_placeTypeCombo->setCurrentIndex(0);
+
     // 场所筛选
     QLabel *placeLabel = new QLabel("场所:", this);
     m_placeCombo = new QComboBox(this);
     m_placeCombo->addItem("全部场所", "all");
     m_placeCombo->setFixedWidth(150);
+    m_placeCombo->setCurrentIndex(0);
 
     // 状态筛选
     QLabel *statusLabel = new QLabel("状态:", this);
@@ -28,6 +62,7 @@ ReservationFilterToolBar::ReservationFilterToolBar(QWidget *parent)
     m_statusCombo->addItem("已完成", "completed");
     m_statusCombo->addItem("已取消", "cancelled");
     m_statusCombo->setFixedWidth(100);
+    m_statusCombo->setCurrentIndex(0);
 
     // 日期筛选
     QLabel *dateLabel = new QLabel("日期:", this);
@@ -37,6 +72,7 @@ ReservationFilterToolBar::ReservationFilterToolBar(QWidget *parent)
     m_dateFilterCombo->addItem("本周", "week");
     m_dateFilterCombo->addItem("本月", "month");
     m_dateFilterCombo->setFixedWidth(100);
+    m_dateFilterCombo->setCurrentIndex(0);
 
     // 日期范围
     QLabel *startLabel = new QLabel("从:", this);
@@ -62,7 +98,10 @@ ReservationFilterToolBar::ReservationFilterToolBar(QWidget *parent)
     m_refreshButton = new QPushButton("🔄 刷新", this);
     m_refreshButton->setFixedWidth(80);
 
-    // 添加到布局
+    // 添加到布局（注意顺序）
+    m_mainLayout->addWidget(m_backButton);
+    m_mainLayout->addWidget(placeTypeLabel);
+    m_mainLayout->addWidget(m_placeTypeCombo);
     m_mainLayout->addWidget(placeLabel);
     m_mainLayout->addWidget(m_placeCombo);
     m_mainLayout->addWidget(statusLabel);
@@ -100,18 +139,28 @@ ReservationFilterToolBar::ReservationFilterToolBar(QWidget *parent)
         "}"
         );
 
+    // 创建防抖定时器
+    m_filterTimer = new QTimer(this);
+    m_filterTimer->setSingleShot(true);
+    m_filterTimer->setInterval(300);
+
     // 连接信号
+    connect(m_backButton, &QPushButton::clicked, this, &ReservationFilterToolBar::backToPlaceListRequested);
+    connect(m_placeTypeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            [this]() { m_filterTimer->start(); });
     connect(m_placeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &ReservationFilterToolBar::filterChanged);
+            [this]() { m_filterTimer->start(); });
     connect(m_statusCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &ReservationFilterToolBar::filterChanged);
+            [this]() { m_filterTimer->start(); });
     connect(m_dateFilterCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &ReservationFilterToolBar::filterChanged);
+            [this]() { m_filterTimer->start(); });
     connect(m_startDateEdit, &QDateEdit::dateChanged,
-            this, &ReservationFilterToolBar::filterChanged);
+            [this]() { m_filterTimer->start(); });
     connect(m_endDateEdit, &QDateEdit::dateChanged,
-            this, &ReservationFilterToolBar::filterChanged);
+            [this]() { m_filterTimer->start(); });
     connect(m_searchEdit, &QLineEdit::textChanged,
+            [this]() { m_filterTimer->start(); });
+    connect(m_filterTimer, &QTimer::timeout,
             this, &ReservationFilterToolBar::filterChanged);
     connect(m_refreshButton, &QPushButton::clicked,
             this, &ReservationFilterToolBar::refreshRequested);
@@ -150,6 +199,11 @@ QString ReservationFilterToolBar::selectedDate() const
     return m_dateFilterCombo->currentData().toString();
 }
 
+QString ReservationFilterToolBar::selectedPlaceType() const
+{
+    return m_placeTypeCombo->currentData().toString();
+}
+
 QString ReservationFilterToolBar::searchText() const
 {
     return m_searchEdit->text().trimmed();
@@ -167,8 +221,13 @@ void ReservationFilterToolBar::setPlaces(const QStringList &places)
 
 void ReservationFilterToolBar::setStatuses(const QStringList &statuses)
 {
-    // 这个方法可以根据需要添加更多状态
     Q_UNUSED(statuses);
+}
+
+void ReservationFilterToolBar::setPlaceTypes(const QStringList &types)
+{
+    // 这个方法可以根据需要动态添加类型
+    Q_UNUSED(types);
 }
 
 QDate ReservationFilterToolBar::startDate() const
@@ -185,4 +244,37 @@ void ReservationFilterToolBar::setDateRange(const QDate &start, const QDate &end
 {
     if (m_startDateEdit) m_startDateEdit->setDate(start);
     if (m_endDateEdit) m_endDateEdit->setDate(end);
+}
+
+void ReservationFilterToolBar::setMode(bool isPlaceListMode, const QString &placeName)
+{
+    m_isPlaceListMode = isPlaceListMode;
+
+    // 根据模式显示/隐藏控件
+    m_backButton->setVisible(!isPlaceListMode);      // 非场所列表模式显示返回按钮
+
+    if (isPlaceListMode) {
+        // 场所列表模式：显示场所类型筛选，隐藏其他筛选
+        m_placeTypeCombo->setVisible(true);
+        m_placeCombo->setVisible(false);
+        m_statusCombo->setVisible(false);
+        m_dateFilterCombo->setVisible(false);
+        m_startDateEdit->setVisible(false);
+        m_endDateEdit->setVisible(false);
+        m_searchEdit->setPlaceholderText("搜索场所名称");
+    } else {
+        // 场所详情模式：隐藏场所筛选，显示其他筛选
+        m_placeTypeCombo->setVisible(false);
+        m_placeCombo->setVisible(false);  // 隐藏场所下拉框
+        m_statusCombo->setVisible(true);
+        m_dateFilterCombo->setVisible(true);
+        m_startDateEdit->setVisible(true);
+        m_endDateEdit->setVisible(true);
+        m_searchEdit->setPlaceholderText("用途或用户ID");
+
+        // 如果传入了场所名称，可以在界面上显示一个标签来标识当前场所
+        // 这需要额外的UI元素，目前我们先隐藏场所筛选即可
+    }
+
+    qDebug() << "筛选工具栏模式设置完成:" << (isPlaceListMode ? "场所列表模式" : "场所详情模式");
 }

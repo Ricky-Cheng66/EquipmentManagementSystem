@@ -4,26 +4,38 @@
 #include <QDebug>
 #include <QDateTime>
 
-ReservationCard::ReservationCard(const QString &reservationId, const QString &place,
+ReservationCard::ReservationCard(const QString &reservationId, const QString &placeId, const QString &placeName,
                                  const QString &userId, const QString &purpose,
                                  const QString &startTime, const QString &endTime,
                                  const QString &status, const QString &equipmentList,
                                  QWidget *parent)
     : QWidget(parent)
-    , m_reservationId(reservationId)
-    , m_place(place)
-    , m_userId(userId)
-    , m_purpose(purpose)
-    , m_startTime(startTime)
-    , m_endTime(endTime)
-    , m_status(status.trimmed())
-    , m_equipmentList(equipmentList)
+    , m_reservationId(reservationId.isEmpty() ? "未知ID" : reservationId)
+    , m_placeId(placeId.isEmpty() ? "未知场所ID" : placeId)
+    , m_placeName(placeName.isEmpty() ? "未知场所" : placeName)
+    , m_userId(userId.isEmpty() ? "未知用户" : userId)
+    , m_purpose(purpose.isEmpty() ? "未指定用途" : purpose)
+    , m_startTime(startTime.isEmpty() ? QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss") : startTime)
+    , m_endTime(endTime.isEmpty() ? QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss") : endTime)
+    , m_status(status.trimmed().isEmpty() ? "pending" : status.trimmed())
+    , m_equipmentList(equipmentList.isEmpty() ? "无设备" : equipmentList)
     , m_selected(false)
 {
-    setupUI();
-    setFixedSize(320, 220); // 固定卡片大小
-    setMouseTracking(true);
-    updateCardStyle();
+    qDebug() << "创建预约卡片: ID=" << m_reservationId
+             << "场所ID=" << m_placeId
+             << "场所名称=" << m_placeName
+             << "状态=" << m_status;
+
+    try {
+        setupUI();
+        setFixedSize(320, 220);
+        setMouseTracking(true);
+        updateCardStyle();
+    } catch (const std::exception &e) {
+        qCritical() << "创建预约卡片时异常:" << e.what();
+    } catch (...) {
+        qCritical() << "创建预约卡片时未知异常";
+    }
 }
 
 void ReservationCard::setupUI()
@@ -71,7 +83,7 @@ void ReservationCard::setupUI()
     contentLayout->addLayout(topLayout);
 
     // ===== 场所信息 =====
-    m_placeLabel = new QLabel("🏢 " + m_place, m_contentWidget);
+    m_placeLabel = new QLabel("🏢 " + m_placeName, m_contentWidget);  // 使用场所名称
     m_placeLabel->setStyleSheet(
         "QLabel {"
         "    font-size: 14px;"
@@ -162,6 +174,7 @@ void ReservationCard::setupUI()
     }
 }
 
+
 void ReservationCard::updateCardStyle()
 {
     QString statusColor = getStatusColor(m_status);
@@ -198,14 +211,23 @@ void ReservationCard::updateCardStyle()
 
 QDate ReservationCard::getStartDate() const
 {
-    // 假设 m_startTime 格式为 "yyyy-MM-dd HH:mm:ss"
-    return QDate::fromString(m_startTime.left(10), "yyyy-MM-dd");
+    // 支持多种日期时间格式
+    QString dateStr = m_startTime.split(" ")[0]; // 获取日期部分
+    QDate date = QDate::fromString(dateStr, "yyyy-MM-dd");
+    if (!date.isValid()) {
+        date = QDate::fromString(dateStr, "yyyy/MM/dd");
+    }
+    return date;
 }
 
 QDate ReservationCard::getEndDate() const
 {
-    // 假设 m_endTime 格式为 "yyyy-MM-dd HH:mm:ss"
-    return QDate::fromString(m_endTime.left(10), "yyyy-MM-dd");
+    QString dateStr = m_endTime.split(" ")[0];
+    QDate date = QDate::fromString(dateStr, "yyyy-MM-dd");
+    if (!date.isValid()) {
+        date = QDate::fromString(dateStr, "yyyy/MM/dd");
+    }
+    return date;
 }
 
 void ReservationCard::updateStatus(const QString &status)

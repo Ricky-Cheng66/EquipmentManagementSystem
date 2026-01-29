@@ -17,14 +17,19 @@
 #include <QScrollArea>
 #include <QGridLayout>
 #include <QStackedWidget>
+#include <QThread>
 #include <QMap>
 #include <QCheckBox>
+#include <QTimer>
+#include <QElapsedTimer>
 #include "protocol_parser.h"
 #include "reservationcard.h"
 #include "reservationfiltertoolbar.h"
+#include "placecard.h"
 
 // 前向声明
 class PlaceCard;
+class PlaceQueryCard;
 
 class ReservationWidget : public QWidget
 {
@@ -44,15 +49,15 @@ public:
     QString getPlaceNameById(const QString &placeId);
     QStringList getEquipmentListForPlace(const QString &placeId) const;
     void updateEquipmentListDisplay();
-
-
+    // 线程安全检查方法
+    bool isInMainThread() const { return thread() == QThread::currentThread(); }
     QComboBox *m_placeComboApply;
     QComboBox *m_placeComboQuery;
     QTabWidget *m_tabWidget;
+
 protected:
-
     void resizeEvent(QResizeEvent *event) override;
-
+    bool event(QEvent *event) override;
 signals:
     void reservationApplyRequested(const QString &placeId, const QString &purpose,
                                    const QString &startTime, const QString &endTime);
@@ -60,9 +65,10 @@ signals:
     void reservationApproveRequested(int reservationId, const QString &placeId, bool approve);
     void loadAllReservationsRequested();
     void placeListLoaded();
+
 public slots:
-    // 更新场所卡片的公有方法
     void updatePlaceCards();
+
 private slots:
     void onApplyButtonClicked();
     void onQueryButtonClicked();
@@ -73,7 +79,6 @@ private slots:
     void onStatusActionRequested(const QString &reservationId, const QString &action);
     void onFilterChanged();
     void onRefreshQueryRequested();
-
     void onPlaceCardClicked(const QString &placeId);
     void onSelectAllChanged(int state);
     void onBatchApprove();
@@ -81,17 +86,36 @@ private slots:
     void onApproveFilterChanged();
     void onApproveRefreshRequested();
 
+    // 新增槽函数
+    void onPlaceQueryCardClicked(const QString &placeId);
+    void onQuickReserveRequested(const QString &placeId);
+    void onBackToPlaceList();
+
+     void safeUpdateQueryResultTable(const QString &data);
 private:
     void setupApplyTab();
     void setupQueryTab();
     void setupApproveTab();
-    void setupQueryCardView();
+    void setupPlaceListPage();        // 新增：设置场所列表页面
+    void setupPlaceDetailPage();      // 新增：设置场所详情页面
+    void refreshPlaceListView();      // 新增：刷新场所列表视图
+    void refreshPlaceDetailView();    // 新增：刷新场所详情视图
+    void clearPlaceListView();        // 新增：清空场所列表
+    void calculatePlaceStats();       // 新增：计算场所统计数据
+
     void refreshQueryCardView();
     void clearQueryCardView();
     void refreshApproveCardView();
+    void refreshQueryCardViewForPlace(const QString &placeId);
     void clearApproveCardView();
     void applyQueryFilters();
     void updatePlaceCardsLayout();
+
+    // 新增：场所统计数据
+    QMap<QString, int> m_placeReservationCount; // 场所ID -> 预约数量
+    QMap<QString, QStringList> m_placeReservations; // 场所ID -> 预约记录列表
+    // 新增：辅助函数声明
+    QString detectPlaceType(const QString &placeName);
 
     // 申请页控件
     QLabel *m_equipmentListLabel;
@@ -107,7 +131,7 @@ private:
     // 申请页新成员
     QWidget *m_placeCardsContainer;
     QGridLayout *m_placeCardsLayout;
-    QMap<QString, PlaceCard*> m_placeCards;  // 修正为正确的类型
+    QMap<QString, PlaceCard*> m_placeCards;
     QString m_selectedPlaceId;
     QTextEdit *m_selectedEquipmentText;
 
@@ -120,9 +144,28 @@ private:
     QStackedWidget *m_queryViewStack;
     QTableWidget *m_queryResultTable;
 
+    // 新增：查询页两级导航
+    QWidget *m_placeListPage;          // 场所列表页面（第一级）
+    QWidget *m_placeDetailPage;        // 场所详情页面（第二级）
+    QGridLayout *m_placeListLayout;    // 场所列表布局
+    QVBoxLayout *m_placeDetailLayout;  // 场所详情布局
+    QList<PlaceQueryCard*> m_placeQueryCards; // 场所查询卡片列表
+    QString m_currentPlaceId;          // 当前选中的场所ID
+    QString m_currentPlaceName;        // 当前选中的场所名称
+
+    // 新增：场所详情页控件
+    ReservationFilterToolBar *m_queryFilterBarDetail; // 场所详情页的筛选工具栏
+    QLabel *m_placeDetailNameLabel;   // 场所详情页的场所名称标签
+    QLabel *m_placeDetailStatsLabel;  // 场所详情页的统计信息标签
+
     // 查询页卡片相关
     QList<ReservationCard*> m_queryCards;
     QMap<QString, ReservationCard*> m_queryCardMap;
+
+    // 刷新控制成员
+    bool m_isRefreshingQueryView;
+    QTimer *m_refreshQueryTimer;
+    QTimer *m_placeListRefreshTimer;   // 新增：场所列表刷新定时器
 
     // 审批页新成员
     ReservationFilterToolBar *m_approveFilterBar;
@@ -130,7 +173,7 @@ private:
     QVBoxLayout *m_approveCardLayout;
     QList<ReservationCard*> m_approveCards;
     QMap<QString, ReservationCard*> m_approveCardMap;
-    QCheckBox *m_selectAllCheck;  // 修正为 QCheckBox*
+    QCheckBox *m_selectAllCheck;
     QPushButton *m_batchApproveButton;
     QPushButton *m_batchRejectButton;
 
@@ -139,6 +182,7 @@ private:
 
     QString m_currentUserId;
     QString m_userRole;
+
 };
 
 #endif // RESERVATIONWIDGET_H
