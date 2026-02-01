@@ -512,26 +512,40 @@ void ReservationWidget::refreshPlaceListView()
         return;
     }
 
-    // 先清空现有布局，但不删除卡片对象
+    // 1. 完全清空现有布局，并删除所有子控件
     try {
-        // 从布局中移除所有项目，但不删除控件
-        while (QLayoutItem* item = m_placeListLayout->takeAt(0)) {
-            if (item->widget()) {
-                // 只从布局中移除，不删除控件
-                m_placeListLayout->removeWidget(item->widget());
+        // 首先删除所有场所卡片对象
+        for (PlaceQueryCard *card : m_placeQueryCards) {
+            if (card) {
+                card->disconnect();  // 断开所有连接
+                card->deleteLater();
             }
-            delete item;
+        }
+        m_placeQueryCards.clear();
+
+        // 从布局中移除并删除所有控件（包括统计标签）
+        QLayoutItem *child;
+        while ((child = m_placeListLayout->takeAt(0)) != nullptr) {
+            if (child->widget()) {
+                QWidget *widget = child->widget();
+                widget->hide();
+                widget->setParent(nullptr);
+
+                // 只删除统计标签，保留空状态标签（如果需要）
+                if (widget->objectName() != "emptyPlaceLabel") {
+                    widget->deleteLater();
+                }
+            }
+            delete child;
         }
     } catch (...) {
         qWarning() << "清空场所列表布局时异常";
     }
 
-    // 清空场所卡片列表（控件由布局管理删除）
-    m_placeQueryCards.clear();
-
-    // 如果没有场所数据，显示提示
+    // 2. 如果没有场所数据，显示提示
     if (m_placeReservationCount.isEmpty()) {
         QLabel *emptyLabel = new QLabel("📭 暂无场所信息\n请先查询预约记录以加载场所数据", m_placeListPage);
+        emptyLabel->setObjectName("emptyPlaceLabel");
         emptyLabel->setAlignment(Qt::AlignCenter);
         emptyLabel->setStyleSheet(
             "QLabel {"
@@ -546,18 +560,20 @@ void ReservationWidget::refreshPlaceListView()
         return;
     }
 
-    // 获取筛选条件
+    // 3. 获取筛选条件
     QString selectedPlaceType = m_queryFilterBar ? m_queryFilterBar->selectedPlaceType() : "all";
     QString searchText = m_queryFilterBar ? m_queryFilterBar->searchText() : "";
 
-    // 计算每行卡片数量
+    // 4. 计算每行卡片数量
     int containerWidth = m_placeListPage->width();
     if (containerWidth <= 0) containerWidth = 800;
-    int cardsPerRow = qMax(1, containerWidth / 300);
+    int cardsPerRow = qMax(1, containerWidth / 300); // 适当调整卡片宽度
 
     int row = 0, col = 0, visibleCards = 0;
 
-    // 遍历所有场所，创建卡片
+    // 5. 收集要显示的场所
+    QVector<QPair<QString, QString>> placesToShow; // <placeId, placeName>
+
     for (auto it = m_placeReservationCount.begin(); it != m_placeReservationCount.end(); ++it) {
         QString placeId = it.key();
         int reservationCount = it.value();
@@ -592,36 +608,58 @@ void ReservationWidget::refreshPlaceListView()
         }
 
         if (shouldShow) {
-            try {
-                // 创建新的卡片，不重用旧卡片
-                PlaceQueryCard *card = new PlaceQueryCard(placeId, placeName, equipmentList,
-                                                          reservationCount, m_placeListPage);
-
-                if (card) {
-                    connect(card, &PlaceQueryCard::cardClicked,
-                            this, &ReservationWidget::onPlaceQueryCardClicked);
-                    connect(card, &PlaceQueryCard::quickReserveRequested,
-                            this, &ReservationWidget::onQuickReserveRequested);
-
-                    m_placeQueryCards.append(card);
-                    m_placeListLayout->addWidget(card, row, col);
-                    visibleCards++;
-
-                    col++;
-                    if (col >= cardsPerRow) {
-                        col = 0;
-                        row++;
-                    }
-                }
-            } catch (const std::exception &e) {
-                qWarning() << "创建场所卡片时异常:" << e.what();
-            } catch (...) {
-                qWarning() << "创建场所卡片时未知异常";
-            }
+            placesToShow.append(qMakePair(placeId, placeName));
         }
     }
 
-    // 如果没有可见卡片，显示提示
+    // 6. 检查去重：确保同一个场所ID只显示一次
+    QSet<QString> uniquePlaceIds;
+    for (int i = 0; i < placesToShow.size(); i++) {
+        const QString &placeId = placesToShow[i].first;
+        if (uniquePlaceIds.contains(placeId)) {
+            qWarning() << "发现重复的场所ID:" << placeId << "，将被移除";
+            placesToShow.removeAt(i);
+            i--; // 调整索引
+        } else {
+            uniquePlaceIds.insert(placeId);
+        }
+    }
+
+    // 7. 创建卡片
+    for (const auto &placeInfo : placesToShow) {
+        QString placeId = placeInfo.first;
+        QString placeName = placeInfo.second;
+        int reservationCount = m_placeReservationCount.value(placeId, 0);
+        QStringList equipmentList = getEquipmentListForPlace(placeId);
+
+        try {
+            PlaceQueryCard *card = new PlaceQueryCard(placeId, placeName, equipmentList,
+                                                      reservationCount, m_placeListPage);
+
+            if (card) {
+                connect(card, &PlaceQueryCard::cardClicked,
+                        this, &ReservationWidget::onPlaceQueryCardClicked);
+                connect(card, &PlaceQueryCard::quickReserveRequested,
+                        this, &ReservationWidget::onQuickReserveRequested);
+
+                m_placeQueryCards.append(card);
+                m_placeListLayout->addWidget(card, row, col);
+                visibleCards++;
+
+                col++;
+                if (col >= cardsPerRow) {
+                    col = 0;
+                    row++;
+                }
+            }
+        } catch (const std::exception &e) {
+            qWarning() << "创建场所卡片时异常:" << e.what();
+        } catch (...) {
+            qWarning() << "创建场所卡片时未知异常";
+        }
+    }
+
+    // 8. 如果没有可见卡片，显示提示
     if (visibleCards == 0) {
         QString filterInfo;
         if (selectedPlaceType != "all") filterInfo += QString("类型:%1 ").arg(selectedPlaceType);
@@ -632,6 +670,7 @@ void ReservationWidget::refreshPlaceListView()
                 "🔍 没有符合条件的场所" :
                 QString("🔍 没有符合条件的场所\n筛选条件: %1").arg(filterInfo),
             m_placeListPage);
+        noMatchLabel->setObjectName("emptyPlaceLabel");
         noMatchLabel->setAlignment(Qt::AlignCenter);
         noMatchLabel->setStyleSheet(
             "QLabel {"
@@ -644,10 +683,21 @@ void ReservationWidget::refreshPlaceListView()
             );
         m_placeListLayout->addWidget(noMatchLabel, 0, 0, 1, cardsPerRow, Qt::AlignCenter);
     } else {
-        // 添加统计信息
+        // 只在最后一行之后添加一个统计标签
+        // 确定统计标签的位置
+        int statsRow = row + 1;
+        if (col == 0) {
+            // 如果最后一行已满，统计标签放在下一行
+            statsRow = row;
+        } else {
+            // 如果最后一行未满，统计标签放在当前行的下一行
+            statsRow = row + 1;
+        }
+
         QLabel *statsLabel = new QLabel(
             QString("共找到 %1 个场所").arg(visibleCards),
             m_placeListPage);
+        statsLabel->setObjectName("statsLabel");
         statsLabel->setStyleSheet(
             "QLabel {"
             "    color: #4a69bd;"
@@ -659,10 +709,10 @@ void ReservationWidget::refreshPlaceListView()
             "    margin: 5px;"
             "}"
             );
-        m_placeListLayout->addWidget(statsLabel, row + 1, 0, 1, cardsPerRow, Qt::AlignCenter);
+        m_placeListLayout->addWidget(statsLabel, statsRow, 0, 1, cardsPerRow, Qt::AlignCenter);
     }
 
-    qDebug() << "场所列表刷新完成，显示" << visibleCards << "个场所";
+    qDebug() << "场所列表刷新完成，显示" << visibleCards << "个场所，去重前总数:" << m_placeReservationCount.size();
 }
 
 // 新增：刷新场所详情视图
@@ -703,20 +753,29 @@ void ReservationWidget::calculatePlaceStats()
     m_placeReservationCount.clear();
     m_placeReservations.clear();
 
+    // 使用QSet来去重，确保每个场所只被统计一次
+    QSet<QString> uniquePlaceIds;
+
     // 遍历所有预约记录，按场所分组
     for (ReservationCard *card : m_queryCards) {
         if (!card) continue;
 
         QString placeId = card->placeId();
 
-        // 统计预约数量
-        m_placeReservationCount[placeId] = m_placeReservationCount.value(placeId, 0) + 1;
+        // 如果已经统计过这个场所，跳过
+        if (!uniquePlaceIds.contains(placeId)) {
+            uniquePlaceIds.insert(placeId);
 
-        // 收集预约记录（用于快速访问）
-        if (!m_placeReservations.contains(placeId)) {
-            m_placeReservations[placeId] = QStringList();
+            // 统计这个场所的预约数量
+            int countForThisPlace = 0;
+            for (ReservationCard *otherCard : m_queryCards) {
+                if (otherCard && otherCard->placeId() == placeId) {
+                    countForThisPlace++;
+                }
+            }
+
+            m_placeReservationCount[placeId] = countForThisPlace;
         }
-        m_placeReservations[placeId].append(card->reservationId());
     }
 
     qDebug() << "场所统计完成，共" << m_placeReservationCount.size() << "个场所有预约记录";
@@ -850,18 +909,29 @@ void ReservationWidget::clearPlaceListView()
     }
 
     // 删除所有场所卡片
-    qDeleteAll(m_placeQueryCards);
+    for (PlaceQueryCard *card : m_placeQueryCards) {
+        if (card) {
+            card->disconnect();  // 断开所有连接
+            card->deleteLater();
+        }
+    }
     m_placeQueryCards.clear();
 
-    // 清空布局（不移除布局本身）
+    // 清空布局
     if (m_placeListLayout) {
-        // 安全地移除所有子控件
-        QLayoutItem *item;
-        while ((item = m_placeListLayout->takeAt(0)) != nullptr) {
-            if (item->widget()) {
-                m_placeListLayout->removeWidget(item->widget());
+        try {
+            QLayoutItem *child;
+            while ((child = m_placeListLayout->takeAt(0)) != nullptr) {
+                if (child->widget()) {
+                    QWidget *widget = child->widget();
+                    widget->hide();
+                    widget->setParent(nullptr);
+                    widget->deleteLater();
+                }
+                delete child;
             }
-            delete item;
+        } catch (...) {
+            qWarning() << "清空场所列表布局时异常";
         }
     }
 
