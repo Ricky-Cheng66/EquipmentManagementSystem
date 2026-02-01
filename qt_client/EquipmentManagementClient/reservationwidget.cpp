@@ -5,14 +5,11 @@
 #include "placequerycard.h"
 
 #include <QMessageBox>
-#include <QHeaderView>
-#include <QLabel>
-#include <QTimer>
+#include <QPushButton>
 #include <QDebug>
-#include <QGridLayout>
+#include <QTimer>
 #include <QElapsedTimer>
 #include <QScrollArea>
-#include <QPushButton>
 #include <QGroupBox>
 #include <QDateEdit>
 #include <QTimeEdit>
@@ -20,6 +17,8 @@
 #include <QCheckBox>
 #include <QTableWidget>
 #include <QStackedWidget>
+#include <QLabel>
+#include <QHeaderView>
 
 ReservationWidget::ReservationWidget(QWidget *parent)
     : QWidget(parent), m_tabWidget(new QTabWidget(this))
@@ -45,6 +44,7 @@ ReservationWidget::ReservationWidget(QWidget *parent)
     , m_placeDetailPage(nullptr)
     , m_placeListLayout(nullptr)
     , m_placeDetailLayout(nullptr)
+    , m_isRefreshingApproveView(false)
 {
     qDebug() << "ReservationWidget 构造函数开始";
 
@@ -84,6 +84,23 @@ ReservationWidget::~ReservationWidget()
         m_placeListRefreshTimer->stop();
         delete m_placeListRefreshTimer;
         m_placeListRefreshTimer = nullptr;
+    }
+
+    // 断开所有信号连接，避免析构后仍有信号触发
+    if (m_approveFilterBar) {
+        m_approveFilterBar->disconnect(this);
+    }
+
+    if (m_queryFilterBar) {
+        m_queryFilterBar->disconnect(this);
+    }
+
+    if (m_queryFilterBarDetail) {
+        m_queryFilterBarDetail->disconnect(this);
+    }
+
+    if (m_tabWidget) {
+        m_tabWidget->disconnect(this);
     }
 
     // 清理申请页的场所卡片
@@ -299,6 +316,19 @@ void ReservationWidget::setupApproveTab()
     // ===== 筛选工具栏 =====
     m_approveFilterBar = new ReservationFilterToolBar(approveTab);
     mainLayout->addWidget(m_approveFilterBar);
+
+    // 初始化场所列表（从申请页复制数据）
+    if (m_placeComboApply) {
+        QStringList places;
+        places << "全部场所";
+        for (int i = 0; i < m_placeComboApply->count(); ++i) {
+            QString placeName = m_placeComboApply->itemText(i);
+            if (!placeName.isEmpty() && !places.contains(placeName)) {
+                places << placeName;
+            }
+        }
+        m_approveFilterBar->setPlaces(places);
+    }
 
     // ===== 创建卡片容器 =====
     m_approveCardContainer = new QWidget(approveTab);
@@ -1024,6 +1054,8 @@ void ReservationWidget::onFilterChanged()
 
 void ReservationWidget::refreshQueryCardView()
 {
+    QMutexLocker locker(&m_refreshMutex);  // 使用互斥锁保护
+
     qDebug() << "=== 刷新预约查询卡片视图 ===";
 
     // 防止重复刷新
@@ -1038,6 +1070,14 @@ void ReservationWidget::refreshQueryCardView()
         qDebug() << "错误: 关键控件为空";
         return;
     }
+
+    // 检查是否正在刷新，避免重复操作
+    if (m_isRefreshingQueryView) {
+        qDebug() << "正在刷新中，跳过此次刷新";
+        return;
+    }
+
+    m_isRefreshingQueryView = true;
 
     // 直接清空并重新构建布局
     // 1. 从布局中移除所有卡片（但不删除卡片对象）
@@ -1237,6 +1277,7 @@ void ReservationWidget::refreshQueryCardView()
     }
 
     m_queryCardLayout->addStretch();
+    m_isRefreshingQueryView = false;
     qDebug() << "刷新完成，筛选条件 - 场所:" << selectedPlace
              << "状态:" << selectedStatus
              << "日期范围:" << selectedDateRange;
@@ -1316,180 +1357,467 @@ void ReservationWidget::onPlaceCardClicked(const QString &placeId)
         qDebug() << "Error: placeId not found in m_placeCards:" << placeId;
     }
 }
-void ReservationWidget::onSelectAllChanged(int state)
-{
-    bool checked = (state == Qt::Checked);
-    for (ReservationCard *card : m_approveCards) {
-        card->setSelected(checked);
-    }
-
-    // 更新批量操作按钮状态
-    m_batchApproveButton->setEnabled(checked);
-    m_batchRejectButton->setEnabled(checked);
-}
 
 void ReservationWidget::onBatchApprove()
 {
-    // 实现批量批准逻辑
+    qDebug() << "批量批准";
+
+    // 收集选中的预约ID
+    QList<int> selectedIds;
+    for (ReservationCard *card : m_approveCards) {
+        if (card && card->isSelected() && card->status().toLower().contains("pending")) {
+            int reservationId = card->reservationId().toInt();
+            if (reservationId > 0) {
+                selectedIds.append(reservationId);
+            }
+        }
+    }
+
+    if (selectedIds.isEmpty()) {
+        QMessageBox::information(this, "提示", "请先选择要批准的预约");
+        return;
+    }
+
+    int result = QMessageBox::question(this, "批量批准",
+                                       QString("确定要批量批准 %1 个预约吗？").arg(selectedIds.size()),
+                                       QMessageBox::Yes | QMessageBox::No);
+
+    if (result == QMessageBox::Yes) {
+        // 批量批准逻辑
+        for (int reservationId : selectedIds) {
+            // 这里需要实现批量批准的逻辑
+            // 暂时先输出日志
+            qDebug() << "批准预约ID:" << reservationId;
+
+            // 模拟批准操作
+            ReservationCard *card = m_approveCardMap.value(QString::number(reservationId));
+            if (card) {
+                card->updateStatus("已批准");
+            }
+        }
+
+        // 刷新视图
+        refreshApproveCardView();
+
+        QMessageBox::information(this, "操作完成",
+                                 QString("已批量批准 %1 个预约").arg(selectedIds.size()));
+    }
 }
 
 void ReservationWidget::onBatchReject()
 {
-    // 实现批量拒绝逻辑
+    qDebug() << "批量拒绝";
+
+    // 收集选中的预约ID
+    QList<int> selectedIds;
+    for (ReservationCard *card : m_approveCards) {
+        if (card && card->isSelected() && card->status().toLower().contains("pending")) {
+            int reservationId = card->reservationId().toInt();
+            if (reservationId > 0) {
+                selectedIds.append(reservationId);
+            }
+        }
+    }
+
+    if (selectedIds.isEmpty()) {
+        QMessageBox::information(this, "提示", "请先选择要拒绝的预约");
+        return;
+    }
+
+    int result = QMessageBox::question(this, "批量拒绝",
+                                       QString("确定要批量拒绝 %1 个预约吗？").arg(selectedIds.size()),
+                                       QMessageBox::Yes | QMessageBox::No);
+
+    if (result == QMessageBox::Yes) {
+        // 批量拒绝逻辑
+        for (int reservationId : selectedIds) {
+            // 这里需要实现批量拒绝的逻辑
+            // 暂时先输出日志
+            qDebug() << "拒绝预约ID:" << reservationId;
+
+            // 模拟拒绝操作
+            ReservationCard *card = m_approveCardMap.value(QString::number(reservationId));
+            if (card) {
+                card->updateStatus("已拒绝");
+            }
+        }
+
+        // 刷新视图
+        refreshApproveCardView();
+
+        QMessageBox::information(this, "操作完成",
+                                 QString("已批量拒绝 %1 个预约").arg(selectedIds.size()));
+    }
+}
+
+void ReservationWidget::onSelectAllChanged(int state)
+{
+    bool checked = (state == Qt::Checked);
+
+    qDebug() << "全选状态改变:" << checked;
+
+    for (ReservationCard *card : m_approveCards) {
+        if (card && card->status().toLower().contains("pending")) {
+            card->setSelected(checked);
+        }
+    }
+
+    // 更新批量操作按钮状态
+    int selectedCount = 0;
+    for (ReservationCard *card : m_approveCards) {
+        if (card && card->isSelected()) {
+            selectedCount++;
+        }
+    }
+
+    bool hasSelected = (selectedCount > 0);
+    if (m_batchApproveButton) {
+        m_batchApproveButton->setEnabled(hasSelected);
+    }
+    if (m_batchRejectButton) {
+        m_batchRejectButton->setEnabled(hasSelected);
+    }
 }
 
 void ReservationWidget::onApproveFilterChanged()
 {
-    refreshApproveCardView();
+    qDebug() << "审批页筛选条件改变";
+
+    // 安全检查：确保控件存在
+    if (!m_approveFilterBar || !m_approveCardLayout || !m_approveCardContainer) {
+        qWarning() << "审批页控件未初始化，跳过刷新";
+        return;
+    }
+
+    // 延迟刷新，避免频繁操作
+    static QElapsedTimer lastRefreshTime;
+    if (lastRefreshTime.isValid() && lastRefreshTime.elapsed() < 200) {
+        qDebug() << "跳过频繁的筛选刷新";
+        return;
+    }
+    lastRefreshTime.start();
+
+    QTimer::singleShot(50, this, &ReservationWidget::refreshApproveCardView);
 }
 
 void ReservationWidget::onApproveRefreshRequested()
 {
+    qDebug() << "审批页刷新请求";
+
+    // 重新查询所有预约数据
     emit reservationQueryRequested("all");
+
+    // 显示刷新提示
+    if (m_approveCardContainer) {
+        // 显示刷新中的提示
+        QLayoutItem* child;
+        while ((child = m_approveCardLayout->takeAt(0)) != nullptr) {
+            if (child->widget()) {
+                child->widget()->setVisible(false);
+                child->widget()->setParent(nullptr);
+            }
+            delete child;
+        }
+
+        QLabel *loadingLabel = new QLabel("🔄 正在刷新数据...", m_approveCardContainer);
+        loadingLabel->setAlignment(Qt::AlignCenter);
+        loadingLabel->setStyleSheet(
+            "QLabel {"
+            "    color: #4a69bd;"
+            "    font-size: 16px;"
+            "    font-weight: bold;"
+            "    padding: 60px;"
+            "    background-color: #f8f9fa;"
+            "    border-radius: 8px;"
+            "}");
+        m_approveCardLayout->addWidget(loadingLabel);
+        m_approveCardLayout->addStretch();
+    }
 }
 
 void ReservationWidget::refreshApproveCardView()
 {
-    if (!m_approveCardLayout || !m_approveCardContainer) return;
+    QMutexLocker locker(&m_refreshMutex);  // 使用互斥锁保护
 
-    // 清空现有布局
-    QLayoutItem *item;
-    while ((item = m_approveCardLayout->takeAt(0)) != nullptr) {
-        if (item->widget()) {
-            item->widget()->setParent(nullptr);
-            delete item->widget();
-        }
-        delete item;
-    }
+    qDebug() << "刷新审批卡片视图";
 
-    // 如果没有卡片，显示提示信息
-    if (m_approveCards.isEmpty()) {
-        QLabel *emptyLabel = new QLabel("暂无待审批预约", m_approveCardContainer);
-        emptyLabel->setAlignment(Qt::AlignCenter);
-        emptyLabel->setStyleSheet(
-            "QLabel {"
-            "    color: #999;"
-            "    font-size: 16px;"
-            "    padding: 60px;"
-            "}");
-        m_approveCardLayout->addWidget(emptyLabel);
+    // 安全检查
+    if (!m_approveCardLayout || !m_approveCardContainer) {
+        qCritical() << "审批卡片视图控件为空，无法刷新";
         return;
     }
 
-    // 获取筛选条件
-    QString selectedPlace = m_approveFilterBar->selectedPlace();
-    QString selectedStatus = m_approveFilterBar->selectedStatus();
-    QString searchText = m_approveFilterBar->searchText();
-
-    // 处理空值
-    if (selectedPlace.isEmpty()) {
-        selectedPlace = "all";
+    // 检查是否正在刷新，避免重复操作
+    if (m_isRefreshingApproveView) {
+        qDebug() << "正在刷新中，跳过此次刷新";
+        return;
     }
 
-    // 创建网格布局
-    QGridLayout *gridLayout = new QGridLayout();
-    gridLayout->setContentsMargins(0, 0, 0, 0);
-    gridLayout->setHorizontalSpacing(20);
-    gridLayout->setVerticalSpacing(20);
+    m_isRefreshingApproveView = true;
 
-    // 计算每行卡片数量
-    int containerWidth = m_approveCardContainer->width();
-    int cardsPerRow = qMax(1, containerWidth / 340);
-
-    int row = 0;
-    int col = 0;
-    int visibleCards = 0;
-
-    // 状态映射表
-    QMap<QString, QStringList> statusMap = {
-        {"all", {"all", "全部状态"}},
-        {"pending", {"pending", "待审批", "未审批", "pending"}},
-        {"approved", {"approved", "已批准", "通过", "approved"}},
-        {"rejected", {"rejected", "已拒绝", "拒绝", "rejected"}},
-        {"completed", {"completed", "已完成", "completed"}},
-        {"cancelled", {"cancelled", "已取消", "cancelled"}}
-    };
-
-    // 收集可见卡片
-    for (ReservationCard *card : m_approveCards) {
-        if (!card) continue;
-
-        bool shouldShow = true;
-
-        // 场所筛选
-        if (selectedPlace != "all") {
-            QString cardPlaceId = card->placeId();
-            if (cardPlaceId != selectedPlace) {
-                shouldShow = false;
+    try {
+        // 清空现有布局，但不删除卡片对象
+        QLayoutItem* child;
+        while ((child = m_approveCardLayout->takeAt(0)) != nullptr) {
+            if (child->widget()) {
+                child->widget()->setVisible(false);
+                child->widget()->setParent(nullptr);
             }
+            delete child;
         }
 
-        // 状态筛选 - 只显示待审批的预约
-        if (shouldShow) {
-            QString cardStatus = card->status().toLower();
-            QString filterStatus = "pending";  // 审批页默认只显示待审批
+        // 如果没有卡片，显示提示信息
+        if (m_approveCards.isEmpty()) {
+            QLabel *emptyLabel = new QLabel("暂无待审批预约", m_approveCardContainer);
+            emptyLabel->setAlignment(Qt::AlignCenter);
+            emptyLabel->setStyleSheet(
+                "QLabel {"
+                "    color: #999;"
+                "    font-size: 16px;"
+                "    padding: 60px;"
+                "    background-color: #f8f9fa;"
+                "    border-radius: 8px;"
+                "}");
+            m_approveCardLayout->addWidget(emptyLabel);
+            m_approveCardLayout->addStretch();
+            m_isRefreshingApproveView = false;
+            return;
+        }
 
-            if (selectedStatus != "all") {
-                filterStatus = selectedStatus;
-            }
+        // 安全获取筛选条件
+        QString selectedPlace = "all";
+        QString selectedStatus = "all";
+        QString selectedPlaceType = "all";
+        QString searchText = "";
 
-            QStringList possibleStatusValues = statusMap.value(filterStatus, QStringList());
+        if (m_approveFilterBar) {
+            selectedPlace = m_approveFilterBar->selectedPlace();
+            selectedStatus = m_approveFilterBar->selectedStatus();
+            selectedPlaceType = m_approveFilterBar->selectedPlaceType();
+            searchText = m_approveFilterBar->searchText();
 
-            bool statusMatch = false;
-            for (const QString &possibleStatus : possibleStatusValues) {
-                if (cardStatus.contains(possibleStatus, Qt::CaseInsensitive)) {
-                    statusMatch = true;
-                    break;
+            // 处理空值
+            if (selectedPlace.isEmpty()) selectedPlace = "all";
+            if (selectedStatus.isEmpty()) selectedStatus = "all";
+            if (selectedPlaceType.isEmpty()) selectedPlaceType = "all";
+        }
+
+        qDebug() << "审批页筛选条件 - 场所:" << selectedPlace
+                 << "状态:" << selectedStatus
+                 << "场所类型:" << selectedPlaceType
+                 << "搜索:" << searchText;
+
+        // 创建网格布局容器
+        QWidget *gridContainer = new QWidget(m_approveCardContainer);
+        QGridLayout *gridLayout = new QGridLayout(gridContainer);
+        gridLayout->setContentsMargins(0, 0, 0, 0);
+        gridLayout->setHorizontalSpacing(20);
+        gridLayout->setVerticalSpacing(20);
+
+        // 计算每行卡片数量
+        int containerWidth = m_approveCardContainer->width();
+        if (containerWidth <= 0) containerWidth = 800;
+        int cardsPerRow = qMax(1, containerWidth / 340);
+
+        // 状态映射表
+        QMap<QString, QStringList> statusMap = {
+            {"all", {"all", "全部状态"}},
+            {"pending", {"pending", "待审批", "未审批", "pending"}},
+            {"approved", {"approved", "已批准", "通过", "approved"}},
+            {"rejected", {"rejected", "已拒绝", "拒绝", "rejected"}},
+            {"completed", {"completed", "已完成", "completed"}},
+            {"cancelled", {"cancelled", "已取消", "cancelled"}}
+        };
+
+        // 筛选并添加卡片
+        int row = 0, col = 0, visibleCards = 0;
+
+        for (ReservationCard *card : m_approveCards) {
+            if (!card) continue;
+
+            bool shouldShow = true;
+
+            // 场所筛选
+            if (selectedPlace != "all") {
+                QString cardPlaceName = card->placeName();
+                if (cardPlaceName != selectedPlace) {
+                    shouldShow = false;
                 }
             }
 
-            if (!statusMatch) {
-                shouldShow = false;
+            // 场所类型筛选
+            if (shouldShow && selectedPlaceType != "all") {
+                QString placeName = card->placeName();
+                QString cardPlaceType = detectPlaceType(placeName);
+
+                qDebug() << "卡片场所类型检测: 场所名称=" << placeName
+                         << "检测到的类型=" << cardPlaceType
+                         << "筛选类型=" << selectedPlaceType;
+
+                if (cardPlaceType != selectedPlaceType) {
+                    shouldShow = false;
+                }
+            }
+
+            // 状态筛选 - 只显示待审批的预约
+            if (shouldShow) {
+                QString cardStatus = card->status().toLower();
+                QString filterStatus = "pending";  // 审批页默认只显示待审批
+
+                if (selectedStatus != "all") {
+                    filterStatus = selectedStatus;
+                }
+
+                QStringList possibleStatusValues = statusMap.value(filterStatus, QStringList());
+
+                bool statusMatch = false;
+                for (const QString &possibleStatus : possibleStatusValues) {
+                    if (cardStatus.contains(possibleStatus, Qt::CaseInsensitive)) {
+                        statusMatch = true;
+                        break;
+                    }
+                }
+
+                if (!statusMatch) {
+                    shouldShow = false;
+                }
+            }
+
+            // 搜索文本筛选
+            if (shouldShow && !searchText.isEmpty()) {
+                bool textMatch =
+                    card->reservationId().contains(searchText, Qt::CaseInsensitive) ||
+                    card->placeName().contains(searchText, Qt::CaseInsensitive) ||
+                    card->userId().contains(searchText, Qt::CaseInsensitive) ||
+                    card->purpose().contains(searchText, Qt::CaseInsensitive);
+
+                if (!textMatch) {
+                    shouldShow = false;
+                }
+            }
+
+            // 添加到布局
+            if (shouldShow) {
+                // 确保卡片有正确的父控件
+                card->setParent(gridContainer);
+                card->setVisible(true);
+                gridLayout->addWidget(card, row, col);
+                visibleCards++;
+
+                col++;
+                if (col >= cardsPerRow) {
+                    col = 0;
+                    row++;
+                }
             }
         }
 
-        // 搜索文本筛选
-        if (shouldShow && !searchText.isEmpty()) {
-            bool textMatch =
-                card->reservationId().contains(searchText, Qt::CaseInsensitive) ||
-                card->placeName().contains(searchText, Qt::CaseInsensitive) ||
-                card->userId().contains(searchText, Qt::CaseInsensitive) ||
-                card->purpose().contains(searchText, Qt::CaseInsensitive);
+        // 如果没有可见卡片，显示提示信息
+        if (visibleCards == 0) {
+            delete gridContainer; // 删除网格容器
 
-            if (!textMatch) {
-                shouldShow = false;
+            // 构建筛选条件提示
+            QString filterInfo;
+
+            // 只显示非"全部"的筛选条件
+            if (selectedPlaceType != "all") {
+                QString placeTypeName = getPlaceTypeDisplayName(selectedPlaceType);
+                filterInfo += QString("类型:%1 ").arg(placeTypeName);
             }
+
+            if (selectedPlace != "all") {
+                // 从场所下拉框中获取场所显示名称
+                if (m_approveFilterBar) {
+                    // 查找场所下拉框
+                    QComboBox *placeCombo = m_approveFilterBar->findChild<QComboBox*>("placeCombo");
+                    if (placeCombo) {
+                        // 查找与selectedPlace匹配的项
+                        int index = placeCombo->findData(selectedPlace);
+                        if (index >= 0) {
+                            QString placeName = placeCombo->itemText(index);
+                            filterInfo += QString("场所:%1 ").arg(placeName);
+                        } else {
+                            filterInfo += QString("场所:%1 ").arg(selectedPlace);
+                        }
+                    } else {
+                        filterInfo += QString("场所:%1 ").arg(selectedPlace);
+                    }
+                } else {
+                    filterInfo += QString("场所:%1 ").arg(selectedPlace);
+                }
+            }
+
+            if (selectedStatus != "all") {
+                // 从状态下拉框中获取状态显示名称
+                if (m_approveFilterBar) {
+                    QComboBox *statusCombo = m_approveFilterBar->findChild<QComboBox*>("statusCombo");
+                    if (statusCombo) {
+                        int index = statusCombo->findData(selectedStatus);
+                        if (index >= 0) {
+                            QString statusName = statusCombo->itemText(index);
+                            filterInfo += QString("状态:%1 ").arg(statusName);
+                        } else {
+                            filterInfo += QString("状态:%1 ").arg(selectedStatus);
+                        }
+                    } else {
+                        filterInfo += QString("状态:%1 ").arg(selectedStatus);
+                    }
+                } else {
+                    filterInfo += QString("状态:%1 ").arg(selectedStatus);
+                }
+            }
+
+            if (!searchText.isEmpty()) {
+                filterInfo += QString("搜索:%1").arg(searchText);
+            }
+
+            QLabel *noMatchLabel = new QLabel(
+                filterInfo.isEmpty() ?
+                    "🔍 没有待审批的预约" :
+                    QString("🔍 没有待审批的预约\n筛选条件: %1").arg(filterInfo),
+                m_approveCardContainer);
+            noMatchLabel->setAlignment(Qt::AlignCenter);
+            noMatchLabel->setStyleSheet(
+                "QLabel {"
+                "    color: #95a5a6;"
+                "    font-size: 15px;"
+                "    padding: 60px;"
+                "    background-color: #f8f9fa;"
+                "    border-radius: 10px;"
+                "    margin: 10px;"
+                "}");
+            m_approveCardLayout->addWidget(noMatchLabel);
+        } else {
+            m_approveCardLayout->addWidget(gridContainer);
+            qDebug() << "显示待审批预约，可见卡片数量:" << visibleCards;
+
+            // 添加筛选结果统计
+            QLabel *resultLabel = new QLabel(
+                QString("共找到 %1 个待审批预约").arg(visibleCards),
+                m_approveCardContainer);
+            resultLabel->setStyleSheet(
+                "QLabel {"
+                "    color: #4a69bd;"
+                "    font-size: 12px;"
+                "    font-weight: bold;"
+                "    padding: 5px 15px;"
+                "    background-color: #e3f2fd;"
+                "    border-radius: 15px;"
+                "    margin: 5px;"
+                "}");
+            gridLayout->addWidget(resultLabel, row + 1, 0, 1, cardsPerRow, Qt::AlignCenter);
         }
 
-        // 添加到布局
-        if (shouldShow) {
-            gridLayout->addWidget(card, row, col);
-            visibleCards++;
+        m_approveCardLayout->addStretch();
 
-            col++;
-            if (col >= cardsPerRow) {
-                col = 0;
-                row++;
-            }
-        }
+    } catch (const std::exception &e) {
+        qCritical() << "刷新审批卡片视图时发生异常:" << e.what();
+    } catch (...) {
+        qCritical() << "刷新审批卡片视图时发生未知异常";
     }
 
-    QWidget *gridWidget = new QWidget(m_approveCardContainer);
-    gridWidget->setLayout(gridLayout);
-    m_approveCardLayout->addWidget(gridWidget);
-
-    // 如果没有可见卡片，显示提示信息
-    if (visibleCards == 0) {
-        QLabel *noPendingLabel = new QLabel("没有待审批的预约", gridWidget);
-        noPendingLabel->setAlignment(Qt::AlignCenter);
-        noPendingLabel->setStyleSheet(
-            "QLabel {"
-            "    color: #999;"
-            "    font-size: 14px;"
-            "    padding: 40px;"
-            "}");
-        gridLayout->addWidget(noPendingLabel, 0, 0, 1, cardsPerRow, Qt::AlignCenter);
-    }
+    m_isRefreshingApproveView = false;
+    qDebug() << "审批卡片视图刷新完成";
 }
 
 void ReservationWidget::refreshQueryCardViewForPlace(const QString &placeId)
@@ -1809,6 +2137,10 @@ void ReservationWidget::loadAllReservationsForApproval(const QString &data)
     // 解析数据
     QStringList reservations = data.split(';', Qt::SkipEmptyParts);
 
+    // 收集所有场所名称和场所类型用于筛选
+    QSet<QString> uniquePlaceNames;
+    QSet<QString> uniquePlaceTypes;
+
     for (int i = 0; i < reservations.size(); ++i) {
         QStringList fields = reservations[i].split('|');
         if (fields.size() >= 7) {
@@ -1822,9 +2154,16 @@ void ReservationWidget::loadAllReservationsForApproval(const QString &data)
 
             QString placeName = getPlaceNameById(placeId);
             QStringList equipmentList = getEquipmentListForPlace(placeId);
-            QString equipmentText = equipmentList.join(", ");
+            QString equipmentText = equipmentList.isEmpty() ? "无设备" : equipmentList.join(", ");
 
-            // 创建审批卡片 - 修复：使用9参数构造函数
+            // 收集场所名称和类型
+            if (!placeName.isEmpty()) {
+                uniquePlaceNames.insert(placeName);
+                QString placeType = detectPlaceType(placeName);
+                uniquePlaceTypes.insert(placeType);
+            }
+
+            // 创建审批卡片
             ReservationCard *card = new ReservationCard(
                 reservationId,      // reservationId
                 placeId,            // placeId
@@ -1846,6 +2185,35 @@ void ReservationWidget::loadAllReservationsForApproval(const QString &data)
             m_approveCards.append(card);
             m_approveCardMap[reservationId] = card;
         }
+    }
+
+    // 更新筛选工具栏的场所列表和场所类型列表
+    if (m_approveFilterBar) {
+        // 设置场所列表
+        QStringList placeNames = uniquePlaceNames.values();
+        placeNames.sort();
+        placeNames.prepend("全部场所");
+        m_approveFilterBar->setPlaces(placeNames);
+
+        // 设置场所类型列表
+        QStringList placeTypes = uniquePlaceTypes.values();
+        // 将类型代码转换为中文名称
+        QStringList placeTypeNames;
+        for (const QString &type : placeTypes) {
+            if (type == "classroom") placeTypeNames << "教室";
+            else if (type == "lab") placeTypeNames << "实验室";
+            else if (type == "meeting") placeTypeNames << "会议室";
+            else if (type == "office") placeTypeNames << "办公室";
+            else if (type == "gym") placeTypeNames << "体育馆";
+            else if (type == "library") placeTypeNames << "图书馆";
+            else placeTypeNames << "其他";
+        }
+        placeTypeNames.sort();
+        placeTypeNames.prepend("全部类型");
+        m_approveFilterBar->setPlaceTypes(placeTypeNames);
+
+        qDebug() << "更新审批页筛选列表 - 场所数量:" << placeNames.size()
+                 << "场所类型数量:" << placeTypeNames.size();
     }
 
     // 刷新审批卡片视图
@@ -2100,6 +2468,44 @@ QString ReservationWidget::detectPlaceType(const QString &placeName)
     } else {
         return "other";
     }
+}
+
+
+void ReservationWidget::refreshApproveFilterPlaces()
+{
+    if (!m_approveFilterBar || m_approveCards.isEmpty()) {
+        return;
+    }
+
+    // 收集所有场所名称
+    QSet<QString> uniquePlaceNames;
+    for (ReservationCard *card : m_approveCards) {
+        if (card && !card->placeName().isEmpty()) {
+            uniquePlaceNames.insert(card->placeName());
+        }
+    }
+
+    // 转换为列表并排序
+    QStringList placeNames = uniquePlaceNames.values();
+    placeNames.sort();
+    placeNames.prepend("全部场所");
+
+    // 更新筛选工具栏
+    m_approveFilterBar->setPlaces(placeNames);
+
+    qDebug() << "刷新审批页场所筛选列表，场所数量:" << placeNames.size();
+}
+
+QString ReservationWidget::getPlaceTypeDisplayName(const QString &placeTypeCode)
+{
+    if (placeTypeCode == "classroom") return "教室";
+    else if (placeTypeCode == "lab") return "实验室";
+    else if (placeTypeCode == "meeting") return "会议室";
+    else if (placeTypeCode == "office") return "办公室";
+    else if (placeTypeCode == "gym") return "体育馆";
+    else if (placeTypeCode == "library") return "图书馆";
+    else if (placeTypeCode == "other") return "其他";
+    else return "未知类型";
 }
 
 void ReservationWidget::resizeEvent(QResizeEvent *event)

@@ -21,12 +21,12 @@ public:
     QString selectedStatus() const;
     QString selectedDate() const;
     QString searchText() const;
-    QString selectedPlaceType() const;  // 新增：场所类型筛选
+    QString selectedPlaceType() const;     // 场所类型筛选
 
     // 设置选项
     void setPlaces(const QStringList &places);
     void setStatuses(const QStringList &statuses);
-    void setPlaceTypes(const QStringList &types);  // 新增：设置场所类型
+    void setPlaceTypes(const QStringList &types);  // 设置场所类型
 
     // 获取日期范围
     QDate startDate() const;
@@ -38,7 +38,7 @@ public:
     void setDateRange(const QDate &start, const QDate &end);
 
     // 新增：设置模式（场所列表模式/预约记录模式）
-      void setMode(bool isPlaceListMode, const QString &placeName = QString());
+    void setMode(bool isPlaceListMode, const QString &placeName = QString());
 
 signals:
     void filterChanged();
@@ -49,17 +49,17 @@ private:
     QComboBox *m_placeCombo;
     QComboBox *m_statusCombo;
     QComboBox *m_dateFilterCombo;
-    QComboBox *m_placeTypeCombo;  // 新增：场所类型筛选
+    QComboBox *m_placeTypeCombo;     // 场所类型筛选
     QLineEdit *m_searchEdit;
     QPushButton *m_refreshButton;
-    QPushButton *m_backButton;    // 新增：返回按钮
+    QPushButton *m_backButton;       // 新增：返回按钮
 
     QDateEdit *m_startDateEdit;
     QDateEdit *m_endDateEdit;
     QHBoxLayout *m_mainLayout;
 
     QTimer *m_filterTimer;
-    bool m_isPlaceListMode;       // 新增：模式标识
+    bool m_isPlaceListMode;          // 新增：模式标识
 };
 
 #endif // RESERVATIONFILTERTOOLBAR_H

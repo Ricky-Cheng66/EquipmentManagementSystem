@@ -22,6 +22,7 @@
 #include <QCheckBox>
 #include <QTimer>
 #include <QElapsedTimer>
+#include <QMutex>  // 添加QMutex头文件
 #include "protocol_parser.h"
 #include "reservationcard.h"
 #include "reservationfiltertoolbar.h"
@@ -58,6 +59,7 @@ public:
 protected:
     void resizeEvent(QResizeEvent *event) override;
     bool event(QEvent *event) override;
+
 signals:
     void reservationApplyRequested(const QString &placeId, const QString &purpose,
                                    const QString &startTime, const QString &endTime);
@@ -91,7 +93,8 @@ private slots:
     void onQuickReserveRequested(const QString &placeId);
     void onBackToPlaceList();
 
-     void safeUpdateQueryResultTable(const QString &data);
+    void safeUpdateQueryResultTable(const QString &data);
+
 private:
     void setupApplyTab();
     void setupQueryTab();
@@ -116,7 +119,8 @@ private:
     QMap<QString, QStringList> m_placeReservations; // 场所ID -> 预约记录列表
     // 新增：辅助函数声明
     QString detectPlaceType(const QString &placeName);
-
+    void refreshApproveFilterPlaces();  // 刷新审批页场所筛选列表
+    QString getPlaceTypeDisplayName(const QString &placeTypeCode);  // 获取场所类型显示名称
     // 申请页控件
     QLabel *m_equipmentListLabel;
     QTextEdit *m_equipmentListText;
@@ -162,10 +166,16 @@ private:
     QList<ReservationCard*> m_queryCards;
     QMap<QString, ReservationCard*> m_queryCardMap;
 
-    // 刷新控制成员
-    bool m_isRefreshingQueryView;
+    // 刷新控制成员 - 这些是原代码中已经存在的
+    bool m_isRefreshingQueryView;  // 原代码已有
     QTimer *m_refreshQueryTimer;
     QTimer *m_placeListRefreshTimer;   // 新增：场所列表刷新定时器
+
+    // 新增：审批页刷新控制
+    bool m_isRefreshingApproveView; // 新增：审批视图刷新状态
+
+    // 新增：保护机制
+    mutable QMutex m_refreshMutex;  // 用于保护刷新操作的互斥锁
 
     // 审批页新成员
     ReservationFilterToolBar *m_approveFilterBar;
