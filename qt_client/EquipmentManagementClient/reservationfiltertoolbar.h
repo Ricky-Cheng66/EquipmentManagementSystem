@@ -17,7 +17,7 @@ public:
     explicit ReservationFilterToolBar(QWidget *parent = nullptr);
 
     void setStatusComboDefault(const QString &status);
-
+    QPushButton *refreshButton() const { return m_refreshButton; }
     // 获取筛选条件
     QString selectedPlace() const;
     QString selectedStatus() const;

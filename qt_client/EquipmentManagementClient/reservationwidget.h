@@ -99,16 +99,21 @@ private slots:
     void onBatchApprove();
     void onBatchReject();
     void onApproveFilterChanged();
-    void onApproveRefreshRequested();
 
     // 审批页新函数（两级导航）
     void onApprovePlaceCardClicked(const QString &placeId);
     void onApprovePlaceFilterChanged();
     void onApproveDetailFilterChanged();
     void onApproveBackToPlaceList();
+    void onApproveListRefreshRequested();   // 第一级导航刷新
+    void onApproveDetailRefreshRequested(); // 第二级导航刷新
 
     void safeUpdateQueryResultTable(const QString &data);
-
+    // 新增：审批页辅助函数
+    void showApproveListLoading();              // 显示场所列表加载提示
+    void showApproveDetailLoading();            // 显示详情页加载提示
+    void clearApproveListData();                // 清空场所列表数据
+    void clearApproveDetailData();              // 清空详情数据
 private:
     // 申请页初始化
     void setupApplyTab();
