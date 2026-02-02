@@ -22,7 +22,7 @@
 #include <QCheckBox>
 #include <QTimer>
 #include <QElapsedTimer>
-#include <QMutex>  // 添加QMutex头文件
+#include <QMutex>
 #include "protocol_parser.h"
 #include "reservationcard.h"
 #include "reservationfiltertoolbar.h"
@@ -50,8 +50,11 @@ public:
     QString getPlaceNameById(const QString &placeId);
     QStringList getEquipmentListForPlace(const QString &placeId) const;
     void updateEquipmentListDisplay();
+
     // 线程安全检查方法
     bool isInMainThread() const { return thread() == QThread::currentThread(); }
+    //初始化检查函数
+    bool isApprovePageInitialized() const;
     QComboBox *m_placeComboApply;
     QComboBox *m_placeComboQuery;
     QTabWidget *m_tabWidget;
@@ -72,55 +75,84 @@ public slots:
     void updatePlaceCards();
 
 private slots:
-    void onApplyButtonClicked();
-    void onQueryButtonClicked();
-    void onApproveButtonClicked();
-    void onDenyButtonClicked();
     void onTabChanged(int index);
+    // 申请页
+    void onApplyButtonClicked();
+
+    // 查询页
+    void onQueryButtonClicked();
     void onReservationCardClicked(const QString &reservationId);
     void onStatusActionRequested(const QString &reservationId, const QString &action);
     void onFilterChanged();
     void onRefreshQueryRequested();
     void onPlaceCardClicked(const QString &placeId);
+
+    // 查询页二级导航
+    void onPlaceQueryCardClicked(const QString &placeId);
+    void onQuickReserveRequested(const QString &placeId);
+    void onBackToPlaceList();
+
+    // 审批页旧函数（可能需要删除）
+    void onApproveButtonClicked();
+    void onDenyButtonClicked();
     void onSelectAllChanged(int state);
     void onBatchApprove();
     void onBatchReject();
     void onApproveFilterChanged();
     void onApproveRefreshRequested();
 
-    // 新增槽函数
-    void onPlaceQueryCardClicked(const QString &placeId);
-    void onQuickReserveRequested(const QString &placeId);
-    void onBackToPlaceList();
+    // 审批页新函数（两级导航）
+    void onApprovePlaceCardClicked(const QString &placeId);
+    void onApprovePlaceFilterChanged();
+    void onApproveDetailFilterChanged();
+    void onApproveBackToPlaceList();
 
     void safeUpdateQueryResultTable(const QString &data);
 
 private:
+    // 申请页初始化
     void setupApplyTab();
+
+    // 查询页初始化
     void setupQueryTab();
+    void setupPlaceListPage();
+    void setupPlaceDetailPage();
+
+    // 审批页初始化（新架构）
     void setupApproveTab();
-    void setupPlaceListPage();        // 新增：设置场所列表页面
-    void setupPlaceDetailPage();      // 新增：设置场所详情页面
-    void refreshPlaceListView();      // 新增：刷新场所列表视图
-    void refreshPlaceDetailView();    // 新增：刷新场所详情视图
-    void clearPlaceListView();        // 新增：清空场所列表
-    void calculatePlaceStats();       // 新增：计算场所统计数据
+    void setupApprovePlaceListPage();
+    void setupApproveDetailPage();
 
+    // 查询页刷新函数
+    void refreshPlaceListView();
+    void refreshPlaceDetailView();
     void refreshQueryCardView();
-    void clearQueryCardView();
-    void refreshApproveCardView();
     void refreshQueryCardViewForPlace(const QString &placeId);
-    void clearApproveCardView();
-    void applyQueryFilters();
-    void updatePlaceCardsLayout();
+    void calculatePlaceStats();
 
-    // 新增：场所统计数据
-    QMap<QString, int> m_placeReservationCount; // 场所ID -> 预约数量
-    QMap<QString, QStringList> m_placeReservations; // 场所ID -> 预约记录列表
-    // 新增：辅助函数声明
+    // 审批页刷新函数（新架构）
+    void refreshApprovePlaceListView();
+    void refreshApproveDetailView();
+    void refreshCurrentApproveView();
+
+    // 清理函数
+    void clearPlaceListView();
+    void clearQueryCardView();
+    void clearApproveCardView();
+
+    // 辅助函数
+    void updatePlaceCardsLayout();
     QString detectPlaceType(const QString &placeName);
-    void refreshApproveFilterPlaces();  // 刷新审批页场所筛选列表
-    QString getPlaceTypeDisplayName(const QString &placeTypeCode);  // 获取场所类型显示名称
+    void refreshApproveFilterPlaces();
+    QString getPlaceTypeDisplayName(const QString &placeTypeCode);
+    void recalculatePendingCounts();
+    void removeLoadingLabels();
+    // ==================== 成员变量 ====================
+
+    // 当前用户信息
+    QString m_currentUserId;
+    QString m_userRole;
+
     // 申请页控件
     QLabel *m_equipmentListLabel;
     QTextEdit *m_equipmentListText;
@@ -132,67 +164,100 @@ private:
     QLineEdit *m_purposeEdit;
     QPushButton *m_applyButton;
 
-    // 申请页新成员
+    // 申请页场所卡片
     QWidget *m_placeCardsContainer;
     QGridLayout *m_placeCardsLayout;
     QMap<QString, PlaceCard*> m_placeCards;
     QString m_selectedPlaceId;
     QTextEdit *m_selectedEquipmentText;
 
-    // 查询页控件
+    // ==================== 查询页相关 ====================
+    // 查询页筛选工具栏
     ReservationFilterToolBar *m_queryFilterBar;
+    ReservationFilterToolBar *m_queryFilterBarDetail;
+
+    // 查询页堆栈和页面
+    QStackedWidget *m_queryViewStack;
+    QWidget *m_placeListPage;
+    QWidget *m_placeDetailPage;
+    QGridLayout *m_placeListLayout;
+    QVBoxLayout *m_placeDetailLayout;
+
+    // 查询页卡片容器
     QScrollArea *m_queryScrollArea;
     QWidget *m_queryCardContainer;
     QVBoxLayout *m_queryCardLayout;
-    QPushButton *m_queryButton;
-    QStackedWidget *m_queryViewStack;
-    QTableWidget *m_queryResultTable;
 
-    // 新增：查询页两级导航
-    QWidget *m_placeListPage;          // 场所列表页面（第一级）
-    QWidget *m_placeDetailPage;        // 场所详情页面（第二级）
-    QGridLayout *m_placeListLayout;    // 场所列表布局
-    QVBoxLayout *m_placeDetailLayout;  // 场所详情布局
-    QList<PlaceQueryCard*> m_placeQueryCards; // 场所查询卡片列表
-    QString m_currentPlaceId;          // 当前选中的场所ID
-    QString m_currentPlaceName;        // 当前选中的场所名称
-
-    // 新增：场所详情页控件
-    ReservationFilterToolBar *m_queryFilterBarDetail; // 场所详情页的筛选工具栏
-    QLabel *m_placeDetailNameLabel;   // 场所详情页的场所名称标签
-    QLabel *m_placeDetailStatsLabel;  // 场所详情页的统计信息标签
-
-    // 查询页卡片相关
+    // 查询页卡片列表
+    QList<PlaceQueryCard*> m_placeQueryCards;
     QList<ReservationCard*> m_queryCards;
     QMap<QString, ReservationCard*> m_queryCardMap;
 
-    // 刷新控制成员 - 这些是原代码中已经存在的
-    bool m_isRefreshingQueryView;  // 原代码已有
-    QTimer *m_refreshQueryTimer;
-    QTimer *m_placeListRefreshTimer;   // 新增：场所列表刷新定时器
+    // 查询页当前选中场所
+    QString m_currentPlaceId;
+    QString m_currentPlaceName;
 
-    // 新增：审批页刷新控制
-    bool m_isRefreshingApproveView; // 新增：审批视图刷新状态
+    // 查询页标签
+    QLabel *m_placeDetailNameLabel;
+    QLabel *m_placeDetailStatsLabel;
 
-    // 新增：保护机制
-    mutable QMutex m_refreshMutex;  // 用于保护刷新操作的互斥锁
+    // ==================== 审批页相关 ====================
+    // 审批页筛选工具栏（新架构）
+    QList<ReservationCard*> m_allApproveCards;    // 所有待审批预约卡片（用于筛选）
+    ReservationFilterToolBar *m_approveFilterBar;          // 审批页场所列表筛选
+    ReservationFilterToolBar *m_approveDetailFilterBar;    // 审批页详情筛选
 
-    // 审批页新成员
-    ReservationFilterToolBar *m_approveFilterBar;
-    QWidget *m_approveCardContainer;
-    QVBoxLayout *m_approveCardLayout;
+    // 审批页堆栈和页面（新架构）
+    QStackedWidget *m_approveViewStack;
+    QWidget *m_approvePlaceListPage;
+    QWidget *m_approveDetailPage;
+    QGridLayout *m_approvePlaceListLayout;
+    QVBoxLayout *m_approveDetailLayout;
+    QWidget *m_approvePlaceListContainer;
+
+    // 审批页卡片列表（新架构）
+    QList<PlaceQueryCard*> m_approvePlaceCards;
     QList<ReservationCard*> m_approveCards;
     QMap<QString, ReservationCard*> m_approveCardMap;
+
+    // 审批页当前选中场所（新架构）
+    QString m_currentApprovePlaceId;
+    QString m_currentApprovePlaceName;
+
+    // 审批页标签（新架构）
+    QLabel *m_approvePendingCountLabel;
+    QLabel *m_approvePlaceNameLabel;
+    QLabel *m_approvePlaceStatsLabel;
+
+    // 审批页批量操作控件
     QCheckBox *m_selectAllCheck;
     QPushButton *m_batchApproveButton;
     QPushButton *m_batchRejectButton;
 
-    // 审批页原有控件
+    // ==================== 通用成员 ====================
+    // 统计数据
+    QMap<QString, int> m_placeReservationCount;
+    QMap<QString, QStringList> m_placeReservations;
+    QMap<QString, int> m_approvePlacePendingCount;
+
+    // 定时器
+    QTimer *m_placeListRefreshTimer;
+    QTimer *m_approvePlaceListRefreshTimer;
+
+    // 刷新状态控制
+    bool m_isRefreshingQueryView;
+    bool m_isRefreshingApproveView;
+
+    // 保护机制
+    mutable QMutex m_refreshMutex;
+
+    // ==================== 旧控件（可能需要删除） ====================
+    // 注意：以下控件可能在重构后不再需要，但暂时保留以保持编译通过
+    QTableWidget *m_queryResultTable;
+    QPushButton *m_queryButton;
     QTableWidget *m_approveTable;
-
-    QString m_currentUserId;
-    QString m_userRole;
-
+    QWidget *m_approveCardContainer;
+    QVBoxLayout *m_approveCardLayout;
 };
 
 #endif // RESERVATIONWIDGET_H

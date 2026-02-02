@@ -16,6 +16,8 @@ class ReservationFilterToolBar : public QWidget
 public:
     explicit ReservationFilterToolBar(QWidget *parent = nullptr);
 
+    void setStatusComboDefault(const QString &status);
+
     // 获取筛选条件
     QString selectedPlace() const;
     QString selectedStatus() const;

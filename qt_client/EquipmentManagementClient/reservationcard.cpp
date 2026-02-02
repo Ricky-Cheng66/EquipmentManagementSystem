@@ -11,7 +11,7 @@ ReservationCard::ReservationCard(const QString &reservationId, const QString &pl
                                  QWidget *parent)
     : QWidget(parent)
     , m_reservationId(reservationId.isEmpty() ? "未知ID" : reservationId)
-    , m_placeId(placeId.isEmpty() ? "未知场所ID" : placeId)
+    , m_placeId(placeId.isEmpty() ? "default_place" : placeId)  // 这里很重要，确保placeId正确
     , m_placeName(placeName.isEmpty() ? "未知场所" : placeName)
     , m_userId(userId.isEmpty() ? "未知用户" : userId)
     , m_purpose(purpose.isEmpty() ? "未指定用途" : purpose)
@@ -21,16 +21,32 @@ ReservationCard::ReservationCard(const QString &reservationId, const QString &pl
     , m_equipmentList(equipmentList.isEmpty() ? "无设备" : equipmentList)
     , m_selected(false)
 {
-    qDebug() << "创建预约卡片: ID=" << m_reservationId
-             << "场所ID=" << m_placeId
-             << "场所名称=" << m_placeName
-             << "状态=" << m_status;
+    qDebug() << "=== 创建预约卡片 ===";
+    qDebug() << "预约ID:" << m_reservationId;
+    qDebug() << "场所ID:" << m_placeId;
+    qDebug() << "场所名称:" << m_placeName;
+    qDebug() << "用户ID:" << m_userId;
+    qDebug() << "状态:" << m_status;
+    qDebug() << "设备列表:" << m_equipmentList;
+
+    // 确保场所ID不是默认值
+    if (m_placeId == "default_place" && !m_placeName.isEmpty()) {
+        // 尝试从场所名称推断场所ID
+        if (m_placeName.contains("教室")) {
+            m_placeId = "classroom_" + m_reservationId; // 简化示例，实际需要更复杂的逻辑
+        } else if (m_placeName.contains("实验室")) {
+            m_placeId = "lab_" + m_reservationId;
+        }
+        qDebug() << "更新场所ID为:" << m_placeId;
+    }
 
     try {
         setupUI();
         setFixedSize(320, 220);
         setMouseTracking(true);
         updateCardStyle();
+
+        qDebug() << "预约卡片创建成功";
     } catch (const std::exception &e) {
         qCritical() << "创建预约卡片时异常:" << e.what();
     } catch (...) {

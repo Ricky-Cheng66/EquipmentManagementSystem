@@ -188,6 +188,16 @@ ReservationFilterToolBar::ReservationFilterToolBar(QWidget *parent)
             });
 }
 
+void ReservationFilterToolBar::setStatusComboDefault(const QString &status)
+{
+    if (m_statusCombo) {
+        int index = m_statusCombo->findData(status);
+        if (index >= 0) {
+            m_statusCombo->setCurrentIndex(index);
+        }
+    }
+}
+
 QString ReservationFilterToolBar::selectedPlace() const
 {
     return m_placeCombo->currentData().toString();
