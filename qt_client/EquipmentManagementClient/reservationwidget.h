@@ -91,6 +91,8 @@ private slots:
     void onPlaceQueryCardClicked(const QString &placeId);
     void onQuickReserveRequested(const QString &placeId);
     void onBackToPlaceList();
+    void onQueryListRefreshRequested();     // 查询页第一级导航刷新
+    void onQueryDetailRefreshRequested();   // 查询页第二级导航刷新
 
     // 审批页旧函数（可能需要删除）
     void onApproveButtonClicked();

@@ -223,7 +223,7 @@ void MainWindow::setupStatusBar()
 void MainWindow::setupCentralStack()
 {
     m_centralStack = new QStackedWidget(this);
-
+    //给整个中央区域设置浅灰色背景
     // 1. 仪表板页面 - 完全重写
     m_dashboardPage = new QWidget();
     m_dashboardPage->setObjectName("dashboardPage");

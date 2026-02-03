@@ -1177,7 +1177,7 @@ void ReservationWidget::setupPlaceListPage()
     connect(m_queryFilterBar, &ReservationFilterToolBar::filterChanged,
             this, &ReservationWidget::onFilterChanged);
     connect(m_queryFilterBar, &ReservationFilterToolBar::refreshRequested,
-            this, &ReservationWidget::onRefreshQueryRequested);
+            this, &ReservationWidget::onQueryListRefreshRequested);
 }
 
 // 新增：设置场所详情页面
@@ -1254,7 +1254,7 @@ void ReservationWidget::setupPlaceDetailPage()
     connect(m_queryFilterBarDetail, &ReservationFilterToolBar::filterChanged,
             this, &ReservationWidget::onFilterChanged);
     connect(m_queryFilterBarDetail, &ReservationFilterToolBar::refreshRequested,
-            this, &ReservationWidget::onRefreshQueryRequested);
+            this, &ReservationWidget::onQueryDetailRefreshRequested);  // 改为第二级刷新
     connect(m_queryFilterBarDetail, &ReservationFilterToolBar::backToPlaceListRequested,
             this, &ReservationWidget::onBackToPlaceList);
 }
@@ -2093,8 +2093,22 @@ void ReservationWidget::onStatusActionRequested(const QString &reservationId, co
 
 void ReservationWidget::onRefreshQueryRequested()
 {
-    // 重新查询预约数据
-    onQueryButtonClicked();
+    qDebug() << "旧的查询刷新函数被调用，自动重定向到当前页面的刷新";
+
+    // 检查当前处于哪个视图
+    if (m_queryViewStack) {
+        int currentIndex = m_queryViewStack->currentIndex();
+        if (currentIndex == 0) {
+            // 在第一级（场所列表）
+            onQueryListRefreshRequested();
+        } else if (currentIndex == 1) {
+            // 在第二级（详情页）
+            onQueryDetailRefreshRequested();
+        }
+    } else {
+        // 如果查询视图堆栈不存在，默认调用第一级刷新
+        onQueryListRefreshRequested();
+    }
 }
 
 // 在 onPlaceCardClicked 函数中添加调试输出
@@ -2292,6 +2306,52 @@ void ReservationWidget::onApproveBackToPlaceList()
     } else {
         qDebug() << "当前不在审批详情页面，无需返回";
     }
+}
+
+// 第一级导航刷新：重新获取所有数据并刷新场所列表
+void ReservationWidget::onQueryListRefreshRequested()
+{
+    qDebug() << "查询页第一级导航刷新请求 - 重新获取所有数据";
+
+    // 检查当前是否在查询页
+    if (!m_tabWidget || m_tabWidget->currentIndex() != 1) {  // 查询页是第1个标签
+        qDebug() << "当前不在查询页，忽略刷新";
+        return;
+    }
+
+    // 确保切换到场所列表页面
+    if (m_queryViewStack && m_queryViewStack->currentIndex() == 1) {
+        m_queryViewStack->setCurrentIndex(0);
+        m_currentPlaceId.clear();
+        m_currentPlaceName.clear();
+    }
+
+    // 发送查询请求（查询所有场所）
+    emit reservationQueryRequested("all");
+
+    qDebug() << "已发送查询请求";
+}
+
+// 第二级导航刷新：只刷新当前场所的详情
+void ReservationWidget::onQueryDetailRefreshRequested()
+{
+    qDebug() << "查询页第二级导航刷新请求 - 刷新当前场所详情";
+
+    // 检查当前是否在查询详情页
+    if (!m_queryViewStack || m_queryViewStack->currentIndex() != 1) {
+        qDebug() << "当前不在查询详情页，忽略刷新";
+        return;
+    }
+
+    if (m_currentPlaceId.isEmpty()) {
+        qDebug() << "当前场所ID为空，无法刷新";
+        return;
+    }
+
+    // 刷新当前场所的详情
+    refreshPlaceDetailView();
+
+    qDebug() << "已刷新场所详情";
 }
 
 // 第一级导航刷新：重新获取所有数据并刷新场所列表
@@ -3360,12 +3420,14 @@ void ReservationWidget::resizeEvent(QResizeEvent *event)
 
             if (currentTab == 1) { // 查询页
                 if (currentView == 0) { // 场所列表页面
-                    if (m_placeListRefreshTimer->isActive()) {
+                    if (m_placeListRefreshTimer && m_placeListRefreshTimer->isActive()) {
                         m_placeListRefreshTimer->stop();
                     }
-                    m_placeListRefreshTimer->start(100);
+                    if (m_placeListRefreshTimer) {
+                        m_placeListRefreshTimer->start(100);
+                    }
                 } else if (currentView == 1) { // 场所详情页面
-                    QTimer::singleShot(50, this, &ReservationWidget::refreshQueryCardView);
+                    QTimer::singleShot(50, this, &ReservationWidget::refreshPlaceDetailView);
                 }
             }
         }
