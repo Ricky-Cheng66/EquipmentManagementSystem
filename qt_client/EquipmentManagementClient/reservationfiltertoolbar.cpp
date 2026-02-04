@@ -307,16 +307,16 @@ void ReservationFilterToolBar::setMode(bool isPlaceListMode, const QString &plac
     m_backButton->setVisible(!isPlaceListMode);      // 非场所列表模式显示返回按钮
 
     if (isPlaceListMode) {
-        // 场所列表模式：显示场所类型筛选，隐藏其他筛选
+        // 场所列表模式：显示所有筛选控件（修改这里！）
         m_placeTypeCombo->setVisible(true);
-        m_placeCombo->setVisible(false);
-        m_statusCombo->setVisible(false);
-        m_dateFilterCombo->setVisible(false);
-        m_startDateEdit->setVisible(false);
-        m_endDateEdit->setVisible(false);
+        m_placeCombo->setVisible(true);     // 改为true，显示场所下拉框
+        m_statusCombo->setVisible(true);    // 改为true，显示状态筛选
+        m_dateFilterCombo->setVisible(true); // 改为true，显示日期筛选
+        m_startDateEdit->setVisible(true);  // 改为true，显示开始日期
+        m_endDateEdit->setVisible(true);    // 改为true，显示结束日期
         m_searchEdit->setPlaceholderText("搜索场所名称");
     } else {
-        // 场所详情模式：隐藏场所类型筛选，显示其他筛选
+        // 场所详情模式：显示完整筛选（不变）
         m_placeTypeCombo->setVisible(true);  // 保留场所类型筛选
         m_placeCombo->setVisible(false);     // 隐藏场所下拉框（因为已固定）
         m_statusCombo->setVisible(true);

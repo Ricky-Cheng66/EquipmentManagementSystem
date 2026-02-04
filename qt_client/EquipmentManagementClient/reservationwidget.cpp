@@ -1319,7 +1319,16 @@ void ReservationWidget::refreshPlaceListView()
 
     // 3. 获取筛选条件
     QString selectedPlaceType = m_queryFilterBar ? m_queryFilterBar->selectedPlaceType() : "all";
+    QString selectedPlace = m_queryFilterBar ? m_queryFilterBar->selectedPlace() : "all";
+    QString selectedStatus = m_queryFilterBar ? m_queryFilterBar->selectedStatus() : "all";
+    QString selectedDateRange = m_queryFilterBar ? m_queryFilterBar->selectedDate() : "all";
     QString searchText = m_queryFilterBar ? m_queryFilterBar->searchText() : "";
+
+    QDate startDate, endDate;
+    if (selectedDateRange != "all") {
+        startDate = m_queryFilterBar->startDate();
+        endDate = m_queryFilterBar->endDate();
+    }
 
     // 4. 计算每行卡片数量
     int containerWidth = m_placeListPage->width();
@@ -1354,6 +1363,78 @@ void ReservationWidget::refreshPlaceListView()
         // 类型筛选
         if (selectedPlaceType != "all" && placeType != selectedPlaceType) {
             shouldShow = false;
+        }
+
+        // 场所筛选（新增）
+        if (shouldShow && selectedPlace != "all") {
+            // 检查是否是完整的场所ID匹配或名称匹配
+            bool placeMatch = false;
+
+            // 直接ID匹配
+            if (placeId == selectedPlace) {
+                placeMatch = true;
+            }
+            // 检查场所名称是否包含筛选文本
+            else if (placeName.contains(selectedPlace, Qt::CaseInsensitive)) {
+                placeMatch = true;
+            }
+
+            if (!placeMatch) {
+                shouldShow = false;
+            }
+        }
+
+        // 状态筛选（新增）- 需要检查该场所的预约记录状态
+        if (shouldShow && selectedStatus != "all") {
+            bool hasMatchingStatus = false;
+
+            // 遍历所有预约记录，检查该场所是否有符合条件的预约
+            for (ReservationCard *card : m_queryCards) {
+                if (card && card->placeId() == placeId) {
+                    QString cardStatus = card->status().toLower();
+                    QStringList statusMap = getStatusMap(selectedStatus);
+
+                    for (const QString &status : statusMap) {
+                        if (cardStatus.contains(status, Qt::CaseInsensitive)) {
+                            hasMatchingStatus = true;
+                            break;
+                        }
+                    }
+
+                    if (hasMatchingStatus) break;
+                }
+            }
+
+            if (!hasMatchingStatus) {
+                shouldShow = false;
+            }
+        }
+
+        // 日期筛选（新增）
+        if (shouldShow && selectedDateRange != "all" && startDate.isValid() && endDate.isValid()) {
+            bool hasMatchingDate = false;
+
+            // 遍历所有预约记录，检查该场所是否有在日期范围内的预约
+            for (ReservationCard *card : m_queryCards) {
+                if (card && card->placeId() == placeId) {
+                    QDate cardStartDate = card->getStartDate();
+                    QDate cardEndDate = card->getEndDate();
+
+                    // 检查卡片的开始或结束日期是否在筛选范围内
+                    bool dateInRange = (cardStartDate >= startDate && cardStartDate <= endDate) ||
+                                       (cardEndDate >= startDate && cardEndDate <= endDate) ||
+                                       (cardStartDate <= startDate && cardEndDate >= endDate);
+
+                    if (dateInRange) {
+                        hasMatchingDate = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hasMatchingDate) {
+                shouldShow = false;
+            }
         }
 
         // 搜索筛选
@@ -3401,6 +3482,20 @@ void ReservationWidget::removeLoadingLabels()
             }
         }
     }
+}
+
+QStringList ReservationWidget::getStatusMap(const QString &statusCode) const
+{
+    QMap<QString, QStringList> statusMap = {
+        {"all", {"all", "全部状态"}},
+        {"pending", {"pending", "待审批", "未审批", "pending", "待审核", "未审核"}},
+        {"approved", {"approved", "已批准", "通过", "approved", "已同意", "已授权"}},
+        {"rejected", {"rejected", "已拒绝", "拒绝", "rejected", "驳回", "未通过"}},
+        {"completed", {"completed", "已完成", "completed", "已结束", "已完成"}},
+        {"cancelled", {"cancelled", "已取消", "cancelled", "取消", "已作废"}}
+    };
+
+    return statusMap.value(statusCode, QStringList());
 }
 
 void ReservationWidget::resizeEvent(QResizeEvent *event)

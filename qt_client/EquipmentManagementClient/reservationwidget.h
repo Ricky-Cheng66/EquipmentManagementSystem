@@ -154,6 +154,7 @@ private:
     QString getPlaceTypeDisplayName(const QString &placeTypeCode);
     void recalculatePendingCounts();
     void removeLoadingLabels();
+    QStringList getStatusMap(const QString &statusCode) const;
     // ==================== 成员变量 ====================
 
     // 当前用户信息
