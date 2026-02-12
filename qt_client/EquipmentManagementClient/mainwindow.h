@@ -65,6 +65,8 @@ private slots:
     // 新增：注销槽函数
     void onLogout();
 
+    void populateEnergyPageFilters();
+
 private:
     Ui::MainWindow *ui;
     TcpClient* m_tcpClient;

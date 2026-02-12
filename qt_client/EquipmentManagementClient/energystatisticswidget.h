@@ -5,9 +5,14 @@
 #include <QComboBox>
 #include <QPushButton>
 #include <QTableWidget>
-#include <QChartView>
 #include <QDateEdit>
-#include "protocol_parser.h"
+#include <QGroupBox>
+
+// 直接包含 Qt Charts 头文件，不加命名空间
+#include <QtCharts/QChartView>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QPieSlice>
+#include <QtCharts/QChart>
 
 class EnergyStatisticsWidget : public QWidget
 {
@@ -16,18 +21,19 @@ class EnergyStatisticsWidget : public QWidget
 public:
     explicit EnergyStatisticsWidget(QWidget *parent = nullptr);
 
+    void setDeviceInfoMap(const QHash<QString, QPair<QString, QString>> &map);
+    void setDeviceTypeList(const QStringList &types);
+    void setPlaceList(const QStringList &places);
     void setEquipmentList(const QStringList &equipmentIds);
 
-    // 添加获取日期的方法
-    QDate getStartDate() const { return m_startDateEdit->date(); }
-    QDate getEndDate() const { return m_endDateEdit->date(); }
+    QDate getStartDate() const;
+    QDate getEndDate() const;
 
 signals:
-    void energyQueryRequested(const QString &equipmentId, const QString &timeRange); // timeRange: "day/week/month/year"
-    void equipmentEnergyQueryRequested(const QString &equipmentId);
+    void energyQueryRequested(const QString &equipmentId, const QString &timeRange);
 
 public slots:
-    void updateEnergyChart(const QString &data); // 接收服务端返回的能耗数据
+    void updateEnergyChart(const QString &data);
 
 private slots:
     void onQueryButtonClicked();
@@ -37,16 +43,32 @@ private slots:
 private:
     void setupUI();
     void parseAndDisplayData(const QString &data);
+    QStringList filterRecords(const QStringList &allRecords);
 
+    // 饼图绘制函数
+    void drawTypePieChart(const QStringList &records);
+    void drawPlacePieChart(const QStringList &records);
+
+    // 控件
     QComboBox *m_equipmentCombo;
     QComboBox *m_timeRangeCombo;
-    QDateEdit *m_startDateEdit;  // 改为QDateEdit
-    QDateEdit *m_endDateEdit;    // 改为QDateEdit
+    QDateEdit *m_startDateEdit;
     QPushButton *m_queryButton;
     QPushButton *m_exportButton;
     QTableWidget *m_statisticsTable;
-    QChartView *m_chartView;
 
+    // 筛选控件
+    QComboBox *m_typeCombo;
+    QComboBox *m_placeCombo;
+
+    // 饼图控件 - 使用 QChartView（无命名空间）
+    QChartView *m_pieChartTypeView;
+    QChartView *m_pieChartPlaceView;
+
+    // 数据
+    QHash<QString, QPair<QString, QString>> m_deviceInfoMap;
+    QString m_selectedType;
+    QString m_selectedPlace;
     QString m_currentTimeRange;
 };
 

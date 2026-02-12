@@ -500,6 +500,8 @@ void EquipmentManagerWidget::handleEquipmentListResponse(const ProtocolParser::P
 
     qDebug() << "设备列表更新完成，共" << m_deviceCards.size() << "个设备";
     qDebug() << "当前视图索引:" << m_viewStack->currentIndex();
+
+    emit deviceListLoaded();
 }
 
 void EquipmentManagerWidget::clearCardView()

@@ -38,6 +38,7 @@ protected:
 
 signals:
     void showStatusMessage(const QString &msg);
+    void deviceListLoaded();
 
 private slots:
     void on_refreshButton_clicked();

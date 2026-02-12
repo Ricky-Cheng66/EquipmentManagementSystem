@@ -1,25 +1,37 @@
-
 #include "energystatisticswidget.h"
 
+// ----- 显式包含所有使用到的 Qt 类头文件 -----
+#include <QLabel>
+#include <QHeaderView>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QDateEdit>
+#include <QComboBox>
+#include <QPushButton>
+#include <QTableWidget>
+#include <QToolTip>
+#include <QCursor>
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QFormLayout>
-#include <QDateTime>
 #include <QMessageBox>
 #include <QFileDialog>
-#include <QTextStream>
 #include <QDebug>
-#include <QtCharts>
-#include <QFile>
-#include <QFileDialog>
 #include <QDate>
+
+// Qt Charts 头文件
+#include <QtCharts/QChartView>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QPieSlice>
+#include <QtCharts/QChart>
 
 
 EnergyStatisticsWidget::EnergyStatisticsWidget(QWidget *parent)
     : QWidget(parent)
 {
     setupUI();
+    // 初始化当前时间粒度（与下拉框默认值一致）
+    m_currentTimeRange = "day";
 
     // 修复：设置为独立窗口，避免背景透明
     setWindowFlags(Qt::Window);
@@ -29,75 +41,135 @@ EnergyStatisticsWidget::EnergyStatisticsWidget(QWidget *parent)
     setWindowTitle("能耗统计分析");
 }
 
+void EnergyStatisticsWidget::setDeviceInfoMap(const QHash<QString, QPair<QString, QString>> &map)
+{
+    m_deviceInfoMap = map;
+}
+
+void EnergyStatisticsWidget::setDeviceTypeList(const QStringList &types)
+{
+    m_typeCombo->clear();
+    m_typeCombo->addItem("全部类型", "all");
+    for (const QString &type : types) {
+        m_typeCombo->addItem(type, type);
+    }
+}
+
+void EnergyStatisticsWidget::setPlaceList(const QStringList &places)
+{
+    m_placeCombo->clear();
+    m_placeCombo->addItem("全部场所", "all");
+    for (const QString &place : places) {
+        m_placeCombo->addItem(place, place);
+    }
+}
+
 void EnergyStatisticsWidget::setupUI()
 {
-    setWindowTitle("Energy Statistics");
-    resize(1000, 700);
+    setWindowTitle("能耗统计分析");
+    resize(1100, 800);  // 增加初始高度，给饼图预留空间
 
-    // 创建控件
+    // ----- 设备选择 -----
     m_equipmentCombo = new QComboBox(this);
-    m_equipmentCombo->addItem("All Equipments", "all");
+    m_equipmentCombo->addItem("全部设备", "all");
 
+    // ----- 时间粒度 -----
     m_timeRangeCombo = new QComboBox(this);
-    m_timeRangeCombo->addItem("Day", "day");
-    m_timeRangeCombo->addItem("Week", "week");
-    m_timeRangeCombo->addItem("Month", "month");
-    m_timeRangeCombo->addItem("Year", "year");
+    m_timeRangeCombo->addItem("日", "day");
+    m_timeRangeCombo->addItem("周", "week");
+    m_timeRangeCombo->addItem("月", "month");
+    m_timeRangeCombo->addItem("年", "year");
 
-    // 开始日期选择
-    QLabel *startDateLabel = new QLabel("Start Date:", this);
-    m_startDateEdit = new QDateEdit(QDate::currentDate().addDays(-7), this);
-    m_startDateEdit->setProperty("class", "form-control");
-    m_startDateEdit->setMinimumHeight(36);
+    // ----- 基准日期 -----
+    QLabel *baseDateLabel = new QLabel("基准日期:", this);
+    m_startDateEdit = new QDateEdit(QDate::currentDate(), this);
     m_startDateEdit->setDisplayFormat("yyyy-MM-dd");
     m_startDateEdit->setCalendarPopup(true);
-    m_startDateEdit->setDate(QDate::currentDate().addDays(-7));
 
-    // 结束日期选择
-    QLabel *endDateLabel = new QLabel("End Date:", this);
-    m_endDateEdit = new QDateEdit(QDate::currentDate(), this);
-    m_endDateEdit->setProperty("class", "form-control");
-    m_endDateEdit->setMinimumHeight(36);
-    m_endDateEdit->setDisplayFormat("yyyy-MM-dd");
-    m_endDateEdit->setCalendarPopup(true);
-    m_endDateEdit->setDate(QDate::currentDate());
+    // ----- 设备类型筛选 -----
+    QLabel *typeLabel = new QLabel("设备类型:", this);
+    m_typeCombo = new QComboBox(this);
+    m_typeCombo->addItem("全部类型", "all");
 
-    m_queryButton = new QPushButton("Query", this);
-    m_exportButton = new QPushButton("Export CSV", this);
+    // ----- 场所筛选 -----
+    QLabel *placeLabel = new QLabel("场所:", this);
+    m_placeCombo = new QComboBox(this);
+    m_placeCombo->addItem("全部场所", "all");
 
+    // ----- 按钮 -----
+    m_queryButton = new QPushButton("查询", this);
+    m_exportButton = new QPushButton("导出CSV", this);
+
+    // ----- 表格 -----
     m_statisticsTable = new QTableWidget(0, 5, this);
-    m_statisticsTable->setHorizontalHeaderLabels({"Equipment ID", "Date", "Energy (kWh)", "Avg Power (W)", "Cost (¥)"});
+    m_statisticsTable->setHorizontalHeaderLabels({"设备ID", "日期", "能耗(kWh)", "平均功率(W)", "费用(¥)"});
     m_statisticsTable->horizontalHeader()->setStretchLastSection(true);
     m_statisticsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
-    m_chartView = new QChartView(this);
-    m_chartView->setRenderHint(QPainter::Antialiasing);
+    // ----- 饼图区域（关键修改）-----
+    QHBoxLayout *pieLayout = new QHBoxLayout();
+    pieLayout->setSpacing(15);                     // 饼图间距
+    pieLayout->setContentsMargins(0, 10, 0, 10);   // 上下边距
 
-    // 布局
+    // 类型占比饼图
+    QGroupBox *typeGroup = new QGroupBox("设备类型能耗占比", this);
+    typeGroup->setMinimumHeight(300);              // 保证饼图显示高度
+    typeGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_pieChartTypeView = new QChartView(typeGroup);
+    m_pieChartTypeView->setRenderHint(QPainter::Antialiasing);
+    m_pieChartTypeView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QVBoxLayout *typeGroupLayout = new QVBoxLayout(typeGroup);
+    typeGroupLayout->setContentsMargins(6, 6, 6, 6);
+    typeGroupLayout->addWidget(m_pieChartTypeView);
+
+    // 场所占比饼图
+    QGroupBox *placeGroup = new QGroupBox("场所能耗占比", this);
+    placeGroup->setMinimumHeight(300);
+    placeGroup->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_pieChartPlaceView = new QChartView(placeGroup);
+    m_pieChartPlaceView->setRenderHint(QPainter::Antialiasing);
+    m_pieChartPlaceView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QVBoxLayout *placeGroupLayout = new QVBoxLayout(placeGroup);
+    placeGroupLayout->setContentsMargins(6, 6, 6, 6);
+    placeGroupLayout->addWidget(m_pieChartPlaceView);
+
+    pieLayout->addWidget(typeGroup, 1);   // 拉伸因子1，等宽
+    pieLayout->addWidget(placeGroup, 1);  // 拉伸因子1，等宽
+
+    // ----- 表单布局（筛选栏压缩高度）-----
     QFormLayout *formLayout = new QFormLayout();
-    formLayout->addRow("Equipment:", m_equipmentCombo);
-    formLayout->addRow("Time Range:", m_timeRangeCombo);
-    formLayout->addRow(startDateLabel, m_startDateEdit);
-    formLayout->addRow(endDateLabel, m_endDateEdit);
+    formLayout->setContentsMargins(0, 0, 0, 0);   // 移除额外边距
+    formLayout->setSpacing(8);                   // 紧凑布局
+    formLayout->addRow("设备:", m_equipmentCombo);
+    formLayout->addRow("时间粒度:", m_timeRangeCombo);
+    formLayout->addRow(baseDateLabel, m_startDateEdit);
+    formLayout->addRow(typeLabel, m_typeCombo);
+    formLayout->addRow(placeLabel, m_placeCombo);
 
+    // ----- 按钮布局 -----
     QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->setContentsMargins(0, 5, 0, 5);
     buttonLayout->addWidget(m_queryButton);
     buttonLayout->addWidget(m_exportButton);
     buttonLayout->addStretch();
 
+    // ----- 主布局（设置拉伸权重）-----
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
-    mainLayout->addLayout(formLayout);
-    mainLayout->addLayout(buttonLayout);
-    mainLayout->addWidget(m_statisticsTable);
-    mainLayout->addWidget(m_chartView);
+    mainLayout->setContentsMargins(10, 10, 10, 10);
+    mainLayout->setSpacing(10);
 
-    // 连接信号
+    mainLayout->addLayout(formLayout);          // 筛选栏（不拉伸）
+    mainLayout->addLayout(buttonLayout);        // 按钮栏（不拉伸）
+    mainLayout->addLayout(pieLayout, 2);        // 饼图区域（拉伸因子2，获得更多空间）
+    mainLayout->addWidget(m_statisticsTable, 1);// 表格（拉伸因子1）
+
+    // ----- 信号连接 -----
     connect(m_queryButton, &QPushButton::clicked, this, &EnergyStatisticsWidget::onQueryButtonClicked);
     connect(m_exportButton, &QPushButton::clicked, this, &EnergyStatisticsWidget::onExportButtonClicked);
-
-    // 时间范围变化时自动调整日期
     connect(m_timeRangeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &EnergyStatisticsWidget::onTimeRangeChanged);
+
+    m_currentTimeRange = "day";
 }
 
 void EnergyStatisticsWidget::setEquipmentList(const QStringList &equipmentIds)
@@ -110,19 +182,49 @@ void EnergyStatisticsWidget::setEquipmentList(const QStringList &equipmentIds)
     }
 }
 
+QDate EnergyStatisticsWidget::getStartDate() const
+{
+    QDate base = m_startDateEdit->date();
+    if (m_currentTimeRange == "month") {
+        return QDate(base.year(), base.month(), 1);
+    } else if (m_currentTimeRange == "year") {
+        return QDate(base.year(), 1, 1);
+    } else if (m_currentTimeRange == "week") {
+        // 自然周：周一为一周开始
+        int dayOfWeek = base.dayOfWeek();  // Qt6: 周一=1, 周日=7
+        return base.addDays(-(dayOfWeek - 1));
+    }
+    return base; // day 返回基准日期本身
+}
+
+QDate EnergyStatisticsWidget::getEndDate() const
+{
+    QDate base = m_startDateEdit->date();
+    if (m_currentTimeRange == "day") {
+        return base;
+    } else if (m_currentTimeRange == "week") {
+        // 自然周：周日为一周结束
+        int dayOfWeek = base.dayOfWeek();
+        return base.addDays(7 - dayOfWeek);
+    } else if (m_currentTimeRange == "month") {
+        return QDate(base.year(), base.month(), base.daysInMonth());
+    } else if (m_currentTimeRange == "year") {
+        return QDate(base.year(), 12, 31);
+    }
+    return base;
+}
+
 void EnergyStatisticsWidget::onQueryButtonClicked()
 {
+    // 存储当前筛选条件
+    m_selectedType = m_typeCombo->currentData().toString();
+    m_selectedPlace = m_placeCombo->currentData().toString();
+
+    // 更新当前粒度（确保与下拉框一致）
+    m_currentTimeRange = m_timeRangeCombo->currentData().toString();
+
     QString equipmentId = m_equipmentCombo->currentData().toString();
-    QString timeRange = m_timeRangeCombo->currentData().toString();
-
-    // 构建符合协议的payload: "timeRange|startDate|endDate"
-    QString startDate = m_startDateEdit->date().toString("yyyy-MM-dd");
-    QString endDate = m_endDateEdit->date().toString("yyyy-MM-dd");
-
-    qDebug() << "发送能耗查询请求:" << equipmentId << timeRange << startDate << endDate;
-
-    // 发射信号，MainWindow会处理并发送到服务端
-    emit energyQueryRequested(equipmentId, timeRange);
+    emit energyQueryRequested(equipmentId, m_currentTimeRange);
 }
 
 void EnergyStatisticsWidget::updateEnergyChart(const QString &data)
@@ -133,25 +235,23 @@ void EnergyStatisticsWidget::updateEnergyChart(const QString &data)
 
 void EnergyStatisticsWidget::parseAndDisplayData(const QString &data)
 {
+    // 原始分割
+    QStringList allRecords = data.split(';', Qt::SkipEmptyParts);
+    // 应用本地过滤
+    QStringList records = filterRecords(allRecords);
+
     // 清空表格
     m_statisticsTable->setRowCount(0);
 
-    if (data.isEmpty() || data == "0") {
-        QMessageBox::information(this, "查询结果", "暂无能耗数据（数据库可能为空）");
+    if (records.isEmpty()) {
+        QMessageBox::information(this, "查询结果", "当前筛选条件下无数据");
+        // 清空饼图
+        m_pieChartTypeView->setChart(nullptr);
+        m_pieChartPlaceView->setChart(nullptr);
         return;
     }
 
-    if (!data.contains("|")) {
-        qDebug() << "警告：数据格式不正确，不包含分隔符:" << data;
-        QMessageBox::warning(this, "数据错误", "服务端返回的数据格式不正确");
-        return;
-    }
-
-    // 解析数据格式: "equipment_id|period|energy|avg_power|cost;..."
-    QStringList records = data.split(';', Qt::SkipEmptyParts);
-
-    qDebug() << "正在解析" << records.size() << "条能耗记录";
-
+    // 填充表格（与原有逻辑一致）
     for (int i = 0; i < records.size(); ++i) {
         QStringList fields = records[i].split('|');
         if (fields.size() >= 5) {
@@ -160,16 +260,158 @@ void EnergyStatisticsWidget::parseAndDisplayData(const QString &data)
                 QTableWidgetItem *item = new QTableWidgetItem(fields.value(j, "0"));
                 m_statisticsTable->setItem(i, j, item);
             }
-        } else {
-            qDebug() << "警告：记录格式不正确:" << records[i];
         }
     }
 
-    // 调整列宽
     m_statisticsTable->resizeColumnsToContents();
     m_statisticsTable->horizontalHeader()->setStretchLastSection(true);
 
-    qDebug() << "能耗数据解析完成，共" << records.size() << "条记录";
+    // 绘制饼图（基于过滤后的数据）
+    drawTypePieChart(records);
+    drawPlacePieChart(records);
+
+    qDebug() << "能耗数据解析完成，共" << records.size() << "条记录（过滤后）";
+}
+
+QStringList EnergyStatisticsWidget::filterRecords(const QStringList &allRecords)
+{
+    // 如果类型和场所都是“全部”，则不过滤
+    if (m_selectedType == "all" && m_selectedPlace == "all") {
+        return allRecords;
+    }
+
+    QStringList filtered;
+    for (const QString &record : allRecords) {
+        QStringList fields = record.split('|');
+        if (fields.size() < 1) continue;
+        QString devId = fields[0];  // 设备ID
+
+        // 从映射中查找设备信息
+        auto it = m_deviceInfoMap.find(devId);
+        if (it == m_deviceInfoMap.end()) {
+            // 如果映射中没有该设备信息，保留还是丢弃？建议丢弃（数据不完整）
+            continue;
+        }
+
+        QString devType = it.value().first;
+        QString devPlace = it.value().second;
+
+        bool typeMatch = (m_selectedType == "all" || devType == m_selectedType);
+        bool placeMatch = (m_selectedPlace == "all" || devPlace == m_selectedPlace);
+
+        if (typeMatch && placeMatch) {
+            filtered << record;
+        }
+    }
+    return filtered;
+}
+
+// ---------- 饼图绘制函数（完全无命名空间）----------
+
+void EnergyStatisticsWidget::drawTypePieChart(const QStringList &records)
+{
+    // 按设备类型聚合能耗
+    QHash<QString, double> typeEnergy;
+    for (const QString &record : records) {
+        QStringList fields = record.split('|');
+        if (fields.size() < 3) continue;
+        QString devId = fields[0];
+        double energy = fields[2].toDouble();
+        auto it = m_deviceInfoMap.find(devId);
+        if (it != m_deviceInfoMap.end()) {
+            QString type = it.value().first;
+            typeEnergy[type] += energy;
+        }
+    }
+
+    if (typeEnergy.isEmpty()) {
+        m_pieChartTypeView->setChart(nullptr);
+        return;
+    }
+
+    // 使用全局类名（无命名空间）
+    QPieSeries *series = new QPieSeries();
+    for (auto it = typeEnergy.begin(); it != typeEnergy.end(); ++it) {
+        QPieSlice *slice = series->append(it.key(), it.value());
+        slice->setLabelVisible(true);
+        slice->setLabel(QString("%1\n%2%")
+                            .arg(it.key())
+                            .arg(QString::number(slice->percentage() * 100, 'f', 1)));
+
+        // 鼠标悬停提示
+        QString tooltipText = QString("%1: %2 kWh (%3%)")
+                                  .arg(it.key())
+                                  .arg(it.value(), 0, 'f', 2)
+                                  .arg(slice->percentage() * 100, 0, 'f', 1);
+        connect(slice, &QPieSlice::hovered, this, [tooltipText](bool hovered){
+            if (hovered) {
+                QToolTip::showText(QCursor::pos(), tooltipText);
+            } else {
+                QToolTip::hideText();
+            }
+        });
+    }
+
+    QChart *chart = new QChart();
+    chart->addSeries(series);
+    chart->setTitle("设备类型能耗占比");
+    chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->legend()->setVisible(true);
+    chart->legend()->setAlignment(Qt::AlignRight);
+
+    m_pieChartTypeView->setChart(chart);
+}
+
+void EnergyStatisticsWidget::drawPlacePieChart(const QStringList &records)
+{
+    // 按场所聚合能耗
+    QHash<QString, double> placeEnergy;
+    for (const QString &record : records) {
+        QStringList fields = record.split('|');
+        if (fields.size() < 3) continue;
+        QString devId = fields[0];
+        double energy = fields[2].toDouble();
+        auto it = m_deviceInfoMap.find(devId);
+        if (it != m_deviceInfoMap.end()) {
+            QString place = it.value().second;
+            placeEnergy[place] += energy;
+        }
+    }
+
+    if (placeEnergy.isEmpty()) {
+        m_pieChartPlaceView->setChart(nullptr);
+        return;
+    }
+
+    QPieSeries *series = new QPieSeries();
+    for (auto it = placeEnergy.begin(); it != placeEnergy.end(); ++it) {
+        QPieSlice *slice = series->append(it.key(), it.value());
+        slice->setLabelVisible(true);
+        slice->setLabel(QString("%1\n%2%")
+                            .arg(it.key())
+                            .arg(QString::number(slice->percentage() * 100, 'f', 1)));
+
+        QString tooltipText = QString("%1: %2 kWh (%3%)")
+                                  .arg(it.key())
+                                  .arg(it.value(), 0, 'f', 2)
+                                  .arg(slice->percentage() * 100, 0, 'f', 1);
+        connect(slice, &QPieSlice::hovered, this, [tooltipText](bool hovered){
+            if (hovered) {
+                QToolTip::showText(QCursor::pos(), tooltipText);
+            } else {
+                QToolTip::hideText();
+            }
+        });
+    }
+
+    QChart *chart = new QChart();
+    chart->addSeries(series);
+    chart->setTitle("场所能耗占比");
+    chart->setAnimationOptions(QChart::SeriesAnimations);
+    chart->legend()->setVisible(true);
+    chart->legend()->setAlignment(Qt::AlignRight);
+
+    m_pieChartPlaceView->setChart(chart);
 }
 
 void EnergyStatisticsWidget::onExportButtonClicked()
@@ -223,25 +465,7 @@ void EnergyStatisticsWidget::onExportButtonClicked()
 void EnergyStatisticsWidget::onTimeRangeChanged(int index)
 {
     if (index < 0) return;
-
-    QString timeRange = m_timeRangeCombo->itemData(index).toString();
-    QDate currentDate = QDate::currentDate();
-
-    if (timeRange == "day") {
-        // 按日统计：默认查询当天
-        m_startDateEdit->setDate(currentDate);
-        m_endDateEdit->setDate(currentDate);
-    } else if (timeRange == "week") {
-        // 按周统计：默认查询最近一周
-        m_startDateEdit->setDate(currentDate.addDays(-7));
-        m_endDateEdit->setDate(currentDate);
-    } else if (timeRange == "month") {
-        // 按月统计：默认查询最近一个月
-        m_startDateEdit->setDate(currentDate.addMonths(-1));
-        m_endDateEdit->setDate(currentDate);
-    } else if (timeRange == "year") {
-        // 按年统计：默认查询最近一年
-        m_startDateEdit->setDate(currentDate.addYears(-1));
-        m_endDateEdit->setDate(currentDate);
-    }
+    m_currentTimeRange = m_timeRangeCombo->itemData(index).toString();
+    // 可选：基准日期复位到今天
+    m_startDateEdit->setDate(QDate::currentDate());
 }

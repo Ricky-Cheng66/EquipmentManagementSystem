@@ -516,6 +516,17 @@ void MainWindow::setupCentralStack()
             this, &MainWindow::onEnergyQueryRequested);
     m_centralStack->addWidget(m_energyPage);
 
+    // 连接设备管理页面的设备列表加载完成信号
+    if (m_equipmentPage) {
+        // 如果设备列表已存在数据，立即填充
+        if (m_equipmentPage->m_equipmentModel->rowCount() > 0) {
+            populateEnergyPageFilters();
+        }
+        // 无论是否已有数据，都连接信号确保后续更新时刷新
+        connect(m_equipmentPage, &EquipmentManagerWidget::deviceListLoaded,
+                this, &MainWindow::populateEnergyPageFilters);
+    }
+
     // 5. 系统设置页面（暂时留空）
     m_settingsPage = new QWidget();
     QVBoxLayout *settingsLayout = new QVBoxLayout(m_settingsPage);
@@ -710,6 +721,38 @@ void MainWindow::onLogout()
             qApp->exit(EXIT_CODE_RELOGOUT);
         });
     }
+}
+
+void MainWindow::populateEnergyPageFilters()
+{
+    if (!m_energyPage || !m_equipmentPage || !m_equipmentPage->m_equipmentModel) {
+        qDebug() << "能耗页面或设备模型未就绪，跳过填充";
+        return;
+    }
+
+    QStandardItemModel *model = m_equipmentPage->m_equipmentModel;
+    if (model->rowCount() == 0) {
+        qDebug() << "设备模型当前无数据，等待下次信号";
+        return;
+    }
+
+    QSet<QString> typeSet, placeSet;
+    QHash<QString, QPair<QString, QString>> devInfoMap;
+
+    for (int row = 0; row < model->rowCount(); ++row) {
+        QString devId   = model->item(row, 0)->text(); // 设备ID
+        QString type    = model->item(row, 1)->text(); // 设备类型
+        QString place   = model->item(row, 2)->text(); // 场所
+        typeSet.insert(type);
+        placeSet.insert(place);
+        devInfoMap.insert(devId, qMakePair(type, place));
+    }
+
+    m_energyPage->setDeviceTypeList(typeSet.values());
+    m_energyPage->setPlaceList(placeSet.values());
+    m_energyPage->setDeviceInfoMap(devInfoMap);
+
+    qDebug() << "能耗页面筛选条件填充完成，类型:" << typeSet.size() << "场所:" << placeSet.size();
 }
 
 // 其他原有的槽函数实现需要保持不变，但需要从构造函数移动到setupMessageHandlers中
