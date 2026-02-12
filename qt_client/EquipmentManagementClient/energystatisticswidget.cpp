@@ -275,7 +275,7 @@ void EnergyStatisticsWidget::parseAndDisplayData(const QString &data)
 
 QStringList EnergyStatisticsWidget::filterRecords(const QStringList &allRecords)
 {
-    // 如果类型和场所都是“全部”，则不过滤
+    // 如果类型和场所都是“全部”，则不过滤（直接返回全部记录）
     if (m_selectedType == "all" && m_selectedPlace == "all") {
         return allRecords;
     }
@@ -284,20 +284,26 @@ QStringList EnergyStatisticsWidget::filterRecords(const QStringList &allRecords)
     for (const QString &record : allRecords) {
         QStringList fields = record.split('|');
         if (fields.size() < 1) continue;
-        QString devId = fields[0];  // 设备ID
-
-        // 从映射中查找设备信息
+        QString devId = fields[0];
         auto it = m_deviceInfoMap.find(devId);
+
+        // 设备不在映射表中：若筛选条件非“全部”，则丢弃（无法匹配）
+        // 若映射表缺失严重，此处可能导致大量丢弃；可根据需要调整策略
         if (it == m_deviceInfoMap.end()) {
-            // 如果映射中没有该设备信息，保留还是丢弃？建议丢弃（数据不完整）
-            continue;
+            // 如果类型或场所指定了非“全部”，无法判断，只能丢弃
+            if (m_selectedType != "all" || m_selectedPlace != "all") {
+                continue;
+            }
+            // 如果都是“全部”，本应在上面直接返回，不会走到这里
         }
 
-        QString devType = it.value().first;
-        QString devPlace = it.value().second;
-
-        bool typeMatch = (m_selectedType == "all" || devType == m_selectedType);
-        bool placeMatch = (m_selectedPlace == "all" || devPlace == m_selectedPlace);
+        bool typeMatch = true, placeMatch = true;
+        if (it != m_deviceInfoMap.end()) {
+            QString devType = it.value().first;
+            QString devPlace = it.value().second;
+            typeMatch = (m_selectedType == "all" || devType == m_selectedType);
+            placeMatch = (m_selectedPlace == "all" || devPlace == m_selectedPlace);
+        }
 
         if (typeMatch && placeMatch) {
             filtered << record;
@@ -306,22 +312,57 @@ QStringList EnergyStatisticsWidget::filterRecords(const QStringList &allRecords)
     return filtered;
 }
 
+QHash<QString, double> EnergyStatisticsWidget::mergeSmallSlices(const QHash<QString, double> &data, double minPercentage)
+{
+    double total = 0;
+    for (double v : data) total += v;
+
+    QHash<QString, double> merged;
+    double otherEnergy = 0.0;
+    int otherCount = 0;
+
+    for (auto it = data.begin(); it != data.end(); ++it) {
+        double p = (it.value() / total) * 100.0;
+        if (p >= minPercentage) {
+            merged.insert(it.key(), it.value());
+        } else {
+            otherEnergy += it.value();
+            otherCount++;
+        }
+    }
+
+    if (otherEnergy > 0.001) {
+        merged.insert(QString("其他 (%1项)").arg(otherCount), otherEnergy);
+    }
+    return merged;
+}
+
 // ---------- 饼图绘制函数（完全无命名空间）----------
 
 void EnergyStatisticsWidget::drawTypePieChart(const QStringList &records)
 {
-    // 按设备类型聚合能耗
     QHash<QString, double> typeEnergy;
+    double unknownEnergy = 0.0;
+    int unknownCount = 0;
+
     for (const QString &record : records) {
         QStringList fields = record.split('|');
         if (fields.size() < 3) continue;
         QString devId = fields[0];
         double energy = fields[2].toDouble();
+
         auto it = m_deviceInfoMap.find(devId);
         if (it != m_deviceInfoMap.end()) {
             QString type = it.value().first;
             typeEnergy[type] += energy;
+        } else {
+            unknownEnergy += energy;
+            unknownCount++;
         }
+    }
+
+    if (unknownEnergy > 0.001) {
+        typeEnergy.insert(QString("未知类型 (%1)").arg(unknownCount), unknownEnergy);
     }
 
     if (typeEnergy.isEmpty()) {
@@ -329,53 +370,81 @@ void EnergyStatisticsWidget::drawTypePieChart(const QStringList &records)
         return;
     }
 
-    // 使用全局类名（无命名空间）
+    // 可选：合并极小切片
+    typeEnergy = mergeSmallSlices(typeEnergy, 1.0);
+
     QPieSeries *series = new QPieSeries();
+    double totalEnergy = 0.0;
+    for (auto it = typeEnergy.begin(); it != typeEnergy.end(); ++it) {
+        totalEnergy += it.value();
+    }
+
     for (auto it = typeEnergy.begin(); it != typeEnergy.end(); ++it) {
         QPieSlice *slice = series->append(it.key(), it.value());
+
+        double percentage = (it.value() / totalEnergy) * 100.0;
+        QString percentText;
+        if (percentage < 0.1) {
+            percentText = "<0.1%";
+        } else {
+            percentText = QString::number(percentage, 'f', 1) + "%";
+        }
+
         slice->setLabelVisible(true);
-        slice->setLabel(QString("%1\n%2%")
-                            .arg(it.key())
-                            .arg(QString::number(slice->percentage() * 100, 'f', 1)));
+        slice->setLabel(QString("%1\n%2").arg(it.key()).arg(percentText));
+
 
         // 鼠标悬停提示
         QString tooltipText = QString("%1: %2 kWh (%3%)")
                                   .arg(it.key())
                                   .arg(it.value(), 0, 'f', 2)
-                                  .arg(slice->percentage() * 100, 0, 'f', 1);
+                                  .arg(percentage, 0, 'f', 2);
         connect(slice, &QPieSlice::hovered, this, [tooltipText](bool hovered){
-            if (hovered) {
-                QToolTip::showText(QCursor::pos(), tooltipText);
-            } else {
-                QToolTip::hideText();
-            }
+            if (hovered) QToolTip::showText(QCursor::pos(), tooltipText);
+            else QToolTip::hideText();
         });
     }
 
     QChart *chart = new QChart();
     chart->addSeries(series);
-    chart->setTitle("设备类型能耗占比");
+    chart->setTitle(QString("设备类型能耗占比 (总计: %1 kWh)").arg(totalEnergy, 0, 'f', 2));
     chart->setAnimationOptions(QChart::SeriesAnimations);
     chart->legend()->setVisible(true);
     chart->legend()->setAlignment(Qt::AlignRight);
+    chart->legend()->setLabelColor(Qt::black);
+    chart->legend()->setFont(QFont("Microsoft YaHei", 9));
 
     m_pieChartTypeView->setChart(chart);
+
+    if (unknownCount > 0) {
+        qWarning() << "[能耗] 类型饼图: 有" << unknownCount << "条记录的设备ID未在映射表中";
+    }
 }
 
 void EnergyStatisticsWidget::drawPlacePieChart(const QStringList &records)
 {
-    // 按场所聚合能耗
     QHash<QString, double> placeEnergy;
+    double unknownEnergy = 0.0;
+    int unknownCount = 0;
+
     for (const QString &record : records) {
         QStringList fields = record.split('|');
         if (fields.size() < 3) continue;
         QString devId = fields[0];
         double energy = fields[2].toDouble();
+
         auto it = m_deviceInfoMap.find(devId);
         if (it != m_deviceInfoMap.end()) {
             QString place = it.value().second;
             placeEnergy[place] += energy;
+        } else {
+            unknownEnergy += energy;
+            unknownCount++;
         }
+    }
+
+    if (unknownEnergy > 0.001) {
+        placeEnergy.insert(QString("未知场所 (%1)").arg(unknownCount), unknownEnergy);
     }
 
     if (placeEnergy.isEmpty()) {
@@ -383,35 +452,53 @@ void EnergyStatisticsWidget::drawPlacePieChart(const QStringList &records)
         return;
     }
 
+    // 可选：合并占比 < 1% 的类别
+    placeEnergy = mergeSmallSlices(placeEnergy, 1.0);
+
     QPieSeries *series = new QPieSeries();
+    double totalEnergy = 0.0;
+    for (auto it = placeEnergy.begin(); it != placeEnergy.end(); ++it) {
+        totalEnergy += it.value();
+    }
+
     for (auto it = placeEnergy.begin(); it != placeEnergy.end(); ++it) {
         QPieSlice *slice = series->append(it.key(), it.value());
+
+        double percentage = (it.value() / totalEnergy) * 100.0;
+        QString percentText;
+        if (percentage < 0.1) {
+            percentText = "<0.1%";
+        } else {
+            percentText = QString::number(percentage, 'f', 1) + "%";
+        }
+
         slice->setLabelVisible(true);
-        slice->setLabel(QString("%1\n%2%")
-                            .arg(it.key())
-                            .arg(QString::number(slice->percentage() * 100, 'f', 1)));
+        slice->setLabel(QString("%1\n%2").arg(it.key()).arg(percentText));
 
         QString tooltipText = QString("%1: %2 kWh (%3%)")
                                   .arg(it.key())
                                   .arg(it.value(), 0, 'f', 2)
-                                  .arg(slice->percentage() * 100, 0, 'f', 1);
+                                  .arg(percentage, 0, 'f', 2);
         connect(slice, &QPieSlice::hovered, this, [tooltipText](bool hovered){
-            if (hovered) {
-                QToolTip::showText(QCursor::pos(), tooltipText);
-            } else {
-                QToolTip::hideText();
-            }
+            if (hovered) QToolTip::showText(QCursor::pos(), tooltipText);
+            else QToolTip::hideText();
         });
     }
 
     QChart *chart = new QChart();
     chart->addSeries(series);
-    chart->setTitle("场所能耗占比");
+    chart->setTitle(QString("场所能耗占比 (总计: %1 kWh)").arg(totalEnergy, 0, 'f', 2));
     chart->setAnimationOptions(QChart::SeriesAnimations);
     chart->legend()->setVisible(true);
     chart->legend()->setAlignment(Qt::AlignRight);
+    chart->legend()->setLabelColor(Qt::black);
+    chart->legend()->setFont(QFont("Microsoft YaHei", 9));
 
     m_pieChartPlaceView->setChart(chart);
+
+    if (unknownCount > 0) {
+        qWarning() << "[能耗] 场所饼图: 有" << unknownCount << "条记录的设备ID未在映射表中";
+    }
 }
 
 void EnergyStatisticsWidget::onExportButtonClicked()

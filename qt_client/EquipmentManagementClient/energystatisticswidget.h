@@ -44,7 +44,7 @@ private:
     void setupUI();
     void parseAndDisplayData(const QString &data);
     QStringList filterRecords(const QStringList &allRecords);
-
+    QHash<QString, double> mergeSmallSlices(const QHash<QString, double> &data, double minPercentage);
     // 饼图绘制函数
     void drawTypePieChart(const QStringList &records);
     void drawPlacePieChart(const QStringList &records);
