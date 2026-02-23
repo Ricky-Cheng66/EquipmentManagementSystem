@@ -130,6 +130,23 @@ std::vector<char> ProtocolParser::build_qt_heartbeat_response(
                                          client_identifier, {timestamp}));
 }
 
+std::vector<char>
+ProtocolParser::build_set_threshold_message(ClientType client_type,
+                                            const std::string &equipment_id,
+                                            float threshold_value) {
+  // payload: "equipment_id|threshold_value"
+  std::string payload = equipment_id + "|" + std::to_string(threshold_value);
+  return pack_message(build_message_body(client_type, QT_SET_THRESHOLD,
+                                         equipment_id, {payload}));
+}
+
+std::vector<char> ProtocolParser::build_set_threshold_response(
+    ClientType client_type, bool success, const std::string &message) {
+  return pack_message(
+      build_message_body(client_type, QT_SET_THRESHOLD_RESPONSE, "response",
+                         {success ? "success" : "fail", message}));
+}
+
 // ============ 私有工具函数 ============
 
 std::string

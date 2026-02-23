@@ -142,6 +142,13 @@ private:
                                     const std::string &equipment_id,
                                     const std::string &severity,
                                     const std::string &message);
+  //阈值相关函数
+  // 从数据库加载阈值
+  void load_thresholds_from_db();
+
+  // 处理设置阈值请求
+  void handle_set_threshold(int fd, const std::string &equipment_id,
+                            const std::string &payload);
 
   //成员变量
   const int MAXCLIENTFDS = 1024;
@@ -153,4 +160,6 @@ private:
   std::unique_ptr<ConnectionManager> connections_manager_;
   std::unique_ptr<DatabaseManager> db_manager_;
   std::unordered_map<int, std::unique_ptr<MessageBuffer>> message_buffers_;
+  std::unordered_map<std::string, float>
+      power_thresholds_; // 阈值缓存 (equipment_id -> power_threshold)
 };

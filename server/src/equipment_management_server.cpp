@@ -163,6 +163,9 @@ bool EquipmentManagementServer::initialize_database() {
   std::cout << "设备管理器初始化成功，共 "
             << equipment_manager_->get_equipment_count() << " 个已注册设备"
             << std::endl;
+  // 加载阈值配置
+  load_thresholds_from_db();
+  std::cout << "阈值配置成功" << std::endl;
   return true;
 }
 
@@ -354,7 +357,7 @@ void EquipmentManagementServer::process_qt_client_message(
     break;
 
   case ProtocolParser::QT_HEARTBEAT_RESPONSE: // 新增（理论上服务端不应收到）
-    std::cout << "警告：服务端收到QT_HEARTBEAT_RESPONSE消息" << std::endl;
+    std::cout << "警告:服务端收到QT_HEARTBEAT_RESPONSE消息" << std::endl;
     break;
 
   case ProtocolParser::QT_ALERT_ACK:
@@ -364,7 +367,9 @@ void EquipmentManagementServer::process_qt_client_message(
   case ProtocolParser::QT_PLACE_LIST_QUERY: // 改动：使用枚举变量名
     handle_qt_place_list_query(fd);
     break;
-
+  case ProtocolParser::QT_SET_THRESHOLD:
+    handle_set_threshold(fd, parse_result.equipment_id, parse_result.payload);
+    break;
   default:
     std::cout << "未知消息类型: " << parse_result.type << " from fd=" << fd
               << std::endl;
@@ -826,7 +831,21 @@ void EquipmentManagementServer::handle_power_report(
 
   try {
     double power_value = std::stod(power_value_str);
+    // 阈值判断
+    auto it = power_thresholds_.find(equipment_id);
+    if (it != power_thresholds_.end() && power_value > it->second) {
+      std::string message = "设备能耗超标: " + equipment_id +
+                            " 当前功耗: " + power_value_str +
+                            "W (阈值: " + std::to_string(it->second) + "W)";
 
+      // 写入数据库
+      db_manager_->insert_alarm("energy_threshold", equipment_id, "warning",
+                                message);
+
+      // 发送告警给所有Qt客户端
+      send_alert_to_all_qt_clients("energy_threshold", equipment_id, "warning",
+                                   message);
+    }
     // 1. 写入原始功耗日志表
     if (db_manager_->is_connected()) {
       db_manager_->insert_power_log(equipment_id, power_value, timestamp);
@@ -1104,6 +1123,97 @@ void EquipmentManagementServer::send_alert_to_all_qt_clients(
       }
     }
   }
+}
+
+void EquipmentManagementServer::load_thresholds_from_db() {
+  if (!db_manager_ || !db_manager_->is_connected()) {
+    std::cerr << "数据库未连接，无法加载阈值" << std::endl;
+    return;
+  }
+
+  std::string query = "SELECT equipment_id, threshold_value FROM thresholds "
+                      "WHERE threshold_type = 'power_threshold'";
+  auto results = db_manager_->execute_query(query);
+
+  power_thresholds_.clear();
+  for (const auto &row : results) {
+    if (row.size() >= 2) {
+      try {
+        std::string eq_id = row[0];
+        float value = std::stof(row[1]);
+        power_thresholds_[eq_id] = value;
+      } catch (...) {
+        std::cerr << "解析阈值数据失败: " << row[0] << " = " << row[1]
+                  << std::endl;
+      }
+    }
+  }
+  std::cout << "已加载 " << power_thresholds_.size() << " 个功率阈值配置"
+            << std::endl;
+}
+
+void EquipmentManagementServer::handle_set_threshold(
+    int fd, const std::string &equipment_id, const std::string &payload) {
+
+  // 解析 payload，格式: "equipment_id|threshold_value"
+  auto parts = ProtocolParser::split_string(payload, '|');
+  if (parts.size() < 2) {
+    std::vector<char> response = ProtocolParser::build_set_threshold_response(
+        ProtocolParser::CLIENT_QT_CLIENT, false, "格式错误");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  std::string target_eq = parts[0];
+  float threshold_value;
+  try {
+    threshold_value = std::stof(parts[1]);
+  } catch (...) {
+    std::vector<char> response = ProtocolParser::build_set_threshold_response(
+        ProtocolParser::CLIENT_QT_CLIENT, false, "阈值数值无效");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  // 检查设备是否存在
+  auto equipment = equipment_manager_->get_equipment(target_eq);
+  if (!equipment) {
+    std::vector<char> response = ProtocolParser::build_set_threshold_response(
+        ProtocolParser::CLIENT_QT_CLIENT, false, "设备不存在");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  // 写入数据库（使用 REPLACE INTO，因为表有唯一约束）
+  if (db_manager_->is_connected()) {
+    // 注意：需要转义 equipment_id 防止 SQL 注入，但这里简化处理
+    std::string query = "REPLACE INTO thresholds (equipment_id, "
+                        "threshold_type, threshold_value) VALUES ('" +
+                        target_eq + "', 'power_threshold', " +
+                        std::to_string(threshold_value) + ")";
+    if (!db_manager_->execute_update(query)) {
+      std::vector<char> response = ProtocolParser::build_set_threshold_response(
+          ProtocolParser::CLIENT_QT_CLIENT, false, "数据库错误");
+      send(fd, response.data(), response.size(), 0);
+      return;
+    }
+  } else {
+    std::vector<char> response = ProtocolParser::build_set_threshold_response(
+        ProtocolParser::CLIENT_QT_CLIENT, false, "数据库未连接");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  // 更新内存缓存
+  power_thresholds_[target_eq] = threshold_value;
+
+  // 发送成功响应
+  std::vector<char> response = ProtocolParser::build_set_threshold_response(
+      ProtocolParser::CLIENT_QT_CLIENT, true, "阈值设置成功");
+  send(fd, response.data(), response.size(), 0);
+
+  std::cout << "阈值设置成功: " << target_eq << " = " << threshold_value
+            << std::endl;
 }
 
 void EquipmentManagementServer::handle_connection_close(int fd) {

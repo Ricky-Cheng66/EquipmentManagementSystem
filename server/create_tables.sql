@@ -108,6 +108,17 @@ CREATE TABLE IF NOT EXISTS places (
     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+-- 9. 阈值配置表
+CREATE TABLE IF NOT EXISTS thresholds (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    equipment_id VARCHAR(50) NOT NULL COMMENT '设备ID',
+    threshold_type VARCHAR(50) NOT NULL COMMENT '阈值类型，如 power_threshold',
+    threshold_value FLOAT NOT NULL COMMENT '阈值数值',
+    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_equipment_type (equipment_id, threshold_type),
+    INDEX idx_equipment (equipment_id)
+) ENGINE=InnoDB;
 
 -- 插入测试数据
 -- 3. 插入真实设备数据（设备池）
