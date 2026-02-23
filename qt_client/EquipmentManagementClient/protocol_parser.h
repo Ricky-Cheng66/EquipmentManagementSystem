@@ -55,7 +55,9 @@ public:
         QT_ALERT_MESSAGE = 109,      // 服务端→Qt客户端：告警消息
         QT_ALERT_ACK = 110,          // Qt客户端→服务端：告警确认
         QT_PLACE_LIST_QUERY = 111, // 新增：Qt客户端 -> 服务器：查询场所列表
-        QT_PLACE_LIST_RESPONSE = 112 // 新增：服务器 -> Qt客户端：返回场所列表
+        QT_PLACE_LIST_RESPONSE = 112, // 新增：服务器 -> Qt客户端：返回场所列表
+        QT_SET_THRESHOLD = 113,         // Qt客户端 -> 服务端：设置阈值
+        QT_SET_THRESHOLD_RESPONSE = 114 // 服务端 -> Qt客户端：设置阈值响应
     };
 
     // ============ 客户端类型枚举 ============
@@ -109,6 +111,17 @@ public:
     build_qt_heartbeat_response(ClientType client_type,
                                 const std::string &client_identifier,
                                 const std::string &timestamp);
+    // ============ 阈值设置相关实现 ============
+    // 阈值设置消息
+    static std::vector<char>
+    build_set_threshold_message(ClientType client_type,
+                                const std::string &equipment_id,
+                                float threshold_value);
+
+    // 阈值设置响应
+    static std::vector<char>
+    build_set_threshold_response(ClientType client_type, bool success,
+                                 const std::string &message);
 
     // ============ 设备上线相关消息构建 ============
     static std::vector<char>

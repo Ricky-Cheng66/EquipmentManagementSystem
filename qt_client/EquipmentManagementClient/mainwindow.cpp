@@ -526,15 +526,31 @@ void MainWindow::setupCentralStack()
         connect(m_equipmentPage, &EquipmentManagerWidget::deviceListLoaded,
                 this, &MainWindow::populateEnergyPageFilters);
     }
+    // 连接设备列表加载完成信号，用于填充阈值页面的设备下拉框
+    connect(m_equipmentPage, &EquipmentManagerWidget::deviceListLoaded,
+            this, [this]() {
+                // 如果阈值页面和设备页面都已就绪
+                if (m_thresholdSettingsPage && m_equipmentPage) {
+                    QHash<QString, QString> devMap;
+                    QStandardItemModel *model = m_equipmentPage->m_equipmentModel;
+                    // 遍历设备模型，提取设备ID、类型和位置
+                    for (int row = 0; row < model->rowCount(); ++row) {
+                        QString devId = model->item(row, 0)->text();   // 设备ID
+                        QString type = model->item(row, 1)->text();   // 设备类型
+                        QString loc = model->item(row, 2)->text();    // 位置
+                        QString display = type + " @ " + loc;         // 组合显示名称
+                        devMap[devId] = display;
+                    }
+                    // 将设备列表传递给阈值设置页面
+                    m_thresholdSettingsPage->setEquipmentList(devMap);
+                }
+            });
 
     // 5. 系统设置页面（暂时留空）
-    m_settingsPage = new QWidget();
-    QVBoxLayout *settingsLayout = new QVBoxLayout(m_settingsPage);
-    QLabel *settingsLabel = new QLabel("<h2>系统设置</h2>");
-    settingsLabel->setAlignment(Qt::AlignCenter);
-    settingsLayout->addWidget(settingsLabel);
-    settingsLayout->addStretch();
-    m_centralStack->addWidget(m_settingsPage);
+    m_thresholdSettingsPage = new ThresholdSettingsWidget(this);
+    connect(m_thresholdSettingsPage, &ThresholdSettingsWidget::setThresholdRequested,
+            this, &MainWindow::onSetThresholdRequested);
+    m_centralStack->addWidget(m_thresholdSettingsPage);
 
     // 连接快速操作按钮的信号
     QList<QPushButton*> actionButtons = quickActionsSection->findChildren<QPushButton*>();
@@ -753,6 +769,35 @@ void MainWindow::populateEnergyPageFilters()
     m_energyPage->setDeviceInfoMap(devInfoMap);
 
     qDebug() << "能耗页面筛选条件填充完成，类型:" << typeSet.size() << "场所:" << placeSet.size();
+}
+
+void MainWindow::onSetThresholdRequested(const QString &equipmentId, double value)
+{
+    if (!m_tcpClient || !m_tcpClient->isConnected()) {
+        QMessageBox::warning(this, "设置失败", "网络未连接");
+        return;
+    }
+
+    // 使用协议构建消息（需在 ProtocolParser 中添加对应函数）
+    std::vector<char> msg = ProtocolParser::build_set_threshold_message(
+        ProtocolParser::CLIENT_QT_CLIENT,
+        equipmentId.toStdString(),
+        value
+        );
+    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+    logMessage(QString("发送阈值设置请求: %1 = %2 W").arg(equipmentId).arg(value));
+}
+
+void MainWindow::handleSetThresholdResponse(const ProtocolParser::ParseResult &result)
+{
+    QString payload = QString::fromStdString(result.payload);
+    QStringList parts = payload.split('|');
+    bool success = (parts.size() >= 1 && parts[0] == "success");
+    QString message = parts.size() >= 2 ? parts[1] : "";
+
+    if (m_thresholdSettingsPage) {
+        m_thresholdSettingsPage->handleSetThresholdResponse(success, message);
+    }
 }
 
 // 其他原有的槽函数实现需要保持不变，但需要从构造函数移动到setupMessageHandlers中
@@ -1400,6 +1445,13 @@ void MainWindow::setupMessageHandlers() {
                                   [this](const ProtocolParser::ParseResult &result) {
                                       QMetaObject::invokeMethod(this, [this, result]() {
                                           this->handleAlertMessage(result);
+                                      });
+                                  });
+    //阈值设置
+    m_dispatcher->registerHandler(ProtocolParser::QT_SET_THRESHOLD_RESPONSE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          this->handleSetThresholdResponse(result);
                                       });
                                   });
 }

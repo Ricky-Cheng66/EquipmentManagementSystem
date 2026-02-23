@@ -16,6 +16,7 @@
 #include "reservationwidget.h"
 #include "equipmentmanagerwidget.h"
 #include "energystatisticswidget.h"
+#include "thresholdsettingswidget.h"
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -67,6 +68,10 @@ private slots:
 
     void populateEnergyPageFilters();
 
+    //阈值设置相关槽函数
+    void onSetThresholdRequested(const QString &equipmentId, double value);
+    void handleSetThresholdResponse(const ProtocolParser::ParseResult &result);
+
 private:
     Ui::MainWindow *ui;
     TcpClient* m_tcpClient;
@@ -109,6 +114,9 @@ private:
 
     QTextEdit *m_alertTextEdit;
     QTextEdit *m_activityTextEdit;
+
+    //阈值设置界面
+    ThresholdSettingsWidget *m_thresholdSettingsPage;
 
     // 仪表板相关函数
     void updateDashboardStats();  // 更新仪表板统计数据
