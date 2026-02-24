@@ -364,11 +364,19 @@ void EquipmentManagementServer::process_qt_client_message(
     handle_qt_alert_ack(fd, parse_result.equipment_id, parse_result.payload);
     break;
 
+  case ProtocolParser::QT_ALARM_QUERY:
+    handle_qt_alarm_query(fd);
+    break;
+
   case ProtocolParser::QT_PLACE_LIST_QUERY: // 改动：使用枚举变量名
     handle_qt_place_list_query(fd);
     break;
   case ProtocolParser::QT_SET_THRESHOLD:
     handle_set_threshold(fd, parse_result.equipment_id, parse_result.payload);
+    break;
+
+  case ProtocolParser::QT_GET_ALL_THRESHOLDS:
+    handle_get_all_thresholds(fd);
     break;
   default:
     std::cout << "未知消息类型: " << parse_result.type << " from fd=" << fd
@@ -778,7 +786,46 @@ void EquipmentManagementServer::handle_heartbeat(
 
 void EquipmentManagementServer::handle_qt_alert_ack(
     int fd, const std::string &equipment_id, const std::string &payload) {
-  std::cout << "qt端确认收到告警信息" << std::endl;
+
+  std::cout << "收到Qt端告警确认: equipment_id=" << equipment_id
+            << " payload=" << payload << std::endl;
+
+  int alarm_id = 0;
+  try {
+    alarm_id = std::stoi(payload);
+  } catch (const std::exception &e) {
+    std::cerr << "告警确认ID解析失败: " << e.what() << std::endl;
+    return;
+  }
+
+  if (db_manager_->update_alarm_acknowledged(alarm_id)) {
+    std::cout << "告警 " << alarm_id << " 已标记为已处理" << std::endl;
+    // 可选：向客户端发送确认响应（可暂不实现）
+  } else {
+    std::cerr << "告警 " << alarm_id << " 标记处理失败" << std::endl;
+  }
+}
+
+void EquipmentManagementServer::handle_qt_alarm_query(int fd) {
+  std::cout << "处理Qt客户端告警列表查询, fd=" << fd << std::endl;
+  auto alarms = db_manager_->get_unacknowledged_alarms();
+
+  std::stringstream ss;
+  for (size_t i = 0; i < alarms.size(); ++i) {
+    if (i > 0)
+      ss << ";";
+    // 字段顺序：id, alarm_type, equipment_id, severity, message, created_time
+    for (size_t j = 0; j < alarms[i].size(); ++j) {
+      if (j > 0)
+        ss << "|";
+      ss << alarms[i][j];
+    }
+  }
+
+  std::vector<char> response = ProtocolParser::build_alarm_query_response(
+      ProtocolParser::CLIENT_QT_CLIENT, true, ss.str());
+  send(fd, response.data(), response.size(), 0);
+  std::cout << "已发送告警列表响应，共 " << alarms.size() << " 条" << std::endl;
 }
 
 void EquipmentManagementServer::handle_qt_heartbeat(
@@ -891,24 +938,16 @@ void EquipmentManagementServer::handle_power_report(
 }
 
 void EquipmentManagementServer::check_heartbeat_timeout() {
-  connections_manager_->check_heartbeat_timeout(60); // 60秒设备超时
-
-  // 新增：检查Qt客户端心跳超时（180秒）
+  connections_manager_->check_heartbeat_timeout(60);
   check_qt_client_heartbeat_timeout(180);
 
-  // 新增：为超时设备生成告警
-  auto timeout_fds = connections_manager_->get_timeout_fds(); // 需要添加此函数
-
+  auto timeout_fds = connections_manager_->get_timeout_fds();
   for (int fd : timeout_fds) {
     auto equipment = connections_manager_->get_equipment_by_fd(fd);
     if (equipment) {
       std::string equipment_id = equipment->get_equipment_id();
       std::string message = "设备离线超时: " + equipment_id;
-
-      // 写入数据库
-      db_manager_->insert_alarm("offline", equipment_id, "warning", message);
-
-      // 发送给所有Qt客户端
+      // 直接调用 send_alert_to_all_qt_clients，它内部会处理插入和发送
       send_alert_to_all_qt_clients("offline", equipment_id, "warning", message);
     }
   }
@@ -1106,16 +1145,33 @@ void EquipmentManagementServer::send_alert_to_all_qt_clients(
     const std::string &alarm_type, const std::string &equipment_id,
     const std::string &severity, const std::string &message) {
 
-  // 获取所有Qt客户端连接
-  auto qt_connections =
-      connections_manager_->get_qt_client_connections(); // 需要添加此函数
+  // 检查最近30秒内是否有未处理的同类告警
+  std::string check_sql = "SELECT COUNT(*) FROM alarms WHERE equipment_id = '" +
+                          equipment_id + "' AND alarm_type = '" + alarm_type +
+                          "' AND is_acknowledged = FALSE AND created_time > "
+                          "NOW() - INTERVAL 30 SECOND";
+  auto result = db_manager_->execute_query(check_sql);
+  if (!result.empty() && std::stoi(result[0][0]) > 0) {
+    std::cout << "设备 " << equipment_id << " 在最近30秒内已有未处理的 "
+              << alarm_type << " 告警，跳过生成" << std::endl;
+    return;
+  }
 
+  // 插入新告警并获取ID
+  int alarm_id =
+      db_manager_->insert_alarm(alarm_type, equipment_id, severity, message);
+  if (alarm_id <= 0) {
+    std::cerr << "插入告警失败，无法发送" << std::endl;
+    return;
+  }
+
+  // 发送给所有在线Qt客户端
+  auto qt_connections = connections_manager_->get_qt_client_connections();
   for (int fd : qt_connections) {
     if (fd > 0 && connections_manager_->is_connection_alive(fd)) {
       std::vector<char> alert_msg = ProtocolParser::build_alert_message(
-          ProtocolParser::CLIENT_QT_CLIENT, equipment_id, alarm_type, severity,
-          message);
-
+          ProtocolParser::CLIENT_QT_CLIENT, equipment_id, alarm_id, alarm_type,
+          severity, message);
       ssize_t bytes_sent =
           send(fd, alert_msg.data(), alert_msg.size(), MSG_NOSIGNAL);
       if (bytes_sent > 0) {
@@ -1214,6 +1270,33 @@ void EquipmentManagementServer::handle_set_threshold(
 
   std::cout << "阈值设置成功: " << target_eq << " = " << threshold_value
             << std::endl;
+}
+
+void EquipmentManagementServer::handle_get_all_thresholds(int fd) {
+  if (!db_manager_->is_connected()) {
+    std::vector<char> response =
+        ProtocolParser::build_get_all_thresholds_response(
+            ProtocolParser::CLIENT_QT_CLIENT, false, "数据库未连接");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  std::string query = "SELECT equipment_id, threshold_value FROM thresholds "
+                      "WHERE threshold_type = 'power_threshold'";
+  auto results = db_manager_->execute_query(query);
+
+  std::stringstream ss;
+  for (size_t i = 0; i < results.size(); ++i) {
+    if (i > 0)
+      ss << ";";
+    ss << results[i][0] << "|" << results[i][1];
+  }
+
+  std::vector<char> response =
+      ProtocolParser::build_get_all_thresholds_response(
+          ProtocolParser::CLIENT_QT_CLIENT, true, ss.str());
+  send(fd, response.data(), response.size(), 0);
+  std::cout << "已发送所有阈值数据: " << results.size() << " 条" << std::endl;
 }
 
 void EquipmentManagementServer::handle_connection_close(int fd) {

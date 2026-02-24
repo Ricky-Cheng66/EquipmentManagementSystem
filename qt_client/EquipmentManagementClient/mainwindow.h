@@ -8,6 +8,8 @@
 #include <QToolBar>
 #include <QStatusBar>
 #include <QMenuBar>
+
+#include "alarmwidget.h"
 #include "protocol_parser.h"
 #include "message_buffer.h"
 #include "tcpclient.h"
@@ -60,9 +62,10 @@ private slots:
     void handleEnergyResponse(const ProtocolParser::ParseResult &result);
     void handleQtHeartbeatResponse(const ProtocolParser::ParseResult &result);
 
-    //智能告警
+    //智能告警相关
     void handleAlertMessage(const ProtocolParser::ParseResult &result);
-
+    void onAcknowledgeAlarm(int alarmId);
+    void handleAlarmQueryResponse(const ProtocolParser::ParseResult &result);
     // 新增：注销槽函数
     void onLogout();
 
@@ -71,7 +74,7 @@ private slots:
     //阈值设置相关槽函数
     void onSetThresholdRequested(const QString &equipmentId, double value);
     void handleSetThresholdResponse(const ProtocolParser::ParseResult &result);
-
+    void handleGetAllThresholdsResponse(const ProtocolParser::ParseResult &result);
 private:
     Ui::MainWindow *ui;
     TcpClient* m_tcpClient;
@@ -117,6 +120,10 @@ private:
 
     //阈值设置界面
     ThresholdSettingsWidget *m_thresholdSettingsPage;
+
+    //告警界面相关
+    AlarmWidget *m_alarmPage;            // 告警中心页面
+    QList<AlarmInfo> m_alarms;           // 所有告警缓存
 
     // 仪表板相关函数
     void updateDashboardStats();  // 更新仪表板统计数据

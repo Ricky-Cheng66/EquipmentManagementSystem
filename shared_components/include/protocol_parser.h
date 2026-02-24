@@ -56,8 +56,12 @@ public:
     QT_ALERT_ACK = 110,          // Qt客户端→服务端：告警确认
     QT_PLACE_LIST_QUERY = 111, // 新增：Qt客户端 -> 服务器：查询场所列表
     QT_PLACE_LIST_RESPONSE = 112, // 新增：服务器 -> Qt客户端：返回场所列表
-    QT_SET_THRESHOLD = 113,         // Qt客户端 -> 服务端：设置阈值
-    QT_SET_THRESHOLD_RESPONSE = 114 // 服务端 -> Qt客户端：设置阈值响应
+    QT_SET_THRESHOLD = 113,          // Qt客户端 -> 服务端：设置阈值
+    QT_SET_THRESHOLD_RESPONSE = 114, // 服务端 -> Qt客户端：设置阈值响应
+    QT_GET_ALL_THRESHOLDS = 115,
+    QT_GET_ALL_THRESHOLDS_RESPONSE = 116,
+    QT_ALARM_QUERY = 117, // Qt客户端 → 服务端：查询告警列表
+    QT_ALARM_QUERY_RESPONSE = 118, // 服务端 → Qt客户端：返回告警列表
   };
 
   // ============ 客户端类型枚举 ============
@@ -122,6 +126,12 @@ public:
   static std::vector<char>
   build_set_threshold_response(ClientType client_type, bool success,
                                const std::string &message);
+
+  static std::vector<char>
+  build_get_all_thresholds_message(ClientType client_type);
+  static std::vector<char>
+  build_get_all_thresholds_response(ClientType client_type, bool success,
+                                    const std::string &data);
 
   // ============ 设备上线相关消息构建 ============
   static std::vector<char>
@@ -198,15 +208,19 @@ public:
                              const std::string &timestamp);
 
   // ============ 告警系统消息实现 ============
-  static std::vector<char> build_alert_message(ClientType client_type,
-                                               const std::string &equipment_id,
-                                               const std::string &alarm_type,
-                                               const std::string &severity,
-                                               const std::string &message);
+  static std::vector<char>
+  build_alert_message(ClientType client_type, const std::string &equipment_id,
+                      int alarm_id, const std::string &alarm_type,
+                      const std::string &severity, const std::string &message);
 
   static std::vector<char> build_alert_ack(ClientType client_type,
                                            const std::string &equipment_id,
                                            int alarm_id);
+
+  static std::vector<char> build_alarm_query_message(ClientType client_type);
+  static std::vector<char> build_alarm_query_response(ClientType client_type,
+                                                      bool success,
+                                                      const std::string &data);
 
   // 工具函数 - 构建基础消息体
   static std::string

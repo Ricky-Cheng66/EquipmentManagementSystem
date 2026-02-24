@@ -147,6 +147,22 @@ std::vector<char> ProtocolParser::build_set_threshold_response(
                            {success ? "success" : "fail", message}));
 }
 
+std::vector<char>
+ProtocolParser::build_get_all_thresholds_message(ClientType client_type) {
+    return pack_message(
+        build_message_body(client_type, QT_GET_ALL_THRESHOLDS, "", {}));
+}
+
+std::vector<char> ProtocolParser::build_get_all_thresholds_response(
+    ClientType client_type, bool success, const std::string &data) {
+    std::vector<std::string> fields;
+    fields.push_back(success ? "success" : "fail");
+    if (!data.empty())
+        fields.push_back(data);
+    return pack_message(build_message_body(
+        client_type, QT_GET_ALL_THRESHOLDS_RESPONSE, "response", fields));
+}
+
 // ============ 私有工具函数 ============
 
 std::string
@@ -157,8 +173,12 @@ ProtocolParser::build_message_body(ClientType client_type, MessageType type,
                        std::to_string(static_cast<int>(type)) + "|" +
                        equipment_id;
 
-    for (const auto &field : fields) {
-        body += "|" + field;
+    if (fields.empty()) {
+        body += "|"; // 添加一个空的 payload 字段
+    } else {
+        for (const auto &field : fields) {
+            body += "|" + field;
+        }
     }
 
     return body;
@@ -354,13 +374,14 @@ std::vector<char> ProtocolParser::build_power_report_message(
 // ============ 告警系统消息实现 ============
 
 std::vector<char> ProtocolParser::build_alert_message(
-    ClientType client_type, const std::string &equipment_id,
+    ClientType client_type, const std::string &equipment_id, int alarm_id,
     const std::string &alarm_type, const std::string &severity,
     const std::string &message) {
-    // payload格式: "alarm_type|severity|message"
+    // payload格式: "alarm_id|alarm_type|severity|message"
+    std::string payload = std::to_string(alarm_id) + "|" + alarm_type + "|" +
+                          severity + "|" + message;
     return pack_message(build_message_body(client_type, QT_ALERT_MESSAGE,
-                                           equipment_id,
-                                           {alarm_type, severity, message}));
+                                           equipment_id, {payload}));
 }
 
 std::vector<char>
@@ -368,4 +389,19 @@ ProtocolParser::build_alert_ack(ClientType client_type,
                                 const std::string &equipment_id, int alarm_id) {
     return pack_message(build_message_body(
         client_type, QT_ALERT_ACK, equipment_id, {std::to_string(alarm_id)}));
+}
+
+std::vector<char>
+ProtocolParser::build_alarm_query_message(ClientType client_type) {
+    return pack_message(build_message_body(client_type, QT_ALARM_QUERY, "", {}));
+}
+
+std::vector<char>
+ProtocolParser::build_alarm_query_response(ClientType client_type, bool success,
+                                           const std::string &data) {
+    std::vector<std::string> fields = {success ? "success" : "fail"};
+    if (!data.empty())
+        fields.push_back(data);
+    return pack_message(build_message_body(client_type, QT_ALARM_QUERY_RESPONSE,
+                                           "response", fields));
 }

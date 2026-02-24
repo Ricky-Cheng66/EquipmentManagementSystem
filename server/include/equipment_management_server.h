@@ -71,6 +71,8 @@ private:
   void handle_qt_alert_ack(int fd, const std::string &equipment_id,
                            const std::string &payload);
 
+  void handle_qt_alarm_query(int fd);
+
   // 处理Qt客户端心跳
   void handle_qt_heartbeat(int fd, const std::string &client_identifier);
 
@@ -149,6 +151,8 @@ private:
   // 处理设置阈值请求
   void handle_set_threshold(int fd, const std::string &equipment_id,
                             const std::string &payload);
+
+  void handle_get_all_thresholds(int fd);
 
   //成员变量
   const int MAXCLIENTFDS = 1024;

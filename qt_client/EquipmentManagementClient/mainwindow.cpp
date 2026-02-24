@@ -52,6 +52,7 @@ MainWindow::MainWindow(TcpClient* tcpClient, MessageDispatcher* dispatcher,
     , m_placeUsageLabel(nullptr)
     , m_alertTextEdit(nullptr)
     , m_activityTextEdit(nullptr)
+    , m_alarmPage(nullptr)
 {
     ui->setupUi(this);
 
@@ -69,6 +70,8 @@ MainWindow::MainWindow(TcpClient* tcpClient, MessageDispatcher* dispatcher,
     if (m_reservationPage) {
         m_reservationPage->setUserRole(m_userRole, QString::number(m_currentUserId));
     }
+
+    m_alarms.clear();   // 初始化告警列表
 
     logMessage(QString("系统启动完成，欢迎 %1 (ID: %2, 角色: %3)").arg(username).arg(userId).arg(role));
 }
@@ -546,11 +549,36 @@ void MainWindow::setupCentralStack()
                 }
             });
 
-    // 5. 系统设置页面（暂时留空）
+    // 5. 系统设置页面（告警中心 + 阈值设置）
+    QWidget *settingsContainer = new QWidget();
+    QVBoxLayout *settingsLayout = new QVBoxLayout(settingsContainer);
+    settingsLayout->setContentsMargins(0, 0, 0, 0);
+
+    QTabWidget *settingsTab = new QTabWidget(settingsContainer);
+    settingsTab->setDocumentMode(true);
+    settingsTab->tabBar()->setExpanding(false);
+
+    // 告警中心页面
+    m_alarmPage = new AlarmWidget(this);
+    settingsTab->addTab(m_alarmPage, "告警中心");
+
+    // 阈值设置页面
     m_thresholdSettingsPage = new ThresholdSettingsWidget(this);
     connect(m_thresholdSettingsPage, &ThresholdSettingsWidget::setThresholdRequested,
             this, &MainWindow::onSetThresholdRequested);
-    m_centralStack->addWidget(m_thresholdSettingsPage);
+    settingsTab->addTab(m_thresholdSettingsPage, "阈值设置");
+
+    settingsLayout->addWidget(settingsTab);
+    m_centralStack->addWidget(settingsContainer);
+
+    // 连接告警确认信号
+    connect(m_alarmPage, &AlarmWidget::acknowledgeAlarm,
+            this, &MainWindow::onAcknowledgeAlarm);
+
+    // 如果已有告警缓存，初始化告警页面
+    if (!m_alarms.isEmpty()) {
+        m_alarmPage->setAlarms(m_alarms);
+    }
 
     // 连接快速操作按钮的信号
     QList<QPushButton*> actionButtons = quickActionsSection->findChildren<QPushButton*>();
@@ -709,6 +737,21 @@ void MainWindow::switchPage(int pageIndex)
                 loadedPages.insert(PAGE_ENERGY);
             }
             break;
+        case PAGE_SETTINGS:
+            if (m_tcpClient && m_tcpClient->isConnected()) {
+                // 请求阈值
+                std::vector<char> msg = ProtocolParser::build_get_all_thresholds_message(
+                    ProtocolParser::CLIENT_QT_CLIENT);
+                m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+                logMessage("请求所有设备阈值...");
+
+                // 请求告警列表
+                std::vector<char> alarmMsg = ProtocolParser::build_alarm_query_message(
+                    ProtocolParser::CLIENT_QT_CLIENT);
+                m_tcpClient->sendData(QByteArray(alarmMsg.data(), alarmMsg.size()));
+                logMessage("请求未处理告警列表...");
+            }
+            break;
         }
     }
 }
@@ -797,6 +840,36 @@ void MainWindow::handleSetThresholdResponse(const ProtocolParser::ParseResult &r
 
     if (m_thresholdSettingsPage) {
         m_thresholdSettingsPage->handleSetThresholdResponse(success, message);
+    }
+}
+
+void MainWindow::handleGetAllThresholdsResponse(const ProtocolParser::ParseResult &result)
+{
+    QString payload = QString::fromStdString(result.payload);
+    // payload 格式: "success|dev1|val1;dev2|val2..." 或 "fail|error"
+    QStringList parts = payload.split('|', Qt::SkipEmptyParts);
+    if (parts.isEmpty()) return;
+    bool success = (parts[0] == "success");
+    if (success) {
+        // 取出数据部分（可能包含多个|，但数据部分是用分号分隔的，所以重新组合）
+        QString data = parts.mid(1).join('|'); // 注意：数据中可能包含|，所以需要重新组合
+        QHash<QString, double> thresholds;
+        QStringList records = data.split(';', Qt::SkipEmptyParts);
+        for (const QString &rec : records) {
+            QStringList kv = rec.split('|');
+            if (kv.size() >= 2) {
+                thresholds[kv[0]] = kv[1].toDouble();
+            }
+        }
+        if (m_thresholdSettingsPage) {
+            m_thresholdSettingsPage->setCurrentThresholds(thresholds);
+        }
+    } else {
+        QString errorMsg = parts.mid(1).join('|');
+        qDebug() << "获取阈值失败:" << errorMsg;
+        if (m_thresholdSettingsPage) {
+            m_thresholdSettingsPage->setCurrentThresholds(QHash<QString, double>());
+        }
     }
 }
 
@@ -1305,23 +1378,108 @@ void MainWindow::handleQtHeartbeatResponse(const ProtocolParser::ParseResult &re
 
 void MainWindow::handleAlertMessage(const ProtocolParser::ParseResult &result)
 {
-    // 解析payload: "alarm_type|severity|message"
     QString payload = QString::fromStdString(result.payload);
     QStringList parts = payload.split('|');
-
-    if (parts.size() < 3) {
+    if (parts.size() < 4) {
         qWarning() << "告警消息格式错误:" << payload;
         return;
     }
 
-    QString alarmType = parts[0];
-    QString severity = parts[1];
-    QString message = parts[2];
+    bool ok;
+    int alarmId = parts[0].toInt(&ok);
+    if (!ok) alarmId = 0; // 降级处理
 
-    // 弹窗显示
-    QMessageBox::warning(this, "系统告警", message);
+    QString alarmType = parts[1];
+    QString severity = parts[2];
+    QString message = parts[3];
 
-    logMessage("[告警] " + message);  // 只使用 logMessage
+    // 根据严重程度决定是否弹窗
+    if (severity == "critical" || severity == "error") {
+        QMessageBox::warning(this, "系统告警", message);
+    } else {
+        logMessage("[告警] " + message);
+    }
+
+    AlarmInfo alarm;
+    alarm.id = alarmId;
+    alarm.type = alarmType;
+    alarm.equipmentId = QString::fromStdString(result.equipment_id);
+    alarm.severity = severity;
+    alarm.message = message;
+    alarm.timestamp = QDateTime::currentDateTime();
+    alarm.acknowledged = false;
+
+    m_alarms.append(alarm);
+    if (m_alarmPage) {
+        m_alarmPage->addAlarm(alarm);
+    }
+
+    logMessage(QString("[告警] ID=%1 | %2 | %3 | %4").arg(alarmId).arg(severity, alarm.equipmentId, message));
+}
+
+void MainWindow::onAcknowledgeAlarm(int alarmId)
+{
+    if (!m_tcpClient || !m_tcpClient->isConnected()) {
+        QMessageBox::warning(this, "操作失败", "网络未连接");
+        return;
+    }
+
+    // 构建告警确认消息，payload 为告警ID
+    std::vector<char> msg = ProtocolParser::build_alert_ack(
+        ProtocolParser::CLIENT_QT_CLIENT,
+        "",  // equipment_id 可选，可留空
+        alarmId
+        );
+    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+    logMessage(QString("发送告警确认: ID=%1").arg(alarmId));
+
+    // 本地乐观更新（假设服务端成功）
+    for (AlarmInfo &a : m_alarms) {
+        if (a.id == alarmId) {
+            a.acknowledged = true;
+            break;
+        }
+    }
+    if (m_alarmPage) {
+        m_alarmPage->setAlarms(m_alarms);
+    }
+}
+
+void MainWindow::handleAlarmQueryResponse(const ProtocolParser::ParseResult &result)
+{
+    QString payload = QString::fromStdString(result.payload);
+    QStringList parts = payload.split('|', Qt::KeepEmptyParts);
+    if (parts.isEmpty()) return;
+    bool success = (parts[0] == "success");
+    if (!success) {
+        qDebug() << "获取告警列表失败:" << payload;
+        return;
+    }
+    QString data = parts.mid(1).join('|');
+    QStringList records = data.split(';', Qt::SkipEmptyParts);
+    QList<AlarmInfo> alarms;
+    for (const QString &rec : records) {
+        QStringList fields = rec.split('|');
+        if (fields.size() < 5) continue;
+        AlarmInfo alarm;
+        alarm.id = fields[0].toInt();
+        alarm.type = fields[1];
+        alarm.equipmentId = fields[2];
+        alarm.severity = fields[3];
+        alarm.message = fields[4];
+        if (fields.size() >= 6) {
+            alarm.timestamp = QDateTime::fromString(fields[5], "yyyy-MM-dd HH:mm:ss");
+        } else {
+            alarm.timestamp = QDateTime::currentDateTime();
+        }
+        alarm.acknowledged = false;  // 查询的是未处理告警
+        alarms.append(alarm);
+    }
+
+    if (m_alarmPage) {
+        m_alarmPage->setAlarms(alarms);
+    }
+    m_alarms = alarms;
 }
 
 
@@ -1452,6 +1610,19 @@ void MainWindow::setupMessageHandlers() {
                                   [this](const ProtocolParser::ParseResult &result) {
                                       QMetaObject::invokeMethod(this, [this, result]() {
                                           this->handleSetThresholdResponse(result);
+                                      });
+                                  });
+
+    m_dispatcher->registerHandler(ProtocolParser::QT_GET_ALL_THRESHOLDS_RESPONSE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          this->handleGetAllThresholdsResponse(result);
+                                      });
+                                  });
+    m_dispatcher->registerHandler(ProtocolParser::QT_ALARM_QUERY_RESPONSE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          this->handleAlarmQueryResponse(result);
                                       });
                                   });
 }

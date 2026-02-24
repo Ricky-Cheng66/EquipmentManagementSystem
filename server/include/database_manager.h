@@ -53,9 +53,11 @@ public:
       const std::string &startDate, const std::string &endDate);
 
   // 告警相关操作
-  bool insert_alarm(const std::string &alarm_type,
-                    const std::string &equipment_id,
-                    const std::string &severity, const std::string &message);
+  int insert_alarm(const std::string &alarm_type,
+                   const std::string &equipment_id, const std::string &severity,
+                   const std::string &message);
+
+  bool update_alarm_acknowledged(int alarm_id);
 
   std::vector<std::vector<std::string>> get_unacknowledged_alarms();
 

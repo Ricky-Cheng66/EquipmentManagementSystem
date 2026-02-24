@@ -421,21 +421,43 @@ std::string DatabaseManager::get_energy_statistics_by_equipment(
   return ss.str();
 }
 
-bool DatabaseManager::insert_alarm(const std::string &alarm_type,
-                                   const std::string &equipment_id,
-                                   const std::string &severity,
-                                   const std::string &message) {
-  std::string sql = "INSERT INTO alarms (alarm_type, equipment_id, severity, "
-                    "message) VALUES ('" +
-                    alarm_type + "', '" + equipment_id + "', '" + severity +
-                    "', '" + message + "')";
-  return execute_update(sql);
+int DatabaseManager::insert_alarm(const std::string &alarm_type,
+                                  const std::string &equipment_id,
+                                  const std::string &severity,
+                                  const std::string &message) {
+  if (!is_connected())
+    return 0;
+  std::string sql =
+      "INSERT INTO alarms (alarm_type, equipment_id, severity, message) "
+      "VALUES ('" +
+      alarm_type + "', '" + equipment_id + "', '" + severity + "', '" +
+      message + "')";
+  if (mysql_query(mysql_conn_, sql.c_str()) != 0) {
+    std::cerr << "插入告警失败: " << mysql_error(mysql_conn_) << std::endl;
+    return 0;
+  }
+  // 返回新插入的自增ID
+  return mysql_insert_id(mysql_conn_);
+}
+
+bool DatabaseManager::update_alarm_acknowledged(int alarm_id) {
+  if (!is_connected())
+    return false;
+  std::string sql = "UPDATE alarms SET is_acknowledged = TRUE WHERE id = " +
+                    std::to_string(alarm_id);
+  if (mysql_query(mysql_conn_, sql.c_str()) != 0) {
+    std::cerr << "更新告警确认状态失败: " << mysql_error(mysql_conn_)
+              << std::endl;
+    return false;
+  }
+  return mysql_affected_rows(mysql_conn_) > 0;
 }
 
 std::vector<std::vector<std::string>>
 DatabaseManager::get_unacknowledged_alarms() {
   std::string sql =
-      "SELECT id, alarm_type, equipment_id, severity, message FROM alarms "
-      "WHERE is_acknowledged = FALSE ORDER BY created_time DESC LIMIT 50";
+      "SELECT id, alarm_type, equipment_id, severity, message, created_time "
+      "FROM alarms WHERE is_acknowledged = FALSE ORDER BY created_time DESC "
+      "LIMIT 50";
   return execute_query(sql);
 }
