@@ -21,6 +21,9 @@ TcpClient::TcpClient(QObject *parent) : QObject(parent)
             sendHeartbeat(m_lastEquipmentId);
         }
     });
+    connect(m_socket, &QTcpSocket::disconnected, this, [this]() {
+        stopHeartbeat();
+    });
 }
 
 TcpClient::~TcpClient()

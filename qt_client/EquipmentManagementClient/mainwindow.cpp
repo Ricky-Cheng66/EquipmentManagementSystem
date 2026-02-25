@@ -63,6 +63,13 @@ MainWindow::MainWindow(TcpClient* tcpClient, MessageDispatcher* dispatcher,
     // 初始化UI
     setupUI();
 
+    // 启动Qt客户端心跳（如果已连接）
+    if (m_tcpClient && m_tcpClient->isConnected()) {
+        QString heartbeatId = QString("qt_client_%1").arg(m_currentUsername);
+        m_tcpClient->startHeartbeat(heartbeatId, 30); // 30秒间隔
+        logMessage(QString("心跳已启动，标识: %1").arg(heartbeatId));
+    }
+
     // 安装事件过滤器
     installEventFilter(this);
 

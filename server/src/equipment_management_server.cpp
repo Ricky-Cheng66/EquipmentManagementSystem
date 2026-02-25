@@ -1145,14 +1145,14 @@ void EquipmentManagementServer::send_alert_to_all_qt_clients(
     const std::string &alarm_type, const std::string &equipment_id,
     const std::string &severity, const std::string &message) {
 
-  // 检查最近30秒内是否有未处理的同类告警
+  // 检查最近5分钟内是否有未处理的同类告警
   std::string check_sql = "SELECT COUNT(*) FROM alarms WHERE equipment_id = '" +
                           equipment_id + "' AND alarm_type = '" + alarm_type +
                           "' AND is_acknowledged = FALSE AND created_time > "
-                          "NOW() - INTERVAL 30 SECOND";
+                          "NOW() - INTERVAL 5 MINUTE";
   auto result = db_manager_->execute_query(check_sql);
   if (!result.empty() && std::stoi(result[0][0]) > 0) {
-    std::cout << "设备 " << equipment_id << " 在最近30秒内已有未处理的 "
+    std::cout << "设备 " << equipment_id << " 在最近5分钟内已有未处理的 "
               << alarm_type << " 告警，跳过生成" << std::endl;
     return;
   }

@@ -181,12 +181,11 @@ void ConnectionManager::update_heartbeat(int fd) {
   auto it = heartbeat_times_.find(fd);
   if (it != heartbeat_times_.end()) {
     it->second = time(nullptr);
-    // 标记连接为健康
-    connection_healthy_[fd] = true;
-    // 同时更新设备的心跳时间
+    connection_healthy_[fd] = true; // 标记健康
+
     auto equip_it = connections_.find(fd);
-    if (equip_it != connections_.end()) {
-      equip_it->second->update_heartbeat();
+    if (equip_it != connections_.end() && equip_it->second) {
+      equip_it->second->update_heartbeat(); // 仅设备端有该操作
     }
   }
 }
@@ -224,20 +223,21 @@ void ConnectionManager::check_heartbeat_timeout(int timeout_seconds) {
       std::cout << "心跳超时: fd=" << fd << ", 最后心跳: " << last_heartbeat
                 << std::endl;
 
-      // 标记连接为不健康，但不立即移除
+      // 标记连接为不健康
       connection_healthy_[fd] = false;
       timeout_fds.push_back(fd);
 
-      // 注意：这里不自动移除连接，由上层逻辑决定是否关闭
+      // 安全地获取设备信息（仅当设备连接时）
       auto equip_it = connections_.find(fd);
-      if (equip_it != connections_.end()) {
-        std::cout << "连接不健康: " << equip_it->second->get_equipment_id()
+      if (equip_it != connections_.end() && equip_it->second) {
+        std::cout << "设备连接不健康: " << equip_it->second->get_equipment_id()
                   << std::endl;
+      } else {
+        std::cout << "Qt客户端连接不健康: fd=" << fd << std::endl;
       }
     }
-    // 这里只记录超时，不自动关闭连接
-    // 连接关闭应该由专门的逻辑处理
   }
+  // 注意：这里不自动移除连接，由上层决定是否关闭
 }
 
 bool ConnectionManager::is_connection_healthy(int fd) const {
