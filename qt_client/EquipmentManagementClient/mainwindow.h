@@ -125,6 +125,14 @@ private:
     AlarmWidget *m_alarmPage;            // 告警中心页面
     QList<AlarmInfo> m_alarms;           // 所有告警缓存
 
+    QMap<QString, QString> m_placeNameMap;  // 场所ID -> 场所名称
+
+    bool m_isRequestingTodayEnergy;  // 标记今日能耗请求
+    bool m_isRequestingTodayReservations;
+    bool m_isRequestingPlaceUsage;          // 标记场所使用率请求
+    bool m_isRequestingAlarms;   // 标记告警请求是否在进行中
+
+
     // 仪表板相关函数
     void updateDashboardStats();  // 更新仪表板统计数据
     void updateRecentAlerts();    // 更新最近告警
@@ -142,6 +150,14 @@ private:
     void setupPermissionByRole();       // 根据角色设置权限
     void switchPage(int pageIndex);     // 切换页面
     void setupCentralStack();           // 设置中央堆栈页面
+
+    void requestTodayEnergy();
+    void requestUnreadAlarms();
+
+    void switchToAlarmCenter();   // 切换到告警中心
+    void requestTodayReservations();
+
+    void requestInitialData();   // 请求初始数据
 };
 
 #endif // MAINWINDOW_H

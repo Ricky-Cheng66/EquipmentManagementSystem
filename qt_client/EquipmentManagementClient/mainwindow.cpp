@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 #include <QTime>
+#include <QTimer>
 #include <QFile>
 #include <QMessageBox>
 #include <QLabel>
@@ -53,6 +54,10 @@ MainWindow::MainWindow(TcpClient* tcpClient, MessageDispatcher* dispatcher,
     , m_alertTextEdit(nullptr)
     , m_activityTextEdit(nullptr)
     , m_alarmPage(nullptr)
+    , m_isRequestingTodayEnergy(false)
+    , m_isRequestingTodayReservations(false)
+    , m_isRequestingPlaceUsage(false)
+    , m_isRequestingAlarms(false)
 {
     ui->setupUi(this);
 
@@ -81,6 +86,8 @@ MainWindow::MainWindow(TcpClient* tcpClient, MessageDispatcher* dispatcher,
     m_alarms.clear();   // 初始化告警列表
 
     logMessage(QString("系统启动完成，欢迎 %1 (ID: %2, 角色: %3)").arg(username).arg(userId).arg(role));
+    // 延迟100ms启动初始数据请求，确保窗口已显示且网络稳定
+    QTimer::singleShot(100, this, &MainWindow::requestInitialData);
 }
 
 MainWindow::~MainWindow()
@@ -564,6 +571,7 @@ void MainWindow::setupCentralStack()
     QTabWidget *settingsTab = new QTabWidget(settingsContainer);
     settingsTab->setDocumentMode(true);
     settingsTab->tabBar()->setExpanding(false);
+    settingsTab->setObjectName("settingsTab");
 
     // 告警中心页面
     m_alarmPage = new AlarmWidget(this);
@@ -612,6 +620,103 @@ void MainWindow::setupCentralStack()
 
     // 初始更新仪表板数据
     updateDashboardStats();
+}
+
+void MainWindow::requestTodayEnergy()
+{
+    if (!m_tcpClient || !m_tcpClient->isConnected()) return;
+    if (m_isRequestingTodayEnergy) {
+        logMessage("今日能耗请求已在进行中，忽略");
+        return;
+    }
+    QDate today = QDate::currentDate();
+    QString payload = QString("day|%1|%1").arg(today.toString("yyyy-MM-dd"));
+    std::string body = ProtocolParser::build_message_body(
+        ProtocolParser::CLIENT_QT_CLIENT,
+        ProtocolParser::QT_ENERGY_QUERY,
+        "all",
+        {payload.toStdString()}
+        );
+    std::vector<char> packet = ProtocolParser::pack_message(body);
+    m_tcpClient->sendData(QByteArray(packet.data(), packet.size()));
+    m_isRequestingTodayEnergy = true;
+    logMessage("请求今日总能耗");
+}
+
+void MainWindow::requestUnreadAlarms()
+{
+    if (!m_tcpClient || !m_tcpClient->isConnected()) return;
+    if (m_isRequestingAlarms) {
+        logMessage("告警请求已在进行中，忽略");
+        return;
+    }
+    std::vector<char> packet = ProtocolParser::build_alarm_query_message(
+        ProtocolParser::CLIENT_QT_CLIENT
+        );
+    m_tcpClient->sendData(QByteArray(packet.data(), packet.size()));
+    m_isRequestingAlarms = true;
+    logMessage("请求未处理告警列表");
+}
+
+void MainWindow::switchToAlarmCenter()
+{
+    // 切换到设置页面（包含告警中心）
+    switchPage(PAGE_SETTINGS);
+
+    // 获取设置页面容器中的 TabWidget，并选中告警中心标签（索引0）
+    QWidget *settingsContainer = m_centralStack->widget(PAGE_SETTINGS);
+    if (settingsContainer) {
+        // 通过对象名查找（需要在 setupCentralStack 中设置 settingsTab 的对象名）
+        QTabWidget *tabWidget = settingsContainer->findChild<QTabWidget*>("settingsTab");
+        if (tabWidget) {
+            tabWidget->setCurrentIndex(0); // 告警中心索引为0
+        }
+    }
+
+    logMessage("跳转到告警中心");
+}
+
+void MainWindow::requestTodayReservations()
+{
+    if (!m_tcpClient || !m_tcpClient->isConnected()) return;
+    if (m_isRequestingTodayReservations) {
+        logMessage("今日预约请求已在进行中，忽略");
+        return;
+    }
+    std::vector<char> msg = ProtocolParser::build_reservation_query(
+        ProtocolParser::CLIENT_QT_CLIENT,
+        ""
+        );
+    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+    m_isRequestingTodayReservations = true;
+    logMessage("请求今日预约数量");
+}
+
+void MainWindow::requestInitialData()
+{
+    // 请求设备列表（设备页面会自动处理响应并更新仪表板）
+    if (m_equipmentPage) {
+        m_equipmentPage->requestEquipmentList();
+    }
+
+    // 请求场所列表（用于预约页面和场所使用率）
+    if (m_tcpClient && m_tcpClient->isConnected()) {
+        std::vector<char> msg = ProtocolParser::pack_message(
+            ProtocolParser::build_message_body(
+                ProtocolParser::CLIENT_QT_CLIENT,
+                ProtocolParser::QT_PLACE_LIST_QUERY,
+                "",  // equipment_id为空
+                {""} // payload为空
+                )
+            );
+        m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+        logMessage("已发送场所列表查询请求");
+    }
+
+    // 调用 updateDashboardStats 发送能耗、告警、预约请求
+    updateDashboardStats();
+
+    logMessage("初始数据请求已发送");
 }
 
 void MainWindow::setupNavigation()
@@ -699,16 +804,16 @@ void MainWindow::switchPage(int pageIndex)
             break;
 
         case PAGE_EQUIPMENT:
-            if (m_equipmentPage) {
-                // 只有在首次切换到设备页面或手动刷新时才请求
-                if (!loadedPages.contains(PAGE_EQUIPMENT)) {
-                    m_equipmentPage->requestEquipmentList();
-                    loadedPages.insert(PAGE_EQUIPMENT);
-                    qDebug() << "首次切换到设备页面，发送设备列表查询请求";
-                } else {
-                    qDebug() << "设备页面已加载过，跳过自动刷新";
-                }
-            }
+            // if (m_equipmentPage) {
+            //     // 只有在首次切换到设备页面或手动刷新时才请求
+            //     if (!loadedPages.contains(PAGE_EQUIPMENT)) {
+            //         m_equipmentPage->requestEquipmentList();
+            //         loadedPages.insert(PAGE_EQUIPMENT);
+            //         qDebug() << "首次切换到设备页面，发送设备列表查询请求";
+            //     } else {
+            //         qDebug() << "设备页面已加载过，跳过自动刷新";
+            //     }
+            // }
             break;
 
         case PAGE_RESERVATION:
@@ -915,7 +1020,7 @@ void MainWindow::logMessage(const QString& msg)
 // 更新仪表板统计数据
 void MainWindow::updateDashboardStats()
 {
-    // 从设备管理页面获取数据
+    // 从设备管理页面获取设备状态数据
     if (m_equipmentPage && m_equipmentPage->m_equipmentModel) {
         QStandardItemModel* model = m_equipmentPage->m_equipmentModel;
         int totalDevices = model->rowCount();
@@ -923,7 +1028,6 @@ void MainWindow::updateDashboardStats()
         int offlineDevices = 0;
         int reservedDevices = 0;
 
-        // 统计设备状态
         for (int i = 0; i < totalDevices; ++i) {
             QString status = model->item(i, 3)->text(); // 第3列是状态
             if (status == "online") {
@@ -935,28 +1039,25 @@ void MainWindow::updateDashboardStats()
             }
         }
 
-        // 更新卡片显示
         if (m_totalDevicesLabel) m_totalDevicesLabel->setText(QString::number(totalDevices));
         if (m_onlineDevicesLabel) m_onlineDevicesLabel->setText(QString::number(onlineDevices));
         if (m_offlineDevicesLabel) m_offlineDevicesLabel->setText(QString::number(offlineDevices));
         if (m_reservedDevicesLabel) m_reservedDevicesLabel->setText(QString::number(reservedDevices));
 
-        // 更新状态栏的设备数量
         QLabel *deviceLabel = m_statusBar->findChild<QLabel*>("deviceCountLabel");
         if (deviceLabel) {
             deviceLabel->setText(QString("设备: %1").arg(totalDevices));
         }
     }
 
-    // 更新其他统计信息（这里先使用模拟数据）
-    if (m_todayEnergyLabel) m_todayEnergyLabel->setText("125.6 kWh");
-    if (m_activeAlertsLabel) m_activeAlertsLabel->setText("3");
-    if (m_todayReservationsLabel) m_todayReservationsLabel->setText("8");
-    if (m_placeUsageLabel) m_placeUsageLabel->setText("65%");
-
-    // 更新最近告警和活动日志
+    // 更新最近告警和活动日志（模拟，可暂时保留）
     updateRecentAlerts();
     updateActivityLog();
+
+    // 发起请求获取实时数据
+    requestTodayEnergy();
+    requestUnreadAlarms();
+    requestTodayReservations();
 }
 
 // 更新最近告警
@@ -1030,32 +1131,33 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
                     logMessage("切换到能耗统计页面");
                 }
                 else if (cardType == "待处理告警") {
-                    // 可以在这里弹出一个告警详情对话框
-                    QMessageBox::information(this, "系统告警",
-                                             "当前有3条待处理告警：\n"
-                                             "1. 设备 projector_101 离线\n"
-                                             "2. 会议室 classroom_101 能耗异常\n"
-                                             "3. 空调 aircon_202 温度过高");
-                    logMessage("查看待处理告警");
+                    switchToAlarmCenter();
+                    return true;
                 }
                 else if (cardType == "今日预约") {
                     switchPage(PAGE_RESERVATION);
-                    logMessage("切换到预约管理页面");
+                    // 切换到查询标签页（索引1）
+                    if (m_reservationPage && m_reservationPage->m_tabWidget) {
+                        m_reservationPage->m_tabWidget->setCurrentIndex(1);
+                    }
+                    logMessage("切换到预约管理页面，查看今日预约");
+                    return true;
                 }
                 else if (cardType == "场所使用率") {
-                    QMessageBox::information(this, "场所使用率统计",
-                                             "今日场所使用情况：\n"
-                                             "• 教室: 80%\n"
-                                             "• 实验室: 60%\n"
-                                             "• 会议室: 55%\n"
-                                             "• 体育场馆: 45%");
-                    logMessage("查看场所使用率");
+                    if (!m_tcpClient || !m_tcpClient->isConnected()) {
+                        QMessageBox::warning(this, "提示", "网络未连接，无法获取场所使用率");
+                        return true;
+                    }
+                    m_isRequestingPlaceUsage = true;
+                    requestTodayReservations();   // 复用今日预约请求
+                    logMessage("请求场所使用率数据");
+                    return true;
                 }
-                return true;
-            }
         }
     }
     return QMainWindow::eventFilter(watched, event);
+}
+
 }
 
 
@@ -1176,7 +1278,7 @@ void MainWindow::handleReservationApplyResponse(const ProtocolParser::ParseResul
     }
 }
 
-// 在 mainwindow.cpp 中修改这个函数
+
 void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResult &result)
 {
     QString payload = QString::fromStdString(result.payload);
@@ -1184,11 +1286,98 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
     qDebug() << "=== 查询响应处理 ===";
     qDebug() << "原始payload:" << payload;
 
-    // 检查是否为错误响应
+    // ---------- 1. 场所使用率请求（点击卡片触发） ----------
+    if (m_isRequestingPlaceUsage) {
+        QMap<QString, int> placeTotalMinutes;
+        QStringList records = payload.split(';', Qt::SkipEmptyParts);
+        for (const QString &rec : records) {
+            QStringList fields = rec.split('|');
+            if (fields.size() >= 5) {
+                QString placeId = fields[1];
+                QString startStr = fields[3];
+                QString endStr = fields[4];
+                QDateTime start = QDateTime::fromString(startStr, "yyyy-MM-dd HH:mm:ss");
+                QDateTime end = QDateTime::fromString(endStr, "yyyy-MM-dd HH:mm:ss");
+                if (start.isValid() && end.isValid()) {
+                    int minutes = start.secsTo(end) / 60;
+                    placeTotalMinutes[placeId] += minutes;
+                }
+            }
+        }
+
+        const int AVAILABLE_MINUTES = 14 * 60; // 每个场所可用840分钟
+
+        QString usageText = "今日场所使用率统计：\n";
+        if (placeTotalMinutes.isEmpty()) {
+            usageText += "  暂无预约记录";
+        } else {
+            for (auto it = placeTotalMinutes.begin(); it != placeTotalMinutes.end(); ++it) {
+                QString placeId = it.key();
+                int usedMinutes = it.value();
+                double percentage = (usedMinutes * 100.0) / AVAILABLE_MINUTES;
+                if (percentage > 100.0) percentage = 100.0;
+                QString placeDisplay = m_placeNameMap.value(placeId, placeId);
+                usageText += QString("  • %1: %2 分钟 (%3%)\n")
+                                 .arg(placeDisplay)
+                                 .arg(usedMinutes)
+                                 .arg(QString::number(percentage, 'f', 1));
+            }
+        }
+
+        QMessageBox::information(this, "场所使用率", usageText);
+        m_isRequestingPlaceUsage = false;
+        return;
+    }
+
+    // ---------- 2. 仪表板今日预约请求（更新卡片） ----------
+    if (m_isRequestingTodayReservations) {
+        int todayCount = 0;
+        int totalUsedMinutes = 0; // 累计所有预约的总时长（分钟）
+        QDate today = QDate::currentDate();
+        QStringList records = payload.split(';', Qt::SkipEmptyParts);
+        for (const QString &rec : records) {
+            QStringList fields = rec.split('|');
+            if (fields.size() >= 5) { // 假设包含开始和结束时间
+                QString startStr = fields[3];
+                QString endStr = fields[4];
+                QDateTime start = QDateTime::fromString(startStr, "yyyy-MM-dd HH:mm:ss");
+                QDateTime end = QDateTime::fromString(endStr, "yyyy-MM-dd HH:mm:ss");
+                if (start.isValid() && end.isValid() && start.date() == today) {
+                    todayCount++;
+                    int minutes = start.secsTo(end) / 60;
+                    totalUsedMinutes += minutes;
+                }
+            }
+        }
+
+        // 更新今日预约数量
+        if (m_todayReservationsLabel) {
+            m_todayReservationsLabel->setText(QString::number(todayCount));
+        }
+
+        // 计算并更新场所使用率（整体使用率）
+        if (m_placeUsageLabel) {
+            int placeCount = m_placeNameMap.size();
+            if (placeCount > 0) {
+                const int AVAILABLE_MINUTES_PER_PLACE = 14 * 60;
+                int totalAvailableMinutes = placeCount * AVAILABLE_MINUTES_PER_PLACE;
+                double usagePercent = (totalUsedMinutes * 100.0) / totalAvailableMinutes;
+                if (usagePercent > 100.0) usagePercent = 100.0;
+                m_placeUsageLabel->setText(QString::number(usagePercent, 'f', 1) + "%");
+            } else {
+                // 场所列表尚未加载，暂时设为0%
+                m_placeUsageLabel->setText("0%");
+            }
+        }
+
+        m_isRequestingTodayReservations = false;
+        return;
+    }
+
+    // ---------- 3. 原有的错误检查和预约页面分发逻辑 ----------
     if (payload.isEmpty() || payload.startsWith("fail|")) {
         QString errorMsg = payload.isEmpty() ? "查询失败" : payload.mid(5);
         qDebug() << "查询失败:" << errorMsg;
-
         if (m_reservationPage) {
             QMetaObject::invokeMethod(m_reservationPage, [this]() {
                 m_reservationPage->updateQueryResultTable("");
@@ -1197,10 +1386,9 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
         return;
     }
 
-    // 处理响应数据
     QString data;
     if (payload.startsWith("success|")) {
-        data = payload.mid(8); // "success|" 长度是8
+        data = payload.mid(8);
     } else {
         data = payload;
     }
@@ -1212,16 +1400,15 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
         return;
     }
 
-    // 根据当前标签页分发数据
     int currentTab = m_reservationPage->m_tabWidget->currentIndex();
     qDebug() << "当前标签页:" << currentTab;
 
-    if (currentTab == 2) {            // 审批页
+    if (currentTab == 2) {
         qDebug() << "分发到审批页";
         QMetaObject::invokeMethod(m_reservationPage, [this, data]() {
             m_reservationPage->loadAllReservationsForApproval(data);
         }, Qt::QueuedConnection);
-    } else if (currentTab == 1) {     // 查询页
+    } else if (currentTab == 1) {
         qDebug() << "分发到查询页";
         QMetaObject::invokeMethod(m_reservationPage, [this, data]() {
             m_reservationPage->updateQueryResultTable(data);
@@ -1230,6 +1417,7 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
         qDebug() << "数据未处理，当前标签页:" << currentTab;
     }
 }
+
 void MainWindow::handleReservationApproveResponse(const ProtocolParser::ParseResult &result)
 {
     QString payload = QString::fromStdString(result.payload);
@@ -1295,6 +1483,9 @@ void MainWindow::handlePlaceListResponse(const ProtocolParser::ParseResult &resu
             QString placeName = fields[1];
             QString equipmentIds = fields[2];
 
+            // 填充场所名称映射
+            m_placeNameMap[placeId] = placeName;
+
             qDebug() << "添加场所:" << placeName << "ID:" << placeId;
 
             if (m_reservationPage->m_placeComboApply) {
@@ -1340,38 +1531,40 @@ void MainWindow::handlePlaceListResponse(const ProtocolParser::ParseResult &resu
         }
     });
 
+    // ★ 新增：场所列表填充完成后，如果当前在仪表板页面，刷新预约数据以更新使用率
+    if (m_centralStack && m_centralStack->currentIndex() == PAGE_DASHBOARD) {
+        requestTodayReservations();
+    }
+
     emit m_reservationPage->placeListLoaded();
 }
 
 void MainWindow::handleEnergyResponse(const ProtocolParser::ParseResult &result)
 {
-    qDebug() << "=== 能耗响应接收调试 ===";
-    qDebug() << "equipment_id:" << QString::fromStdString(result.equipment_id);
-    qDebug() << "payload:" << QString::fromStdString(result.payload);
-
     QString data = QString::fromStdString(result.payload);
 
-    // 检查是否为错误响应
-    if (data.startsWith("fail|")) {
-        QString errorMsg = data.mid(5);
-        QMessageBox::warning(this, "查询失败", errorMsg);
-        logMessage(QString("能耗查询失败: %1").arg(errorMsg));
+    // 仪表板请求分支
+    if (m_isRequestingTodayEnergy) {
+        double total = 0.0;
+        QStringList records = data.split(';', Qt::SkipEmptyParts);
+        for (const QString &rec : records) {
+            QStringList fields = rec.split('|');
+            if (fields.size() >= 3) {
+                total += fields[2].toDouble();
+            }
+        }
+        if (m_todayEnergyLabel)
+            m_todayEnergyLabel->setText(QString::number(total, 'f', 2) + " kWh");
+        m_isRequestingTodayEnergy = false;
+        return;   // 仪表板请求不继续往下
+    }
+
+    // 能耗页面正常更新
+    if (data.isEmpty() || data.startsWith("fail|")) {
+        logMessage("能耗数据无效或查询失败");
         return;
     }
-
-    // 检查数据是否为空
-    if (data.isEmpty()) {
-        QMessageBox::information(this, "查询结果", "返回数据为空");
-        return;
-    }
-
-    if (m_energyPage) {
-        m_energyPage->updateEnergyChart(data);
-    } else {
-        qWarning() << "EnergyStatisticsWidget 未初始化！";
-    }
-
-    logMessage(QString("能耗数据接收成功，准备显示"));
+    if (m_energyPage) m_energyPage->updateEnergyChart(data);
 }
 
 void MainWindow::handleQtHeartbeatResponse(const ProtocolParser::ParseResult &result)
@@ -1454,6 +1647,8 @@ void MainWindow::onAcknowledgeAlarm(int alarmId)
 
 void MainWindow::handleAlarmQueryResponse(const ProtocolParser::ParseResult &result)
 {
+    // 重置标志（无论成功失败，请求结束）
+    if (m_isRequestingAlarms) m_isRequestingAlarms = false;
     QString payload = QString::fromStdString(result.payload);
     QStringList parts = payload.split('|', Qt::KeepEmptyParts);
     if (parts.isEmpty()) return;
@@ -1487,6 +1682,12 @@ void MainWindow::handleAlarmQueryResponse(const ProtocolParser::ParseResult &res
         m_alarmPage->setAlarms(alarms);
     }
     m_alarms = alarms;
+    // 更新待处理告警卡片
+    if (m_activeAlertsLabel) {
+        m_activeAlertsLabel->setText(QString::number(m_alarms.size()));
+    }
+    // 如果告警页面存在，更新它
+    if (m_alarmPage) m_alarmPage->setAlarms(m_alarms);
 }
 
 
@@ -1533,6 +1734,9 @@ void MainWindow::setupMessageHandlers() {
                                               if (deviceLabel) {
                                                   deviceLabel->setText(QString("设备: %1").arg(rowCount));
                                               }
+
+                                              // ★ 新增：刷新仪表板上的设备卡片
+                                              updateDashboardStats();
                                           }
                                       });
                                   });
