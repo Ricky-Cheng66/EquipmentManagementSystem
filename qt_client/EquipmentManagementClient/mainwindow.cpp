@@ -263,13 +263,8 @@ void MainWindow::setupCentralStack()
             .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss")),
         welcomeSection);
 
-    QPushButton *quickRefreshBtn = new QPushButton("🔄 刷新数据", welcomeSection);
-    quickRefreshBtn->setProperty("class", "primary-button");
-    quickRefreshBtn->setMinimumSize(120, 36);
-
     welcomeLayout->addWidget(welcomeText);
     welcomeLayout->addStretch();
-    welcomeLayout->addWidget(quickRefreshBtn);
 
     // 统计卡片区域 - 2行网格
     QWidget *statsSection = new QWidget(m_dashboardPage);
@@ -405,7 +400,6 @@ void MainWindow::setupCentralStack()
         QHBoxLayout *btnLayout = new QHBoxLayout(btn);
         btnLayout->setContentsMargins(10, 10, 10, 10);
 
-        // 图标
         QLabel *iconLabel = new QLabel(btn);
         iconLabel->setStyleSheet("font-size: 24px; color: #4a69bd;");
         if (icon == "refresh") iconLabel->setText("🔄");
@@ -413,8 +407,8 @@ void MainWindow::setupCentralStack()
         else if (icon == "energy") iconLabel->setText("📊");
         else if (icon == "control") iconLabel->setText("🎛️");
         else if (icon == "report") iconLabel->setText("📈");
+        else if (icon == "alert") iconLabel->setText("🚨");
 
-        // 文本
         QVBoxLayout *textLayout = new QVBoxLayout();
         textLayout->setSpacing(4);
 
@@ -435,12 +429,34 @@ void MainWindow::setupCentralStack()
         return btn;
     };
 
-    actionsGrid->addWidget(createActionButton("刷新设备列表", "refresh", "获取最新设备状态"), 0, 0);
-    actionsGrid->addWidget(createActionButton("预约会议室", "reserve", "快速预约设备/场所"), 0, 1);
-    actionsGrid->addWidget(createActionButton("能耗分析", "energy", "查看能耗统计数据"), 0, 2);
-    actionsGrid->addWidget(createActionButton("设备控制", "control", "批量开关设备"), 1, 0);
-    actionsGrid->addWidget(createActionButton("生成报告", "report", "导出设备使用报告"), 1, 1);
-    actionsGrid->addWidget(createActionButton("查看告警", "alert", "查看系统告警信息"), 1, 2);
+    // 创建按钮并保存指针
+    QPushButton *refreshBtn = createActionButton("刷新数据", "refresh", "刷新仪表板数据");
+    QPushButton *reserveBtn = createActionButton("预约场所", "reserve", "快速预约场所");
+    QPushButton *energyBtn = createActionButton("能耗分析", "energy", "查看能耗统计数据");
+    QPushButton *controlBtn = createActionButton("远程开关设备", "control", "远程控制设备开关");
+    QPushButton *reportBtn = createActionButton("报表导出", "report", "导出能耗表格");
+    QPushButton *alertBtn = createActionButton("查看告警", "alert", "查看系统告警信息");
+
+    // 添加到网格
+    actionsGrid->addWidget(refreshBtn, 0, 0);
+    actionsGrid->addWidget(reserveBtn, 0, 1);
+    actionsGrid->addWidget(energyBtn, 0, 2);
+    actionsGrid->addWidget(controlBtn, 1, 0);
+    actionsGrid->addWidget(reportBtn, 1, 1);
+    actionsGrid->addWidget(alertBtn, 1, 2);
+
+    // 直接连接信号
+    connect(refreshBtn, &QPushButton::clicked, this, &MainWindow::onRefreshDashboard);
+    connect(reserveBtn, &QPushButton::clicked, this, [this]() {
+        switchPage(PAGE_RESERVATION);
+        if (m_reservationPage && m_reservationPage->m_tabWidget) {
+            m_reservationPage->m_tabWidget->setCurrentIndex(0); // 0 为申请页
+        }
+    });
+    connect(energyBtn, &QPushButton::clicked, this, [this]() { switchPage(PAGE_ENERGY); });
+    connect(controlBtn, &QPushButton::clicked, this, [this]() { switchPage(PAGE_EQUIPMENT); });
+    connect(reportBtn, &QPushButton::clicked, this, [this]() { switchPage(PAGE_ENERGY); });
+    connect(alertBtn, &QPushButton::clicked, this, &MainWindow::switchToAlarmCenter);
 
     actionsLayout->addWidget(actionsTitle);
     actionsLayout->addLayout(actionsGrid);
@@ -595,26 +611,7 @@ void MainWindow::setupCentralStack()
         m_alarmPage->setAlarms(m_alarms);
     }
 
-    // 连接快速操作按钮的信号
-    QList<QPushButton*> actionButtons = quickActionsSection->findChildren<QPushButton*>();
-    for (QPushButton* btn : actionButtons) {
-        if (btn->text().contains("刷新设备列表")) {
-            connect(btn, &QPushButton::clicked, this, [this]() {
-                if (m_equipmentPage) {
-                    m_equipmentPage->requestEquipmentList();
-                    logMessage("已从仪表板刷新设备列表");
-                }
-            });
-        } else if (btn->text().contains("预约会议室")) {
-            connect(btn, &QPushButton::clicked, this, [this]() {
-                switchPage(PAGE_RESERVATION);
-            });
-        } else if (btn->text().contains("能耗分析")) {
-            connect(btn, &QPushButton::clicked, this, [this]() {
-                switchPage(PAGE_ENERGY);
-            });
-        }
-    }
+
     // 设置仪表板信号连接
     setupDashboardConnections();
 
@@ -982,6 +979,49 @@ void MainWindow::handleGetAllThresholdsResponse(const ProtocolParser::ParseResul
         if (m_thresholdSettingsPage) {
             m_thresholdSettingsPage->setCurrentThresholds(QHash<QString, double>());
         }
+    }
+}
+
+void MainWindow::onRefreshDashboard()
+{
+    QPushButton* btn = qobject_cast<QPushButton*>(sender());
+    if (btn) {
+        btn->setText("刷新中...");
+        btn->setEnabled(false);
+    }
+
+    logMessage("开始刷新仪表板数据...");
+    m_statusBar->showMessage("正在刷新仪表板数据...", 2000);
+
+    // 刷新设备列表
+    if (m_equipmentPage) {
+        m_equipmentPage->requestEquipmentList();
+    }
+
+    // 刷新其他数据（这些函数内部已有防重复机制）
+    requestTodayEnergy();
+    requestUnreadAlarms();
+    requestTodayReservations();
+
+    // 刷新场所列表（可选）
+    if (m_tcpClient && m_tcpClient->isConnected()) {
+        std::vector<char> msg = ProtocolParser::pack_message(
+            ProtocolParser::build_message_body(
+                ProtocolParser::CLIENT_QT_CLIENT,
+                ProtocolParser::QT_PLACE_LIST_QUERY,
+                "",
+                {""}
+                )
+            );
+        m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+    }
+
+    // 延迟恢复按钮（简单反馈）
+    if (btn) {
+        QTimer::singleShot(1000, [btn]() {
+            btn->setText("刷新数据");
+            btn->setEnabled(true);
+        });
     }
 }
 

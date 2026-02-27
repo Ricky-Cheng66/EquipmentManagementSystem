@@ -75,6 +75,8 @@ private slots:
     void onSetThresholdRequested(const QString &equipmentId, double value);
     void handleSetThresholdResponse(const ProtocolParser::ParseResult &result);
     void handleGetAllThresholdsResponse(const ProtocolParser::ParseResult &result);
+    //仪表板相关
+    void onRefreshDashboard();
 private:
     Ui::MainWindow *ui;
     TcpClient* m_tcpClient;
