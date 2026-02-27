@@ -160,6 +160,8 @@ private:
     void requestTodayReservations();
 
     void requestInitialData();   // 请求初始数据
+
+    void updateRecentReservations(const QString &data);
 };
 
 #endif // MAINWINDOW_H

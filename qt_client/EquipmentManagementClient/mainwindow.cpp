@@ -363,10 +363,6 @@ void MainWindow::setupCentralStack()
     statsGrid->addWidget(createStatCard("今日预约", "0", "reservation", "#1abc9c", &m_todayReservationsLabel), 1, 2);
     statsGrid->addWidget(createStatCard("场所使用率", "0%", "usage", "#34495e", &m_placeUsageLabel), 1, 3);
 
-    // 在实时信息区域保存控件指针
-    //m_alertTextEdit = alertList;
-    //m_activityTextEdit = logList;
-
     // 快速操作区域
     QWidget *quickActionsSection = new QWidget(m_dashboardPage);
     QVBoxLayout *actionsLayout = new QVBoxLayout(quickActionsSection);
@@ -479,6 +475,7 @@ void MainWindow::setupCentralStack()
     alertTitle->setStyleSheet("font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 10px;");
 
     QTextEdit *alertList = new QTextEdit(alertCard);
+    m_alertTextEdit = alertList;
     alertList->setReadOnly(true);
     alertList->setPlaceholderText("暂无告警信息");
     alertList->setStyleSheet(
@@ -500,12 +497,12 @@ void MainWindow::setupCentralStack()
     QVBoxLayout *logLayout = new QVBoxLayout(logCard);
     logLayout->setContentsMargins(20, 15, 20, 15);
 
-    QLabel *logTitle = new QLabel("最近活动");
+    QLabel *logTitle = new QLabel("最近预约");
     logTitle->setStyleSheet("font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 10px;");
 
     QTextEdit *logList = new QTextEdit(logCard);
     logList->setReadOnly(true);
-    logList->setPlaceholderText("暂无活动记录");
+    logList->setPlaceholderText("暂无预约记录");
     logList->setStyleSheet(
         "QTextEdit {"
         "    border: none;"
@@ -516,6 +513,8 @@ void MainWindow::setupCentralStack()
 
     logLayout->addWidget(logTitle);
     logLayout->addWidget(logList);
+
+    m_activityTextEdit = logList;
 
     realtimeLayout->addWidget(alertCard);
     realtimeLayout->addWidget(logCard);
@@ -714,6 +713,58 @@ void MainWindow::requestInitialData()
     updateDashboardStats();
 
     logMessage("初始数据请求已发送");
+}
+
+void MainWindow::updateRecentReservations(const QString &data)
+{
+    if (!m_activityTextEdit) return;
+
+    m_activityTextEdit->clear();
+    if (data.isEmpty()) {
+        m_activityTextEdit->setPlainText("暂无预约记录");
+        return;
+    }
+
+    QStringList records = data.split(';', Qt::SkipEmptyParts);
+    if (records.isEmpty()) {
+        m_activityTextEdit->setPlainText("暂无预约记录");
+        return;
+    }
+
+    // 解析记录，按开始时间排序，取最近两条
+    QList<QPair<QDateTime, QString>> items;
+    for (const QString &rec : records) {
+        QStringList fields = rec.split('|');
+        // 假设格式: id|placeId|userId|start|end|status|purpose
+        if (fields.size() >= 7) {
+            QString placeId = fields[1];
+            QString startStr = fields[3];
+            QString purpose = fields[6];
+            QDateTime start = QDateTime::fromString(startStr, "yyyy-MM-dd HH:mm:ss");
+            if (start.isValid()) {
+                QString placeName = m_placeNameMap.value(placeId, placeId);
+                QString display = QString("%1 %2: %3")
+                                      .arg(start.toString("hh:mm"))
+                                      .arg(placeName)
+                                      .arg(purpose);
+                items.append(qMakePair(start, display));
+            }
+        }
+    }
+
+    if (items.isEmpty()) {
+        m_activityTextEdit->setPlainText("暂无预约记录");
+        return;
+    }
+
+    // 按时间倒序（最近在前）
+    std::sort(items.begin(), items.end(),
+              [](const auto &a, const auto &b) { return a.first > b.first; });
+
+    int showCount = qMin(2, items.size());
+    for (int i = 0; i < showCount; ++i) {
+        m_activityTextEdit->append(items[i].second);
+    }
 }
 
 void MainWindow::setupNavigation()
@@ -1092,7 +1143,6 @@ void MainWindow::updateDashboardStats()
 
     // 更新最近告警和活动日志（模拟，可暂时保留）
     updateRecentAlerts();
-    updateActivityLog();
 
     // 发起请求获取实时数据
     requestTodayEnergy();
@@ -1105,15 +1155,22 @@ void MainWindow::updateRecentAlerts()
 {
     if (!m_alertTextEdit) return;
 
-    // 模拟告警数据
-    QStringList alerts;
-    alerts << "10:25 设备 projector_101 离线"
-           << "09:15 会议室 classroom_101 能耗异常"
-           << "08:30 空调 aircon_202 温度过高";
-
     m_alertTextEdit->clear();
-    for (const QString &alert : alerts) {
-        m_alertTextEdit->append(alert);
+    if (m_alarms.isEmpty()) {
+        m_alertTextEdit->setPlainText("暂无告警信息");
+        return;
+    }
+
+    // 取最后两条（假设 m_alarms 按时间顺序添加，最新的在末尾）
+    int count = m_alarms.size();
+    int start = qMax(0, count - 2);
+    for (int i = start; i < count; ++i) {
+        const AlarmInfo &a = m_alarms.at(i);
+        QString line = QString("[%1] %2: %3")
+                           .arg(a.timestamp.toString("hh:mm"))
+                           .arg(a.equipmentId)
+                           .arg(a.message);
+        m_alertTextEdit->append(line);
     }
 }
 
@@ -1456,6 +1513,11 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
     } else {
         qDebug() << "数据未处理，当前标签页:" << currentTab;
     }
+
+    // 如果当前在仪表板，更新最近预约显示
+    if (m_centralStack && m_centralStack->currentIndex() == PAGE_DASHBOARD) {
+        updateRecentReservations(data);  // data 是已去除 success| 前缀的数据
+    }
 }
 
 void MainWindow::handleReservationApproveResponse(const ProtocolParser::ParseResult &result)
@@ -1654,6 +1716,10 @@ void MainWindow::handleAlertMessage(const ProtocolParser::ParseResult &result)
         m_alarmPage->addAlarm(alarm);
     }
 
+    if (m_centralStack && m_centralStack->currentIndex() == PAGE_DASHBOARD) {
+        updateRecentAlerts();
+    }
+
     logMessage(QString("[告警] ID=%1 | %2 | %3 | %4").arg(alarmId).arg(severity, alarm.equipmentId, message));
 }
 
@@ -1728,6 +1794,10 @@ void MainWindow::handleAlarmQueryResponse(const ProtocolParser::ParseResult &res
     }
     // 如果告警页面存在，更新它
     if (m_alarmPage) m_alarmPage->setAlarms(m_alarms);
+
+    if (m_centralStack && m_centralStack->currentIndex() == PAGE_DASHBOARD) {
+        updateRecentAlerts();
+    }
 }
 
 
