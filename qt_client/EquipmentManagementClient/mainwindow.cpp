@@ -353,9 +353,10 @@ void MainWindow::setupCentralStack()
 
     // 修改统计卡片创建，保存指针
     statsGrid->addWidget(createStatCard("设备总数", "0", "devices", "#3498db", &m_totalDevicesLabel), 0, 0);
-    statsGrid->addWidget(createStatCard("在线设备", "0", "online", "#27ae60", &m_onlineDevicesLabel), 0, 1);
+    statsGrid->addWidget(createStatCard("可用设备", "0", "online", "#27ae60", &m_onlineDevicesLabel), 0, 1);
     statsGrid->addWidget(createStatCard("离线设备", "0", "offline", "#e74c3c", &m_offlineDevicesLabel), 0, 2);
-    statsGrid->addWidget(createStatCard("预约中", "0", "reserved", "#f39c12", &m_reservedDevicesLabel), 0, 3);
+    statsGrid->addWidget(createStatCard("使用中", "0", "reserved", "#f39c12", &m_reservedDevicesLabel), 0, 3);
+
 
     // 第二行：能耗和告警卡片
     statsGrid->addWidget(createStatCard("今日能耗", "0 kWh", "energy", "#9b59b6", &m_todayEnergyLabel), 1, 0);
@@ -679,9 +680,10 @@ void MainWindow::requestTodayReservations()
         logMessage("今日预约请求已在进行中，忽略");
         return;
     }
+    // 将查询参数从空字符串改为 "all"，以匹配服务器对“全部场所”的处理
     std::vector<char> msg = ProtocolParser::build_reservation_query(
         ProtocolParser::CLIENT_QT_CLIENT,
-        ""
+        "all"
         );
     m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
     m_isRequestingTodayReservations = true;
@@ -735,17 +737,23 @@ void MainWindow::updateRecentReservations(const QString &data)
     QList<QPair<QDateTime, QString>> items;
     for (const QString &rec : records) {
         QStringList fields = rec.split('|');
-        // 假设格式: id|placeId|userId|start|end|status|purpose
+        // 格式：id|placeId|userId|purpose|start|end|status
         if (fields.size() >= 7) {
             QString placeId = fields[1];
-            QString startStr = fields[3];
-            QString purpose = fields[6];
+            QString purpose = fields[3];
+            QString startStr = fields[4];
+            QString endStr = fields[5]; // 获取结束时间
             QDateTime start = QDateTime::fromString(startStr, "yyyy-MM-dd HH:mm:ss");
-            if (start.isValid()) {
+            QDateTime end = QDateTime::fromString(endStr, "yyyy-MM-dd HH:mm:ss");
+            if (start.isValid() && end.isValid()) {
                 QString placeName = m_placeNameMap.value(placeId, placeId);
-                QString display = QString("%1 %2: %3")
-                                      .arg(start.toString("hh:mm"))
+                // 构建格式：场所 日期 时间段: 用途
+                QString dateStr = start.toString("yyyy-MM-dd");
+                QString timeRange = start.toString("hh:mm") + "-" + end.toString("hh:mm");
+                QString display = QString("%1 %2 %3: %4")
                                       .arg(placeName)
+                                      .arg(dateStr)
+                                      .arg(timeRange)
                                       .arg(purpose);
                 items.append(qMakePair(start, display));
             }
@@ -1218,8 +1226,8 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
             QString cardType = watched->property("cardType").toString();
             if (!cardType.isEmpty()) {
                 // 根据卡片类型执行不同操作
-                if (cardType == "设备总数" || cardType == "在线设备" ||
-                    cardType == "离线设备" || cardType == "预约中") {
+                if (cardType == "设备总数" || cardType == "可用设备" ||
+                    cardType == "离线设备" || cardType == "使用中") {
                     switchPage(PAGE_EQUIPMENT);
                     logMessage(QString("切换到设备管理页面，查看%1").arg(cardType));
                 }
@@ -1379,14 +1387,23 @@ void MainWindow::handleReservationApplyResponse(const ProtocolParser::ParseResul
 void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResult &result)
 {
     QString payload = QString::fromStdString(result.payload);
-
     qDebug() << "=== 查询响应处理 ===";
     qDebug() << "原始payload:" << payload;
 
+    // ★ 修复1：统一提取数据部分（去除可能的 "success|" 前缀）
+    QString data;
+    bool hasSuccess = payload.startsWith("success|");
+    if (hasSuccess) {
+        data = payload.mid(8); // 跳过 "success|"
+    } else {
+        data = payload;
+    }
+
     // ---------- 1. 场所使用率请求（点击卡片触发） ----------
     if (m_isRequestingPlaceUsage) {
+        // ★ 修复2：使用 data 而不是 payload 进行解析
         QMap<QString, int> placeTotalMinutes;
-        QStringList records = payload.split(';', Qt::SkipEmptyParts);
+        QStringList records = data.split(';', Qt::SkipEmptyParts);
         for (const QString &rec : records) {
             QStringList fields = rec.split('|');
             if (fields.size() >= 5) {
@@ -1429,12 +1446,14 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
     // ---------- 2. 仪表板今日预约请求（更新卡片） ----------
     if (m_isRequestingTodayReservations) {
         int todayCount = 0;
-        int totalUsedMinutes = 0; // 累计所有预约的总时长（分钟）
+        int totalUsedMinutes = 0;
         QDate today = QDate::currentDate();
-        QStringList records = payload.split(';', Qt::SkipEmptyParts);
+        // ★ 修复3：使用 data 而不是 payload 进行分割
+        QStringList records = data.split(';', Qt::SkipEmptyParts);
         for (const QString &rec : records) {
             QStringList fields = rec.split('|');
-            if (fields.size() >= 5) { // 假设包含开始和结束时间
+            // 假设字段至少5个（id|placeId|userId|start|end|...）
+            if (fields.size() >= 5) {
                 QString startStr = fields[3];
                 QString endStr = fields[4];
                 QDateTime start = QDateTime::fromString(startStr, "yyyy-MM-dd HH:mm:ss");
@@ -1452,7 +1471,7 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
             m_todayReservationsLabel->setText(QString::number(todayCount));
         }
 
-        // 计算并更新场所使用率（整体使用率）
+        // 计算并更新场所使用率
         if (m_placeUsageLabel) {
             int placeCount = m_placeNameMap.size();
             if (placeCount > 0) {
@@ -1462,9 +1481,13 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
                 if (usagePercent > 100.0) usagePercent = 100.0;
                 m_placeUsageLabel->setText(QString::number(usagePercent, 'f', 1) + "%");
             } else {
-                // 场所列表尚未加载，暂时设为0%
                 m_placeUsageLabel->setText("0%");
             }
+        }
+
+        // ★ 修复4：更新最近预约列表
+        if (m_centralStack && m_centralStack->currentIndex() == PAGE_DASHBOARD) {
+            updateRecentReservations(data);
         }
 
         m_isRequestingTodayReservations = false;
@@ -1483,13 +1506,7 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
         return;
     }
 
-    QString data;
-    if (payload.startsWith("success|")) {
-        data = payload.mid(8);
-    } else {
-        data = payload;
-    }
-
+    // data 已经提取完毕，直接使用
     qDebug() << "处理后的数据:" << data;
 
     if (!m_reservationPage) {
@@ -1514,9 +1531,9 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
         qDebug() << "数据未处理，当前标签页:" << currentTab;
     }
 
-    // 如果当前在仪表板，更新最近预约显示
+    // 如果当前在仪表板，更新最近预约显示（可能已在上面的分支处理过，但保留判断以防遗漏）
     if (m_centralStack && m_centralStack->currentIndex() == PAGE_DASHBOARD) {
-        updateRecentReservations(data);  // data 是已去除 success| 前缀的数据
+        updateRecentReservations(data);
     }
 }
 
