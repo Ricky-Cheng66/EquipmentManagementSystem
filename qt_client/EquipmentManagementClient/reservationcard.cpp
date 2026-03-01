@@ -8,10 +8,10 @@ ReservationCard::ReservationCard(const QString &reservationId, const QString &pl
                                  const QString &userId, const QString &purpose,
                                  const QString &startTime, const QString &endTime,
                                  const QString &status, const QString &equipmentList,
-                                 QWidget *parent)
+                                 bool approveMode, QWidget *parent)
     : QWidget(parent)
     , m_reservationId(reservationId.isEmpty() ? "未知ID" : reservationId)
-    , m_placeId(placeId.isEmpty() ? "default_place" : placeId)  // 这里很重要，确保placeId正确
+    , m_placeId(placeId.isEmpty() ? "default_place" : placeId)
     , m_placeName(placeName.isEmpty() ? "未知场所" : placeName)
     , m_userId(userId.isEmpty() ? "未知用户" : userId)
     , m_purpose(purpose.isEmpty() ? "未指定用途" : purpose)
@@ -20,6 +20,7 @@ ReservationCard::ReservationCard(const QString &reservationId, const QString &pl
     , m_status(status.trimmed().isEmpty() ? "pending" : status.trimmed())
     , m_equipmentList(equipmentList.isEmpty() ? "无设备" : equipmentList)
     , m_selected(false)
+    , m_approveMode(approveMode)
 {
     qDebug() << "=== 创建预约卡片 ===";
     qDebug() << "预约ID:" << m_reservationId;
@@ -163,8 +164,8 @@ void ReservationCard::setupUI()
 
     contentLayout->addStretch();
 
-    // ===== 操作按钮（根据状态显示不同按钮）=====
-    if (m_status == "pending" || m_status == "待审批") {
+    // ===== 操作按钮（根据状态和模式显示不同按钮）=====
+    if (m_approveMode && (m_status == "pending" || m_status == "待审批")) {
         m_actionButton = new QPushButton("审批", m_contentWidget);
         m_actionButton->setFixedSize(80, 26);
         m_actionButton->setStyleSheet(

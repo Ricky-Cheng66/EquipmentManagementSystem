@@ -18,6 +18,7 @@ public:
                              const QString &userId, const QString &purpose,
                              const QString &startTime, const QString &endTime,
                              const QString &status, const QString &equipmentList,
+                             bool approveMode = false,
                              QWidget *parent = nullptr);
 
     // 获取预约信息的公共方法
@@ -71,6 +72,8 @@ private:
     QString m_status;
     QString m_equipmentList;
     bool m_selected;
+
+    bool m_approveMode;
 
     // UI控件
     QWidget *m_contentWidget;

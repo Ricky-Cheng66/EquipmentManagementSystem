@@ -1683,7 +1683,10 @@ void ReservationWidget::updateQueryResultTable(const QString &data)
                 // 创建预约卡片，但不立即添加到布局
                 ReservationCard *card = new ReservationCard(
                     reservationId, placeId, placeName, userId, purpose,
-                    startTime, endTime, status, equipmentText, nullptr);
+                    startTime, endTime, status, equipmentText,
+                    false,  // 明确指定非审批模式
+                    nullptr
+                    );
 
                 if (card) {
                     connect(card, &ReservationCard::cardClicked,
@@ -3032,16 +3035,10 @@ void ReservationWidget::loadAllReservationsForApproval(const QString &data)
 
             // 创建审批卡片
             ReservationCard *card = new ReservationCard(
-                reservationId,      // reservationId
-                placeId,            // placeId
-                placeName,          // placeName
-                userId,             // userId
-                purpose,            // purpose
-                startTime,          // startTime
-                endTime,            // endTime
-                status,             // status
-                equipmentText,      // equipmentList
-                nullptr             // parent
+                reservationId, placeId, placeName, userId, purpose,
+                startTime, endTime, status, equipmentText,
+                true,   // 审批模式
+                nullptr
                 );
 
             if (card) {
