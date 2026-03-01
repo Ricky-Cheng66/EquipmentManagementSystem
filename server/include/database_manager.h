@@ -65,7 +65,8 @@ public:
   bool add_reservation(const std::string &place_id, int user_id,
                        const std::string &purpose,
                        const std::string &start_time,
-                       const std::string &end_time);
+                       const std::string &end_time,
+                       const std::string &status = "pending_teacher");
 
   bool update_reservation_status(int reservation_id, const std::string &status,
                                  const std::string &place_id);
@@ -101,6 +102,21 @@ public:
   // 根据用户名查询用户信息
   bool get_user_info(const std::string &username, std::string &password_hash,
                      std::string &role, int &user_id);
+
+  // 获取某老师的所有学生ID
+  std::vector<int> get_students_of_teacher(int teacher_id);
+
+  // 判断老师是否是某学生的导师
+  bool is_teacher_of_student(int teacher_id, int student_id);
+
+  // 根据用户角色获取预约记录（用于查询）
+  std::vector<std::vector<std::string>>
+  get_reservations_for_user(int user_id, const std::string &role);
+
+  // 根据场所ID和用户信息获取预约记录（角色过滤）
+  std::vector<std::vector<std::string>>
+  get_reservations_by_place_for_user(const std::string &place_id, int user_id,
+                                     const std::string &role);
 
 private:
   bool initialize_tables(); // 初始化数据库表

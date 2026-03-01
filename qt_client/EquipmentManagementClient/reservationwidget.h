@@ -47,9 +47,12 @@ public:
     void clearEquipmentList();
     QString getCurrentSelectedPlaceId() const;
     int getCurrentSelectedReservationId() const;
+    QString userRole() const { return m_userRole; }
     QString getPlaceNameById(const QString &placeId);
     QStringList getEquipmentListForPlace(const QString &placeId) const;
     void updateEquipmentListDisplay();
+
+    void filterAndDisplayTeacherPending(const QString& data); // 筛选并显示待审批项（原代码）
 
     // 线程安全检查方法
     bool isInMainThread() const { return thread() == QThread::currentThread(); }
@@ -73,6 +76,8 @@ signals:
 
 public slots:
     void updatePlaceCards();
+
+    void handleTeacherPendingData(const QString& data);
 
 private slots:
     void onTabChanged(int index);
@@ -116,6 +121,9 @@ private slots:
     void showApproveDetailLoading();            // 显示详情页加载提示
     void clearApproveListData();                // 清空场所列表数据
     void clearApproveDetailData();              // 清空详情数据
+
+    void onTeacherStatusActionRequested(const QString &reservationId, const QString &action);
+
 private:
     // 申请页初始化
     void setupApplyTab();
@@ -266,6 +274,29 @@ private:
     QTableWidget *m_approveTable;
     QWidget *m_approveCardContainer;
     QVBoxLayout *m_approveCardLayout;
+
+    // 老师审批页相关核心属性
+    int m_teacherApproveTabIndex;                  // 老师审批页索引
+    QWidget *m_teacherApproveTab;                  // 老师审批标签页（原 m_teacherApprovePage）
+    QVBoxLayout *m_teacherApproveLayout;           // 主布局（去重保留）
+    QWidget *m_teacherCardContainer;               // 卡片容器（去重保留）
+    QGridLayout *m_teacherCardGrid;                // 卡片网格布局（去重保留）
+    QTimer* m_teacherRefreshTimer;                 // 刷新定时器（原代码保留）
+
+    // 卡片管理相关
+    QList<ReservationCard*> m_teacherPendingCards; // 老师待审批卡片列表（原代码）
+    QList<ReservationCard*> m_teacherApproveCards; // 当前显示的卡片（新改动）
+    QMap<QString, ReservationCard*> m_teacherCardMap; // 卡片映射表（新改动）
+
+    // 筛选工具栏（可选，新改动）
+    ReservationFilterToolBar *m_teacherFilterBar;
+
+    // 方法声明
+    void setupTeacherApproveTab();                 // 创建老师审批页（去重保留）
+    void refreshTeacherApproveView();              // 刷新老师审批页（去重保留）
+    void clearTeacherCards();                      // 清理卡片（原代码）
+    void clearTeacherApproveCards();               // 清理审批卡片（新改动）
+
 };
 
 #endif // RESERVATIONWIDGET_H

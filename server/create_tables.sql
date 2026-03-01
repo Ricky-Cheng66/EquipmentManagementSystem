@@ -17,14 +17,18 @@ CREATE TABLE IF NOT EXISTS equipments (
 ) ENGINE=InnoDB;
 
 -- 2. 用户表
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) NOT NULL,
     real_name VARCHAR(50),
     department VARCHAR(100),
-    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    teacher_id INT NULL,
+    created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_role (role),
+    INDEX idx_teacher (teacher_id)
 ) ENGINE=InnoDB;
 
 -- 3. 设备状态记录表
@@ -40,17 +44,19 @@ CREATE TABLE IF NOT EXISTS equipment_status_logs (
 ) ENGINE=InnoDB;
 
 -- 重建预约表（场所版）
-CREATE TABLE IF NOT EXISTS reservations (
+CREATE TABLE reservations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     place_id VARCHAR(50) NOT NULL COMMENT '场所ID',
     user_id INT NOT NULL,
     purpose VARCHAR(200) NOT NULL,
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,
-    status VARCHAR(20) DEFAULT 'pending' COMMENT 'pending/approved/rejected',
+    status ENUM('pending_teacher', 'pending_admin', 'approved', 'rejected') 
+           DEFAULT 'pending_teacher' COMMENT '待老师审批/待管理员审批/已批准/已拒绝',
     created_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_place_time (place_id, start_time, end_time),
     INDEX idx_user (user_id),
+    INDEX idx_status (status),
     FOREIGN KEY (place_id) REFERENCES places(place_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

@@ -163,17 +163,128 @@ bool DatabaseManager::get_user_info(const std::string &username,
   return false;
 }
 
+// 获取老师的学生ID列表
+std::vector<int> DatabaseManager::get_students_of_teacher(int teacher_id) {
+  std::vector<int> student_ids;
+  std::string query =
+      "SELECT id FROM users WHERE teacher_id = " + std::to_string(teacher_id);
+  auto results = execute_query(query);
+  for (const auto &row : results) {
+    if (!row.empty())
+      student_ids.push_back(std::stoi(row[0]));
+  }
+  return student_ids;
+}
+
+// 判断师生关系
+bool DatabaseManager::is_teacher_of_student(int teacher_id, int student_id) {
+  std::string query =
+      "SELECT COUNT(*) FROM users WHERE id = " + std::to_string(student_id) +
+      " AND teacher_id = " + std::to_string(teacher_id);
+  auto results = execute_query(query);
+  return (!results.empty() && std::stoi(results[0][0]) > 0);
+}
+
+// 按角色查询预约
+std::vector<std::vector<std::string>>
+DatabaseManager::get_reservations_for_user(int user_id,
+                                           const std::string &role) {
+  std::string query;
+  if (role == "admin") {
+    query =
+        "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
+        "FROM reservations WHERE status = 'pending_admin' ORDER BY start_time";
+  } else if (role == "teacher") {
+    auto student_ids = get_students_of_teacher(user_id);
+    if (student_ids.empty()) {
+      query =
+          "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
+          "FROM reservations WHERE user_id = " +
+          std::to_string(user_id) + " ORDER BY start_time";
+    } else {
+      std::string ids_str;
+      for (size_t i = 0; i < student_ids.size(); ++i) {
+        if (i > 0)
+          ids_str += ",";
+        ids_str += std::to_string(student_ids[i]);
+      }
+      query =
+          "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
+          "FROM reservations WHERE user_id = " +
+          std::to_string(user_id) +
+          " "
+          "OR (user_id IN (" +
+          ids_str +
+          ") AND status = 'pending_teacher') "
+          "ORDER BY start_time";
+    }
+  } else { // student
+    query =
+        "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
+        "FROM reservations WHERE user_id = " +
+        std::to_string(user_id) + " ORDER BY start_time";
+  }
+  return execute_query(query);
+}
+
+std::vector<std::vector<std::string>>
+DatabaseManager::get_reservations_by_place_for_user(const std::string &place_id,
+                                                    int user_id,
+                                                    const std::string &role) {
+
+  // 如果请求的是全部场所，直接调用已有的 get_reservations_for_user
+  if (place_id == "all") {
+    return get_reservations_for_user(user_id, role);
+  }
+
+  std::string query;
+  std::string base =
+      "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
+      "FROM reservations WHERE place_id = '" +
+      place_id + "'";
+
+  if (role == "admin") {
+    // 管理员可以看到该场所所有预约（全部状态）
+    query = base + " ORDER BY start_time";
+  } else if (role == "teacher") {
+    // 老师能看到：自己提交的预约 + 自己学生提交的且状态为 pending_teacher
+    // 的预约
+    auto student_ids = get_students_of_teacher(user_id);
+    if (!student_ids.empty()) {
+      std::string ids_str;
+      for (size_t i = 0; i < student_ids.size(); ++i) {
+        if (i > 0)
+          ids_str += ",";
+        ids_str += std::to_string(student_ids[i]);
+      }
+      query = base + " AND (user_id = " + std::to_string(user_id) +
+              " OR (user_id IN (" + ids_str +
+              ") AND status = 'pending_teacher')) "
+              "ORDER BY start_time";
+    } else {
+      query = base + " AND user_id = " + std::to_string(user_id) +
+              " ORDER BY start_time";
+    }
+  } else { // student
+    // 学生只能看到自己提交的预约（所有状态）
+    query = base + " AND user_id = " + std::to_string(user_id) +
+            " ORDER BY start_time";
+  }
+
+  return execute_query(query);
+}
+
 bool DatabaseManager::add_reservation(const std::string &place_id, int user_id,
                                       const std::string &purpose,
                                       const std::string &start_time,
-                                      const std::string &end_time) {
-  // 改动点：equipment_id → place_id
-  std::string query = "INSERT INTO reservations (place_id, user_id, "
-                      "purpose, start_time, end_time, status) "
+                                      const std::string &end_time,
+                                      const std::string &status) {
+  std::string query = "INSERT INTO reservations (place_id, user_id, purpose, "
+                      "start_time, end_time, status) "
                       "VALUES ('" +
                       place_id + "', " + std::to_string(user_id) + ", '" +
                       purpose + "', '" + start_time + "', '" + end_time +
-                      "', 'pending')";
+                      "', '" + status + "')";
   return execute_update(query);
 }
 
@@ -269,25 +380,20 @@ DatabaseManager::get_equipment_ids_by_place(const std::string &place_id) {
 bool DatabaseManager::check_place_reservation_conflict(
     const std::string &place_id, const std::string &start_time,
     const std::string &end_time) {
-
-  std::string sql = "SELECT COUNT(*) FROM reservations WHERE place_id = '" +
-                    place_id +
-                    "' "
-                    "AND status IN ('pending', 'approved') "
-                    "AND ((start_time BETWEEN '" +
-                    start_time + "' AND '" + end_time +
-                    "') "
-                    "OR (end_time BETWEEN '" +
-                    start_time + "' AND '" + end_time +
-                    "') "
-                    "OR (start_time <= '" +
-                    start_time + "' AND end_time >= '" + end_time + "'))";
-
+  std::string sql =
+      "SELECT COUNT(*) FROM reservations WHERE place_id = '" + place_id +
+      "' "
+      "AND status IN ('pending_teacher', 'pending_admin', 'approved') "
+      "AND ((start_time BETWEEN '" +
+      start_time + "' AND '" + end_time +
+      "') "
+      "OR (end_time BETWEEN '" +
+      start_time + "' AND '" + end_time +
+      "') "
+      "OR (start_time <= '" +
+      start_time + "' AND end_time >= '" + end_time + "'))";
   auto results = execute_query(sql);
-  if (!results.empty() && std::stoi(results[0][0]) > 0) {
-    return true;
-  }
-  return false;
+  return (!results.empty() && std::stoi(results[0][0]) > 0);
 }
 
 bool DatabaseManager::insert_power_log(const std::string &equipment_id,

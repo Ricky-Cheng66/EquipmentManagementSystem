@@ -1534,9 +1534,16 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
         qDebug() << "数据未处理，当前标签页:" << currentTab;
     }
 
+    if (m_reservationPage && m_reservationPage->userRole() == "teacher") {
+        m_reservationPage->filterAndDisplayTeacherPending(data);
+    }
+
     // 如果当前在仪表板，更新最近预约显示（可能已在上面的分支处理过，但保留判断以防遗漏）
     if (m_centralStack && m_centralStack->currentIndex() == PAGE_DASHBOARD) {
         updateRecentReservations(data);
+    }
+    if (m_reservationPage) {
+        m_reservationPage->handleTeacherPendingData(data);
     }
 }
 

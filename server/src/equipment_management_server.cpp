@@ -1415,7 +1415,8 @@ void EquipmentManagementServer::reset_all_equipment_on_shutdown() {
 
 void EquipmentManagementServer::handle_reservation_apply(
     int fd, const std::string &equipment_id, const std::string &payload) {
-  // 改动1：参数名equipment_id其实是place_id，复用参数名
+
+  // equipment_id 实际是 place_id（复用参数名）
   std::cout << "处理预约申请: place_id=" << equipment_id
             << " payload: " << payload << std::endl;
 
@@ -1434,7 +1435,7 @@ void EquipmentManagementServer::handle_reservation_apply(
   std::string end_time = parts[2];
   std::string purpose = parts[3];
 
-  // 验证用户是否存在（保持不变）
+  // 验证用户是否存在
   int user_id = std::stoi(user_id_str);
   if (!validate_user_exists(user_id)) {
     std::vector<char> response = ProtocolParser::build_reservation_response(
@@ -1443,7 +1444,27 @@ void EquipmentManagementServer::handle_reservation_apply(
     return;
   }
 
-  // 改动2：检查场所是否存在（通过是否能查出设备来判断）
+  // 【新增】获取当前连接的用户信息（包含角色）
+  ConnectionManager::UserInfo user_info;
+  if (!connections_manager_->get_user_info(fd, user_info)) {
+    std::vector<char> response = ProtocolParser::build_reservation_response(
+        ProtocolParser::CLIENT_QT_CLIENT, false, "无法获取用户信息");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  // 【新增】根据角色确定初始状态
+  std::string initial_status;
+  if (user_info.role == "student") {
+    initial_status = "pending_teacher";
+  } else if (user_info.role == "teacher") {
+    initial_status = "pending_admin";
+  } else {
+    // 管理员也能直接提交？按业务通常不允许，但可设为 pending_admin
+    initial_status = "pending_admin";
+  }
+
+  // 检查场所是否存在（通过是否能查出设备来判断）
   auto equipment_ids = db_manager_->get_equipment_ids_by_place(equipment_id);
   if (equipment_ids.empty()) {
     std::vector<char> response = ProtocolParser::build_reservation_response(
@@ -1452,7 +1473,7 @@ void EquipmentManagementServer::handle_reservation_apply(
     return;
   }
 
-  // 改动3：检查场所预约冲突（函数名变更）
+  // 检查场所预约冲突
   if (check_place_reservation_conflict(equipment_id, start_time, end_time)) {
     std::vector<char> response = ProtocolParser::build_reservation_response(
         ProtocolParser::CLIENT_QT_CLIENT, false, "场所时间冲突");
@@ -1460,16 +1481,17 @@ void EquipmentManagementServer::handle_reservation_apply(
     return;
   }
 
-  // 改动4：保存场所预约（函数参数变更）
+  // 【修改】调用 add_reservation 时传入初始状态
   if (db_manager_->is_connected()) {
-    bool success = db_manager_->add_reservation(equipment_id, user_id, purpose,
-                                                start_time, end_time);
+    bool success = db_manager_->add_reservation(
+        equipment_id, user_id, purpose, start_time, end_time, initial_status);
     if (success) {
       std::vector<char> response = ProtocolParser::build_reservation_response(
-          ProtocolParser::CLIENT_QT_CLIENT, true, "预约申请提交成功，等待审批");
+          ProtocolParser::CLIENT_QT_CLIENT, true, "预约申请提交成功");
       send(fd, response.data(), response.size(), 0);
       std::cout << "预约申请成功: place_id=" << equipment_id << " by user "
-                << user_id << std::endl;
+                << user_id << " 角色=" << user_info.role
+                << " 状态=" << initial_status << std::endl;
     } else {
       std::vector<char> response = ProtocolParser::build_reservation_response(
           ProtocolParser::CLIENT_QT_CLIENT, false, "数据库错误");
@@ -1485,8 +1507,18 @@ void EquipmentManagementServer::handle_reservation_apply(
 void EquipmentManagementServer::handle_reservation_query(
     int fd, const std::string &equipment_id, const std::string &payload) {
 
-  // 改动：equipment_id 实际是 place_id
+  // equipment_id 实际是 place_id（复用参数名）
   std::string place_id = equipment_id;
+
+  // 获取查询者信息
+  ConnectionManager::UserInfo user_info;
+  if (!connections_manager_->get_user_info(fd, user_info)) {
+    std::vector<char> response =
+        ProtocolParser::build_reservation_query_response(
+            ProtocolParser::CLIENT_QT_CLIENT, false, "无法获取用户信息");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
 
   if (!db_manager_->is_connected()) {
     std::vector<char> response =
@@ -1496,14 +1528,11 @@ void EquipmentManagementServer::handle_reservation_query(
     return;
   }
 
-  std::vector<std::vector<std::string>> reservations;
-  if (place_id == "all") {
-    reservations = db_manager_->get_all_reservations();
-  } else {
-    reservations = db_manager_->get_reservations_by_place(place_id);
-  }
+  // 调用新函数获取数据（已按角色过滤）
+  auto reservations = db_manager_->get_reservations_by_place_for_user(
+      place_id, user_info.user_id, user_info.role);
 
-  // 构建响应数据（格式保持不变）
+  // 构建响应数据（格式不变）
   std::string response_data;
   for (const auto &reservation : reservations) {
     if (reservation.size() >= 7) {
@@ -1520,8 +1549,8 @@ void EquipmentManagementServer::handle_reservation_query(
       ProtocolParser::CLIENT_QT_CLIENT, true, response_data);
   send(fd, response.data(), response.size(), 0);
 
-  std::cout << "返回场所预约查询结果: " << reservations.size() << " 条记录"
-            << std::endl;
+  std::cout << "返回场所预约查询结果: " << reservations.size()
+            << " 条记录 (角色=" << user_info.role << ")" << std::endl;
 }
 
 void EquipmentManagementServer::handle_reservation_approve(
@@ -1543,26 +1572,12 @@ void EquipmentManagementServer::handle_reservation_approve(
   std::string reservation_id_str = parts[0];
   std::string action = parts[1];
 
-  // 验证管理员权限
-  ConnectionManager::UserInfo user_info;
-  if (!connections_manager_->get_user_info(fd, user_info) ||
-      user_info.role != "admin") {
+  // 【新增】获取当前审批人信息（角色、ID）
+  ConnectionManager::UserInfo approver_info;
+  if (!connections_manager_->get_user_info(fd, approver_info)) {
     std::vector<char> response =
         ProtocolParser::build_reservation_approve_response(
-            ProtocolParser::CLIENT_QT_CLIENT, false, "权限不足");
-    send(fd, response.data(), response.size(), 0);
-    return;
-  }
-
-  std::cout << "管理员审批验证通过: " << user_info.username << std::endl;
-
-  // 验证场所存在性
-  auto equipment_ids = db_manager_->get_equipment_ids_by_place(place_id);
-  if (equipment_ids.empty()) {
-    std::vector<char> response =
-        ProtocolParser::build_reservation_approve_response(
-            ProtocolParser::CLIENT_QT_CLIENT, false,
-            "场所不存在或场所内无设备");
+            ProtocolParser::CLIENT_QT_CLIENT, false, "无法获取审批人信息");
     send(fd, response.data(), response.size(), 0);
     return;
   }
@@ -1579,12 +1594,75 @@ void EquipmentManagementServer::handle_reservation_approve(
     return;
   }
 
-  std::string new_status = (action == "approve") ? "approved" : "rejected";
+  // 【新增】查询当前预约记录，获取其状态和申请人
+  std::string query = "SELECT user_id, status FROM reservations WHERE id = " +
+                      reservation_id_str;
+  auto result = db_manager_->execute_query(query);
+  if (result.empty()) {
+    std::vector<char> response =
+        ProtocolParser::build_reservation_approve_response(
+            ProtocolParser::CLIENT_QT_CLIENT, false, "预约记录不存在");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+  int applicant_id = std::stoi(result[0][0]);
+  std::string current_status = result[0][1];
+
+  // 【新增】权限检查
+  bool allowed = false;
+  std::string target_status;
+
+  if (approver_info.role == "admin") {
+    // 管理员只能审批 pending_admin 状态的申请
+    if (current_status == "pending_admin") {
+      allowed = true;
+      target_status = (action == "approve") ? "approved" : "rejected";
+    } else {
+      std::cout << "管理员不能审批状态为 " << current_status << " 的申请"
+                << std::endl;
+    }
+  } else if (approver_info.role == "teacher") {
+    // 老师只能审批 pending_teacher 状态，且必须是自己学生的申请
+    if (current_status == "pending_teacher") {
+      if (db_manager_->is_teacher_of_student(approver_info.user_id,
+                                             applicant_id)) {
+        allowed = true;
+        target_status = (action == "approve") ? "pending_admin" : "rejected";
+      } else {
+        std::cout << "老师只能审批自己学生的申请，学生ID=" << applicant_id
+                  << std::endl;
+      }
+    } else {
+      std::cout << "老师不能审批状态为 " << current_status << " 的申请"
+                << std::endl;
+    }
+  } else {
+    std::cout << "非审批人员尝试审批: role=" << approver_info.role << std::endl;
+  }
+
+  if (!allowed) {
+    std::vector<char> response =
+        ProtocolParser::build_reservation_approve_response(
+            ProtocolParser::CLIENT_QT_CLIENT, false, "权限不足或状态不可审批");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  // 验证场所存在性
+  auto equipment_ids = db_manager_->get_equipment_ids_by_place(place_id);
+  if (equipment_ids.empty()) {
+    std::vector<char> response =
+        ProtocolParser::build_reservation_approve_response(
+            ProtocolParser::CLIENT_QT_CLIENT, false,
+            "场所不存在或场所内无设备");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
 
   // 更新数据库预约状态
   if (db_manager_->is_connected()) {
-    bool success = db_manager_->update_reservation_status(reservation_id,
-                                                          new_status, place_id);
+    bool success = db_manager_->update_reservation_status(
+        reservation_id, target_status, place_id);
     if (!success) {
       std::vector<char> response =
           ProtocolParser::build_reservation_approve_response(
@@ -1594,17 +1672,14 @@ void EquipmentManagementServer::handle_reservation_approve(
     }
 
     std::cout << "预约状态更新成功: reservation_id=" << reservation_id << " -> "
-              << new_status << std::endl;
+              << target_status << std::endl;
 
-    // ✅ 审批通过后，更新设备状态（增加空指针保护）
-    if (new_status == "approved") {
+    // 如果审批通过（最终状态为 approved），则更新设备状态为 reserved
+    if (target_status == "approved") {
       for (const auto &eq_id : equipment_ids) {
         auto equipment = equipment_manager_->get_equipment(eq_id);
         if (equipment) {
-          // 设备存在，更新状态
           equipment_manager_->update_equipment_status(eq_id, "reserved");
-
-          // 记录状态日志
           if (db_manager_->is_connected()) {
             db_manager_->log_equipment_status(eq_id, "reserved",
                                               equipment->get_power_state(),
@@ -1612,10 +1687,8 @@ void EquipmentManagementServer::handle_reservation_approve(
           }
           std::cout << "设备状态更新为reserved: " << eq_id << std::endl;
         } else {
-          // ✅ 设备不存在，跳过但不中断流程
           std::cout << "警告: 设备 " << eq_id
                     << " 不存在于equipment_manager，跳过状态更新" << std::endl;
-          // 可选：记录到系统日志或告警表
         }
       }
     }
@@ -1626,7 +1699,8 @@ void EquipmentManagementServer::handle_reservation_approve(
             ProtocolParser::CLIENT_QT_CLIENT, true, "审批操作成功");
     send(fd, response.data(), response.size(), 0);
     std::cout << "预约审批成功: reservation " << reservation_id << " -> "
-              << new_status << " (place_id: " << place_id << ")" << std::endl;
+              << target_status << " (place_id: " << place_id << ")"
+              << std::endl;
 
   } else {
     std::vector<char> response =
