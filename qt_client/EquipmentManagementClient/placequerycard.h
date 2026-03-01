@@ -17,6 +17,7 @@ class PlaceQueryCard : public QWidget
 public:
     explicit PlaceQueryCard(const QString &placeId, const QString &placeName,
                             const QStringList &equipmentList, int reservationCount,
+                            bool showQuickReserve = true,   // 新增参数，默认显示
                             QWidget *parent = nullptr);
 
     QString placeId() const { return m_placeId; }
@@ -51,6 +52,7 @@ private:
     int m_reservationCount;
     QString m_placeType;
     bool m_selected;
+    bool m_showQuickReserve;      // 新增：控制快速预约按钮显示
 
     // UI控件
     QLabel *m_iconLabel;

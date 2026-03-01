@@ -4,14 +4,14 @@
 
 PlaceQueryCard::PlaceQueryCard(const QString &placeId, const QString &placeName,
                                const QStringList &equipmentList, int reservationCount,
-                               QWidget *parent)
+                               bool showQuickReserve, QWidget *parent)
     : QWidget(parent)
     , m_placeId(placeId)
     , m_placeName(placeName)
     , m_equipmentList(equipmentList)
     , m_reservationCount(reservationCount)
     , m_selected(false)
-// 不要在初始化列表中初始化这些指针，它们会在setupUI()中创建
+    , m_showQuickReserve(showQuickReserve)   // 新增初始化
 {
     m_placeType = detectPlaceType(placeName);
     setupUI();
@@ -88,33 +88,35 @@ void PlaceQueryCard::setupUI()
 
     mainLayout->addStretch();
 
-    // 快速预约按钮
-    m_quickReserveButton = new QPushButton("快速预约", this);
-    m_quickReserveButton->setStyleSheet(
-        "QPushButton {"
-        "    background-color: #4a69bd;"
-        "    color: white;"
-        "    border: none;"
-        "    border-radius: 4px;"
-        "    padding: 8px 16px;"
-        "    font-size: 12px;"
-        "}"
-        "QPushButton:hover {"
-        "    background-color: #3c5aa6;"
-        "}"
-        );
-    m_quickReserveButton->setCursor(Qt::PointingHandCursor);
+    // 快速预约按钮（仅当需要显示时）
+    if (m_showQuickReserve) {
+        m_quickReserveButton = new QPushButton("快速预约", this);
+        m_quickReserveButton->setStyleSheet(
+            "QPushButton {"
+            "    background-color: #4a69bd;"
+            "    color: white;"
+            "    border: none;"
+            "    border-radius: 4px;"
+            "    padding: 8px 16px;"
+            "    font-size: 12px;"
+            "}"
+            "QPushButton:hover {"
+            "    background-color: #3c5aa6;"
+            "}"
+            );
+        m_quickReserveButton->setCursor(Qt::PointingHandCursor);
 
-    QHBoxLayout *buttonLayout = new QHBoxLayout();
-    buttonLayout->addStretch();
-    buttonLayout->addWidget(m_quickReserveButton);
+        QHBoxLayout *buttonLayout = new QHBoxLayout();
+        buttonLayout->addStretch();
+        buttonLayout->addWidget(m_quickReserveButton);
 
-    mainLayout->addLayout(buttonLayout);
+        mainLayout->addLayout(buttonLayout);
 
-    // 连接信号
-    connect(m_quickReserveButton, &QPushButton::clicked, [this]() {
-        emit quickReserveRequested(m_placeId);
-    });
+        // 连接信号
+        connect(m_quickReserveButton, &QPushButton::clicked, [this]() {
+            emit quickReserveRequested(m_placeId);
+        });
+    }
 }
 
 void PlaceQueryCard::setReservationCount(int count)

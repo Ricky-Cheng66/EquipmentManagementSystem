@@ -825,7 +825,7 @@ void ReservationWidget::refreshApprovePlaceListView()
                 try {
                     PlaceQueryCard *card = new PlaceQueryCard(
                         placeId, placeName, equipmentList,
-                        pendingCount, m_approvePlaceListPage);
+                        pendingCount, false, m_approvePlaceListPage);
 
                     if (!card) {
                         qWarning() << "创建卡片失败";
@@ -1472,7 +1472,7 @@ void ReservationWidget::refreshPlaceListView()
 
         try {
             PlaceQueryCard *card = new PlaceQueryCard(placeId, placeName, equipmentList,
-                                                      reservationCount, m_placeListPage);
+                                                      reservationCount, true, m_placeListPage);
 
             if (card) {
                 connect(card, &PlaceQueryCard::cardClicked,
