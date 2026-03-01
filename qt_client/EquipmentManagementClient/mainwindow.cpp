@@ -904,6 +904,9 @@ void MainWindow::switchPage(int pageIndex)
                 m_energyPage->setEquipmentList(equipmentIds);
                 loadedPages.insert(PAGE_ENERGY);
             }
+            if (m_energyPage) {
+                m_energyPage->autoQueryToday();
+            }
             break;
         case PAGE_SETTINGS:
             if (m_tcpClient && m_tcpClient->isConnected()) {

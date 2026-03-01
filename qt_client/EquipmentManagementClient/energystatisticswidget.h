@@ -26,6 +26,8 @@ public:
     void setPlaceList(const QStringList &places);
     void setEquipmentList(const QStringList &equipmentIds);
 
+    void autoQueryToday();  // 自动查询当天能耗
+
     QDate getStartDate() const;
     QDate getEndDate() const;
 

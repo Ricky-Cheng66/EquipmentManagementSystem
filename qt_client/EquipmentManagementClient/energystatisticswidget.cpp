@@ -182,6 +182,19 @@ void EnergyStatisticsWidget::setEquipmentList(const QStringList &equipmentIds)
     }
 }
 
+void EnergyStatisticsWidget::autoQueryToday()
+{
+    // 确保基准日期为今天（默认已是今天，显式设置确保）
+    m_startDateEdit->setDate(QDate::currentDate());
+    // 确保时间粒度默认为“日”（默认也是，但为保险可设置）
+    int dayIndex = m_timeRangeCombo->findData("day");
+    if (dayIndex >= 0) {
+        m_timeRangeCombo->setCurrentIndex(dayIndex);
+    }
+    // 触发查询
+    onQueryButtonClicked();
+}
+
 QDate EnergyStatisticsWidget::getStartDate() const
 {
     QDate base = m_startDateEdit->date();
