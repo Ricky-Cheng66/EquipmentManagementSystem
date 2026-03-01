@@ -100,7 +100,7 @@ void ReservationCard::setupUI()
     contentLayout->addLayout(topLayout);
 
     // ===== 场所信息 =====
-    m_placeLabel = new QLabel("🏢 " + m_placeName, m_contentWidget);  // 使用场所名称
+    m_placeLabel = new QLabel("🏢 " + m_placeName, m_contentWidget);
     m_placeLabel->setStyleSheet(
         "QLabel {"
         "    font-size: 14px;"
@@ -164,13 +164,17 @@ void ReservationCard::setupUI()
 
     contentLayout->addStretch();
 
-    // ===== 操作按钮（根据状态和模式显示不同按钮）=====
+    // ===== 操作按钮（根据状态和模式显示）=====
     if (m_approveMode && (m_status == "pending" || m_status == "待审批")) {
-        m_actionButton = new QPushButton("审批", m_contentWidget);
-        m_actionButton->setFixedSize(80, 26);
-        m_actionButton->setStyleSheet(
+        QHBoxLayout *buttonLayout = new QHBoxLayout();
+        buttonLayout->addStretch();
+
+        // 批准按钮
+        QPushButton *approveBtn = new QPushButton("✅ 批准", m_contentWidget);
+        approveBtn->setFixedSize(70, 28);
+        approveBtn->setStyleSheet(
             "QPushButton {"
-            "    background-color: #f39c12;"
+            "    background-color: #27ae60;"
             "    color: white;"
             "    border: none;"
             "    border-radius: 4px;"
@@ -178,15 +182,35 @@ void ReservationCard::setupUI()
             "    font-weight: bold;"
             "}"
             "QPushButton:hover {"
-            "    background-color: #e67e22;"
+            "    background-color: #219653;"
             "}"
             );
-        m_actionButton->setProperty("action", "approve");
-        connect(m_actionButton, &QPushButton::clicked, this, &ReservationCard::onActionButtonClicked);
+        approveBtn->setProperty("action", "approve");
+        connect(approveBtn, &QPushButton::clicked, this, &ReservationCard::onActionButtonClicked);
+        buttonLayout->addWidget(approveBtn);
+        buttonLayout->addSpacing(8);
 
-        QHBoxLayout *buttonLayout = new QHBoxLayout();
+        // 拒绝按钮
+        QPushButton *rejectBtn = new QPushButton("❌ 拒绝", m_contentWidget);
+        rejectBtn->setFixedSize(70, 28);
+        rejectBtn->setStyleSheet(
+            "QPushButton {"
+            "    background-color: #e74c3c;"
+            "    color: white;"
+            "    border: none;"
+            "    border-radius: 4px;"
+            "    font-size: 11px;"
+            "    font-weight: bold;"
+            "}"
+            "QPushButton:hover {"
+            "    background-color: #c0392b;"
+            "}"
+            );
+        rejectBtn->setProperty("action", "reject");
+        connect(rejectBtn, &QPushButton::clicked, this, &ReservationCard::onActionButtonClicked);
+        buttonLayout->addWidget(rejectBtn);
+
         buttonLayout->addStretch();
-        buttonLayout->addWidget(m_actionButton);
         contentLayout->addLayout(buttonLayout);
     }
 }
@@ -306,7 +330,10 @@ void ReservationCard::paintEvent(QPaintEvent *event)
 
 void ReservationCard::onActionButtonClicked()
 {
-    QString action = m_actionButton->property("action").toString();
+    QPushButton *btn = qobject_cast<QPushButton*>(sender());
+    if (!btn) return;
+    QString action = btn->property("action").toString();
+    if (action.isEmpty()) return;
     emit statusActionRequested(m_reservationId, action);
 }
 
