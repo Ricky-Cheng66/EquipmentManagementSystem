@@ -8,6 +8,7 @@ ReservationCard::ReservationCard(const QString &reservationId, const QString &pl
                                  const QString &userId, const QString &purpose,
                                  const QString &startTime, const QString &endTime,
                                  const QString &status, const QString &equipmentList,
+                                 const QString &applicantRole,
                                  bool approveMode, QWidget *parent)
     : QWidget(parent)
     , m_reservationId(reservationId.isEmpty() ? "未知ID" : reservationId)
@@ -19,15 +20,18 @@ ReservationCard::ReservationCard(const QString &reservationId, const QString &pl
     , m_endTime(endTime.isEmpty() ? QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss") : endTime)
     , m_status(status.trimmed().isEmpty() ? "pending" : status.trimmed())
     , m_equipmentList(equipmentList.isEmpty() ? "无设备" : equipmentList)
+    , m_applicantRole(applicantRole.isEmpty() ? "未知" : applicantRole)  // 初始化
     , m_selected(false)
     , m_approveMode(approveMode)
 {
+    // ... 原有调试输出，可添加角色打印
     qDebug() << "=== 创建预约卡片 ===";
     qDebug() << "预约ID:" << m_reservationId;
     qDebug() << "场所ID:" << m_placeId;
     qDebug() << "场所名称:" << m_placeName;
     qDebug() << "用户ID:" << m_userId;
     qDebug() << "状态:" << m_status;
+    qDebug() << "申请人角色:" << m_applicantRole;  // 新增
     qDebug() << "设备列表:" << m_equipmentList;
 
     // 确保场所ID不是默认值
@@ -53,6 +57,8 @@ ReservationCard::ReservationCard(const QString &reservationId, const QString &pl
     } catch (...) {
         qCritical() << "创建预约卡片时未知异常";
     }
+
+    qDebug() << "ReservationCard created, status =" << m_status << "approveMode =" << m_approveMode;
 }
 
 void ReservationCard::setupUI()
@@ -145,6 +151,28 @@ void ReservationCard::setupUI()
         );
     contentLayout->addWidget(m_userLabel);
 
+    // ===== 角色信息 =====
+    QString roleDisplay;
+    if (m_applicantRole == "teacher")
+        roleDisplay = "👨‍🏫 老师申请";
+    else if (m_applicantRole == "student")
+        roleDisplay = "🎓 学生申请";
+    else
+        roleDisplay = "👤 用户申请";
+
+    QLabel *roleLabel = new QLabel(roleDisplay, m_contentWidget);
+    roleLabel->setStyleSheet(
+        "QLabel {"
+        "    font-size: 11px;"
+        "    color: #9b59b6;"  // 紫色强调
+        "    padding: 2px 6px;"
+        "    background-color: #f3e5f5;"
+        "    border-radius: 3px;"
+        "    margin-top: 2px;"
+        "}"
+        );
+    contentLayout->addWidget(roleLabel);
+
     // ===== 设备信息 =====
     if (!m_equipmentList.isEmpty() && m_equipmentList != "无设备") {
         m_equipmentLabel = new QLabel("🔧 " + m_equipmentList, m_contentWidget);
@@ -165,8 +193,10 @@ void ReservationCard::setupUI()
     contentLayout->addStretch();
 
     // ===== 操作按钮（根据状态和模式显示）=====
-    if (m_approveMode && (m_status == "pending" || m_status == "待审批" ||
-                          m_status.toLower() == "pending_teacher" || m_status == "待老师审批")) {
+    if (m_approveMode && (m_status.toLower() == "pending" ||
+                          m_status.toLower() == "pending_teacher" ||
+                          m_status.toLower() == "pending_admin")) {
+        qDebug() << "Creating approve/reject buttons for reservation" << m_reservationId;
         QHBoxLayout *buttonLayout = new QHBoxLayout();
         buttonLayout->addStretch();
 

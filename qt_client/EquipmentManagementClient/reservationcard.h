@@ -18,6 +18,7 @@ public:
                              const QString &userId, const QString &purpose,
                              const QString &startTime, const QString &endTime,
                              const QString &status, const QString &equipmentList,
+                            const QString &applicantRole,
                              bool approveMode = false,
                              QWidget *parent = nullptr);
 
@@ -31,6 +32,8 @@ public:
     QString endTime() const { return m_endTime; }
     QString status() const { return m_status; }
     QString equipmentList() const { return m_equipmentList; }
+
+    QString applicantRole() const { return m_applicantRole; }
 
     QDate getStartDate() const;
     QDate getEndDate() const;
@@ -71,6 +74,7 @@ private:
     QString m_endTime;
     QString m_status;
     QString m_equipmentList;
+    QString m_applicantRole;  // 新增：申请人角色
     bool m_selected;
 
     bool m_approveMode;

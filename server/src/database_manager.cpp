@@ -191,16 +191,22 @@ DatabaseManager::get_reservations_for_user(int user_id,
                                            const std::string &role) {
   std::string query;
   if (role == "admin") {
-    query =
-        "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
-        "FROM reservations WHERE status = 'pending_admin' ORDER BY start_time";
+    // 管理员需要看到所有状态为 pending_admin 的预约，包括申请人的角色
+    query = "SELECT r.id, r.place_id, r.user_id, r.purpose, r.start_time, "
+            "r.end_time, r.status, u.role "
+            "FROM reservations r "
+            "JOIN users u ON r.user_id = u.id "
+            "WHERE r.status = 'pending_admin' ORDER BY r.start_time";
   } else if (role == "teacher") {
     auto student_ids = get_students_of_teacher(user_id);
     if (student_ids.empty()) {
-      query =
-          "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
-          "FROM reservations WHERE user_id = " +
-          std::to_string(user_id) + " ORDER BY start_time";
+      // 只有老师自己的申请
+      query = "SELECT r.id, r.place_id, r.user_id, r.purpose, r.start_time, "
+              "r.end_time, r.status, u.role "
+              "FROM reservations r "
+              "JOIN users u ON r.user_id = u.id "
+              "WHERE r.user_id = " +
+              std::to_string(user_id) + " ORDER BY r.start_time";
     } else {
       std::string ids_str;
       for (size_t i = 0; i < student_ids.size(); ++i) {
@@ -208,21 +214,22 @@ DatabaseManager::get_reservations_for_user(int user_id,
           ids_str += ",";
         ids_str += std::to_string(student_ids[i]);
       }
-      query =
-          "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
-          "FROM reservations WHERE user_id = " +
-          std::to_string(user_id) +
-          " "
-          "OR (user_id IN (" +
-          ids_str +
-          ") AND status = 'pending_teacher') "
-          "ORDER BY start_time";
+      query = "SELECT r.id, r.place_id, r.user_id, r.purpose, r.start_time, "
+              "r.end_time, r.status, u.role "
+              "FROM reservations r "
+              "JOIN users u ON r.user_id = u.id "
+              "WHERE r.user_id = " +
+              std::to_string(user_id) + " OR (r.user_id IN (" + ids_str +
+              ") AND r.status = 'pending_teacher') "
+              "ORDER BY r.start_time";
     }
   } else { // student
-    query =
-        "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
-        "FROM reservations WHERE user_id = " +
-        std::to_string(user_id) + " ORDER BY start_time";
+    query = "SELECT r.id, r.place_id, r.user_id, r.purpose, r.start_time, "
+            "r.end_time, r.status, u.role "
+            "FROM reservations r "
+            "JOIN users u ON r.user_id = u.id "
+            "WHERE r.user_id = " +
+            std::to_string(user_id) + " ORDER BY r.start_time";
   }
   return execute_query(query);
 }
@@ -232,23 +239,23 @@ DatabaseManager::get_reservations_by_place_for_user(const std::string &place_id,
                                                     int user_id,
                                                     const std::string &role) {
 
-  // 如果请求的是全部场所，直接调用已有的 get_reservations_for_user
+  // 如果请求的是全部场所，直接调用已有的
+  // get_reservations_for_user（该函数也需要修改）
   if (place_id == "all") {
     return get_reservations_for_user(user_id, role);
   }
 
   std::string query;
-  std::string base =
-      "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
-      "FROM reservations WHERE place_id = '" +
-      place_id + "'";
+  std::string base = "SELECT r.id, r.place_id, r.user_id, r.purpose, "
+                     "r.start_time, r.end_time, r.status, u.role "
+                     "FROM reservations r "
+                     "JOIN users u ON r.user_id = u.id "
+                     "WHERE r.place_id = '" +
+                     place_id + "'";
 
   if (role == "admin") {
-    // 管理员可以看到该场所所有预约（全部状态）
-    query = base + " ORDER BY start_time";
+    query = base + " ORDER BY r.start_time";
   } else if (role == "teacher") {
-    // 老师能看到：自己提交的预约 + 自己学生提交的且状态为 pending_teacher
-    // 的预约
     auto student_ids = get_students_of_teacher(user_id);
     if (!student_ids.empty()) {
       std::string ids_str;
@@ -257,24 +264,17 @@ DatabaseManager::get_reservations_by_place_for_user(const std::string &place_id,
           ids_str += ",";
         ids_str += std::to_string(student_ids[i]);
       }
-      query = base + " AND (user_id = " + std::to_string(user_id) +
-              " OR (user_id IN (" + ids_str +
-              ") AND status = 'pending_teacher')) "
-              "ORDER BY start_time";
+      query = base + " AND (r.user_id = " + std::to_string(user_id) +
+              " OR (r.user_id IN (" + ids_str +
+              ") AND r.status = 'pending_teacher')) "
+              "ORDER BY r.start_time";
     } else {
-      query = base + " AND user_id = " + std::to_string(user_id) +
-              " ORDER BY start_time";
+      query = base + " AND r.user_id = " + std::to_string(user_id) +
+              " ORDER BY r.start_time";
     }
-    // ===== 新增日志 =====
-    std::cout << "[DEBUG Teacher Query] " << query << std::endl;
-    auto results = execute_query(query);
-    std::cout << "[DEBUG Teacher Query] Found " << results.size() << " records"
-              << std::endl;
-    return results;
   } else { // student
-    // 学生只能看到自己提交的预约（所有状态）
-    query = base + " AND user_id = " + std::to_string(user_id) +
-            " ORDER BY start_time";
+    query = base + " AND r.user_id = " + std::to_string(user_id) +
+            " ORDER BY r.start_time";
   }
 
   return execute_query(query);
@@ -326,9 +326,11 @@ DatabaseManager::get_reservations_by_place(const std::string &place_id) {
 }
 
 std::vector<std::vector<std::string>> DatabaseManager::get_all_reservations() {
-  std::string query =
-      "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
-      "FROM reservations ORDER BY start_time";
+  std::string query = "SELECT r.id, r.place_id, r.user_id, r.purpose, "
+                      "r.start_time, r.end_time, r.status, u.role "
+                      "FROM reservations r "
+                      "JOIN users u ON r.user_id = u.id "
+                      "ORDER BY r.start_time";
   return execute_query(query);
 }
 

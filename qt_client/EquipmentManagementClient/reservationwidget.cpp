@@ -358,57 +358,8 @@ void ReservationWidget::setupApproveTab()
             m_approveViewStack->setCurrentIndex(0);
         }
 
-        // ==== 底部批量操作栏 ====
-        QWidget *batchWidget = new QWidget(approveTab);
-        batchWidget->setStyleSheet("background-color: #f5f6fa; border-top: 1px solid #e0e0e0;");
-        QHBoxLayout *batchLayout = new QHBoxLayout(batchWidget);
-        batchLayout->setContentsMargins(10, 10, 10, 10);
 
-        m_selectAllCheck = new QCheckBox("全选", batchWidget);
-        m_batchApproveButton = new QPushButton("✅ 批量批准", batchWidget);
-        m_batchApproveButton->setStyleSheet(
-            "QPushButton {"
-            "    background-color: #27ae60;"
-            "    color: white;"
-            "    border: none;"
-            "    border-radius: 3px;"
-            "    padding: 6px 12px;"
-            "    font-weight: bold;"
-            "}"
-            "QPushButton:hover {"
-            "    background-color: #219653;"
-            "}"
-            "QPushButton:disabled {"
-            "    background-color: #c8d6e5;"
-            "}");
-        m_batchApproveButton->setEnabled(false);
-
-        m_batchRejectButton = new QPushButton("❌ 批量拒绝", batchWidget);
-        m_batchRejectButton->setStyleSheet(
-            "QPushButton {"
-            "    background-color: #e74c3c;"
-            "    color: white;"
-            "    border: none;"
-            "    border-radius: 3px;"
-            "    padding: 6px 12px;"
-            "    font-weight: bold;"
-            "}"
-            "QPushButton:hover {"
-            "    background-color: #c0392b;"
-            "}"
-            "QPushButton:disabled {"
-            "    background-color: #c8d6e5;"
-            "}");
-        m_batchRejectButton->setEnabled(false);
-
-        batchLayout->addWidget(m_selectAllCheck);
-        batchLayout->addStretch();
-        batchLayout->addWidget(m_batchApproveButton);
-        batchLayout->addWidget(m_batchRejectButton);
-
-        // 添加到主布局
         mainLayout->addWidget(m_approveViewStack);
-        mainLayout->addWidget(batchWidget);
 
 
         // 连接信号 - 使用新的槽函数
@@ -626,6 +577,72 @@ void ReservationWidget::setupApproveDetailPage()
         reservationScrollArea->setWidget(m_approveCardContainer);
 
         m_approveDetailLayout->addWidget(reservationScrollArea, 1); // 设置为可拉伸
+
+        // ===== 底部批量操作栏（仅详情页显示）=====
+        QWidget *batchWidget = new QWidget(m_approveDetailPage);
+        batchWidget->setStyleSheet(
+            "QWidget {"
+            "    background-color: #f5f6fa;"
+            "    border-top: 1px solid #e0e0e0;"
+            "}"
+            );
+        QHBoxLayout *batchLayout = new QHBoxLayout(batchWidget);
+        batchLayout->setContentsMargins(10, 10, 10, 10);
+
+        // 创建或重用按钮
+        if (!m_selectAllCheck) {
+            m_selectAllCheck = new QCheckBox("全选", batchWidget);
+            m_batchApproveButton = new QPushButton("✅ 批量批准", batchWidget);
+            m_batchRejectButton = new QPushButton("❌ 批量拒绝", batchWidget);
+        } else {
+            // 重用已有按钮，改变父对象
+            m_selectAllCheck->setParent(batchWidget);
+            m_batchApproveButton->setParent(batchWidget);
+            m_batchRejectButton->setParent(batchWidget);
+        }
+
+        // 设置按钮样式
+        m_batchApproveButton->setStyleSheet(
+            "QPushButton {"
+            "    background-color: #27ae60;"
+            "    color: white;"
+            "    border: none;"
+            "    border-radius: 3px;"
+            "    padding: 6px 12px;"
+            "    font-weight: bold;"
+            "}"
+            "QPushButton:hover { background-color: #219653; }"
+            "QPushButton:disabled { background-color: #c8d6e5; }"
+            );
+        m_batchRejectButton->setStyleSheet(
+            "QPushButton {"
+            "    background-color: #e74c3c;"
+            "    color: white;"
+            "    border: none;"
+            "    border-radius: 3px;"
+            "    padding: 6px 12px;"
+            "    font-weight: bold;"
+            "}"
+            "QPushButton:hover { background-color: #c0392b; }"
+            "QPushButton:disabled { background-color: #c8d6e5; }"
+            );
+
+        batchLayout->addWidget(m_selectAllCheck);
+        batchLayout->addStretch();
+        batchLayout->addWidget(m_batchApproveButton);
+        batchLayout->addWidget(m_batchRejectButton);
+
+        // 添加到详情页布局（位于滚动区域下方）
+        m_approveDetailLayout->addWidget(batchWidget);
+
+        // 重新连接信号（确保只连接一次，可用静态标志或检查已有连接）
+        static bool signalsConnected = false;
+        if (!signalsConnected) {
+            connect(m_selectAllCheck, &QCheckBox::stateChanged, this, &ReservationWidget::onSelectAllChanged);
+            connect(m_batchApproveButton, &QPushButton::clicked, this, &ReservationWidget::onBatchApprove);
+            connect(m_batchRejectButton, &QPushButton::clicked, this, &ReservationWidget::onBatchReject);
+            signalsConnected = true;
+        }
 
         m_approveViewStack->addWidget(m_approveDetailPage);
 
@@ -1679,6 +1696,14 @@ void ReservationWidget::updateQueryResultTable(const QString &data)
             QString endTime = fields[5].trimmed();
             QString status = fields[6].trimmed();
 
+            // 提取角色字段（如果存在）
+            QString role;
+            if (fields.size() >= 8) {
+                role = fields[7].trimmed();  // 角色字段
+            } else {
+                role = "";  // 旧数据没有角色，置空
+            }
+
             qDebug() << "解析到预约记录 - ID:" << reservationId
                      << "场所:" << placeId
                      << "用户:" << userId
@@ -1697,7 +1722,8 @@ void ReservationWidget::updateQueryResultTable(const QString &data)
                 ReservationCard *card = new ReservationCard(
                     reservationId, placeId, placeName, userId, purpose,
                     startTime, endTime, status, equipmentText,
-                    false,  // 明确指定非审批模式
+                    role,       // 新增：角色参数
+                    false,      // approveMode
                     nullptr
                     );
 
@@ -3070,6 +3096,7 @@ void ReservationWidget::loadAllReservationsForApproval(const QString &data)
 
     for (int i = 0; i < reservations.size(); ++i) {
         QStringList fields = reservations[i].split('|');
+        // 兼容旧格式：至少7个字段，如果有8个则包含角色
         if (fields.size() >= 7) {
             QString reservationId = fields[0].trimmed();
             QString placeId = fields[1].trimmed();
@@ -3079,13 +3106,20 @@ void ReservationWidget::loadAllReservationsForApproval(const QString &data)
             QString endTime = fields[5].trimmed();
             QString status = fields[6].trimmed();
 
+            QString role;
+            if (fields.size() >= 8) {
+                role = fields[7].trimmed();
+            } else {
+                role = "";  // 旧数据无角色
+            }
+
             // 检查预约ID是否有效
             if (reservationId.isEmpty() || reservationId == "\u0000") {
                 qWarning() << "无效的预约ID，跳过记录:" << fields;
                 continue;
             }
 
-            // 只处理待审批的预约
+            // 只处理待审批的预约 (pending_teacher 或 pending_admin)
             if (!status.toLower().contains("pending")) {
                 continue;
             }
@@ -3115,22 +3149,21 @@ void ReservationWidget::loadAllReservationsForApproval(const QString &data)
             ReservationCard *card = new ReservationCard(
                 reservationId, placeId, placeName, userId, purpose,
                 startTime, endTime, status, equipmentText,
+                role,   // 角色参数
                 true,   // 审批模式
                 nullptr
                 );
 
             if (card) {
-                // ===== 新增：连接信号 =====
                 connect(card, &ReservationCard::statusActionRequested,
                         this, &ReservationWidget::onStatusActionRequested);
-                // ==========================
                 m_allApproveCards.append(card);
                 qDebug() << "创建审批卡片成功 - 预约ID:" << reservationId;
             } else {
                 qWarning() << "创建审批卡片失败 - 预约ID:" << reservationId;
             }
         }
-    } // ===== 修复：补上这个缺失的 for 循环结束括号 =====
+    }
 
     qDebug() << "创建了" << m_allApproveCards.size() << "个审批卡片";
 
@@ -3955,6 +3988,14 @@ void ReservationWidget::filterAndDisplayTeacherPending(const QString &data) {
             QString endTime = fields[5];
             QString status = fields[6];
 
+            // 提取角色字段
+            QString role;
+            if (fields.size() >= 8) {
+                role = fields[7].trimmed();
+            } else {
+                role = "";
+            }
+
             // 只显示待老师审批的
             if (status.toLower() != "pending_teacher") continue;
 
@@ -3965,7 +4006,8 @@ void ReservationWidget::filterAndDisplayTeacherPending(const QString &data) {
             ReservationCard* card = new ReservationCard(
                 reservationId, placeId, placeName, userId, purpose,
                 startTime, endTime, status, equipmentText,
-                true, // 审批模式，显示按钮
+                role,       // 新增：角色参数
+                true,       // 审批模式
                 m_teacherCardContainer
                 );
 

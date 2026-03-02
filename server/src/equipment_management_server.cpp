@@ -1539,13 +1539,15 @@ void EquipmentManagementServer::handle_reservation_query(
   // 构建响应数据（格式不变）
   std::string response_data;
   for (const auto &reservation : reservations) {
-    if (reservation.size() >= 7) {
+    if (reservation.size() >= 8) { // 现在有 8 个字段
       if (!response_data.empty())
         response_data += ";";
+      // 顺序：id, place_id, user_id, purpose, start_time, end_time, status,
+      // role
       response_data += reservation[0] + "|" + reservation[1] + "|" +
                        reservation[2] + "|" + reservation[3] + "|" +
                        reservation[4] + "|" + reservation[5] + "|" +
-                       reservation[6];
+                       reservation[6] + "|" + reservation[7];
     }
   }
 
