@@ -1480,7 +1480,11 @@ void EquipmentManagementServer::handle_reservation_apply(
     send(fd, response.data(), response.size(), 0);
     return;
   }
-
+  std::cout << "DEBUG: initial_status = [" << initial_status << "]"
+            << std::endl;
+  std::cout << "DEBUG: purpose = [" << purpose << "]" << std::endl;
+  std::cout << "DEBUG: place_id = [" << equipment_id << "]" << std::endl;
+  std::cout << "DEBUG: user_id = " << user_id << std::endl;
   // 【修改】调用 add_reservation 时传入初始状态
   if (db_manager_->is_connected()) {
     bool success = db_manager_->add_reservation(

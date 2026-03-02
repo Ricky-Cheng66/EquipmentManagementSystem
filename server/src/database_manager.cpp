@@ -265,6 +265,12 @@ DatabaseManager::get_reservations_by_place_for_user(const std::string &place_id,
       query = base + " AND user_id = " + std::to_string(user_id) +
               " ORDER BY start_time";
     }
+    // ===== 新增日志 =====
+    std::cout << "[DEBUG Teacher Query] " << query << std::endl;
+    auto results = execute_query(query);
+    std::cout << "[DEBUG Teacher Query] Found " << results.size() << " records"
+              << std::endl;
+    return results;
   } else { // student
     // 学生只能看到自己提交的预约（所有状态）
     query = base + " AND user_id = " + std::to_string(user_id) +
@@ -285,6 +291,7 @@ bool DatabaseManager::add_reservation(const std::string &place_id, int user_id,
                       place_id + "', " + std::to_string(user_id) + ", '" +
                       purpose + "', '" + start_time + "', '" + end_time +
                       "', '" + status + "')";
+  std::cout << "DEBUG: SQL = " << query << std::endl;
   return execute_update(query);
 }
 
@@ -380,20 +387,39 @@ DatabaseManager::get_equipment_ids_by_place(const std::string &place_id) {
 bool DatabaseManager::check_place_reservation_conflict(
     const std::string &place_id, const std::string &start_time,
     const std::string &end_time) {
+  // 使用开区间判断重叠：start < 请求结束 AND 请求开始 < end
   std::string sql =
       "SELECT COUNT(*) FROM reservations WHERE place_id = '" + place_id +
       "' "
       "AND status IN ('pending_teacher', 'pending_admin', 'approved') "
-      "AND ((start_time BETWEEN '" +
-      start_time + "' AND '" + end_time +
-      "') "
-      "OR (end_time BETWEEN '" +
-      start_time + "' AND '" + end_time +
-      "') "
-      "OR (start_time <= '" +
-      start_time + "' AND end_time >= '" + end_time + "'))";
+      "AND start_time < '" +
+      end_time + "' AND end_time > '" + start_time + "'";
+
+  // 添加调试输出
+  std::cout << "[Conflict Check] SQL: " << sql << std::endl;
+
   auto results = execute_query(sql);
-  return (!results.empty() && std::stoi(results[0][0]) > 0);
+  int count = results.empty() ? 0 : std::stoi(results[0][0]);
+  std::cout << "[Conflict Check] Found " << count << " conflicting records"
+            << std::endl;
+
+  // 如果有冲突，可以进一步打印冲突详情（可选）
+  if (count > 0) {
+    std::string detail_sql =
+        "SELECT id, start_time, end_time, status FROM reservations WHERE "
+        "place_id = '" +
+        place_id +
+        "' AND status IN ('pending_teacher','pending_admin','approved') AND "
+        "start_time < '" +
+        end_time + "' AND end_time > '" + start_time + "'";
+    auto details = execute_query(detail_sql);
+    for (const auto &row : details) {
+      std::cout << "  Conflict: id=" << row[0] << ", start=" << row[1]
+                << ", end=" << row[2] << ", status=" << row[3] << std::endl;
+    }
+  }
+
+  return count > 0;
 }
 
 bool DatabaseManager::insert_power_log(const std::string &equipment_id,

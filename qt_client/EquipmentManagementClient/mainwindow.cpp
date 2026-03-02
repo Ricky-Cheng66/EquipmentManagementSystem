@@ -1319,7 +1319,7 @@ void MainWindow::onReservationApplyRequested(const QString &placeId, const QStri
 // 发送预约查询
 void MainWindow::onReservationQueryRequested(const QString &placeId)
 {
-    qDebug() << "MainWindow::onReservationQueryRequested 收到信号，placeId =" << placeId;
+    qDebug() << "MainWindow::onReservationQueryRequested() called with placeId =" << placeId;
 
     if (!m_tcpClient) {
         qCritical() << "错误: TCP客户端未初始化";
@@ -1379,6 +1379,15 @@ void MainWindow::handleReservationApplyResponse(const ProtocolParser::ParseResul
     if (parts.size() >= 2 && parts[0] == "success") {
         QMessageBox::information(this, "预约成功", parts[1]);
         logMessage("预约申请提交成功");
+
+        // ===== 新增：切换到查询页并自动刷新 =====
+        switchPage(PAGE_RESERVATION);  // 切换到预约查询页
+        QTimer::singleShot(200, [this]() {
+            if (m_reservationPage) {
+                emit m_reservationPage->reservationQueryRequested("all");
+            }
+        });
+        // ========================================
     } else {
         QString errorMsg = parts.size() >= 2 ? parts[1] : "未知错误";
         QMessageBox::warning(this, "预约失败", errorMsg);
@@ -1514,6 +1523,13 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
 
     if (!m_reservationPage) {
         qDebug() << "错误: ReservationWidget 未初始化";
+        return;
+    }
+
+    // ===== 新增：根据角色分发 =====
+    if (m_userRole == "teacher") {
+        // 老师角色：调用老师审批页专用处理函数
+        m_reservationPage->handleTeacherPendingData(data);
         return;
     }
 

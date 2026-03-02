@@ -165,7 +165,8 @@ void ReservationCard::setupUI()
     contentLayout->addStretch();
 
     // ===== 操作按钮（根据状态和模式显示）=====
-    if (m_approveMode && (m_status == "pending" || m_status == "待审批")) {
+    if (m_approveMode && (m_status == "pending" || m_status == "待审批" ||
+                          m_status.toLower() == "pending_teacher" || m_status == "待老师审批")) {
         QHBoxLayout *buttonLayout = new QHBoxLayout();
         buttonLayout->addStretch();
 
@@ -213,6 +214,7 @@ void ReservationCard::setupUI()
         buttonLayout->addStretch();
         contentLayout->addLayout(buttonLayout);
     }
+    qDebug() << "Card actual size:" << size();
 }
 
 

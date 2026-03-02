@@ -82,10 +82,6 @@ ReservationWidget::ReservationWidget(QWidget *parent)
     setupApplyTab();
     setupQueryTab();
 
-    // 注意：setupApproveTab() 会在用户切换到审批页时延迟创建
-    // 但我们仍然需要初始化基本控件
-    setupApproveTab();
-
     // 主布局
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->addWidget(m_tabWidget);
@@ -414,7 +410,6 @@ void ReservationWidget::setupApproveTab()
         mainLayout->addWidget(m_approveViewStack);
         mainLayout->addWidget(batchWidget);
 
-        m_tabWidget->addTab(approveTab, "📋 预约审批");
 
         // 连接信号 - 使用新的槽函数
         if (m_selectAllCheck) {
@@ -695,7 +690,13 @@ void ReservationWidget::onApprovePlaceCardClicked(const QString &placeId)
 // 刷新审批场所列表视图
 void ReservationWidget::refreshApprovePlaceListView()
 {
+    qDebug() << "!!! refreshApprovePlaceListView called";
     qDebug() << "刷新审批场所列表视图 - 开始";
+
+    if (!m_approveViewStack || !m_approvePlaceListPage) {
+        qWarning() << "Approve page not ready, skipping refresh";
+        return;
+    }
 
     // 检查审批页是否已初始化
     if (!isApprovePageInitialized()) {
@@ -1013,6 +1014,7 @@ void ReservationWidget::refreshApproveDetailView()
                  << "卡片场所ID:" << cardPlaceId
                  << "目标场所ID:" << m_currentApprovePlaceId
                  << "卡片状态:" << cardStatus;
+        qDebug() << "Card geometry after add:" << card->geometry();
 
         if (cardPlaceId != m_currentApprovePlaceId) {
             continue;
@@ -1050,6 +1052,8 @@ void ReservationWidget::refreshApproveDetailView()
 
             // 添加到网格布局
             gridLayout->addWidget(card, row, col);
+            card->updateGeometry();
+            card->layout()->activate();
             visibleCards++;
 
             // 将卡片添加到当前显示的列表中
@@ -1746,11 +1750,10 @@ void ReservationWidget::updateQueryResultTable(const QString &data)
     }
 
     // 数据解析完成后，如果当前用户是老师，刷新老师审批页
+    qDebug() << "准备刷新老师审批页，m_userRole=" << m_userRole << ", m_teacherApproveTab=" << m_teacherApproveTab;
     if (m_userRole == "teacher" && m_teacherApproveTab) {
         refreshTeacherApproveView();
     }
-
-    qDebug() << "updateQueryResultTable 完成";
 }
 
 // 新增：清空场所列表
@@ -2131,16 +2134,23 @@ void ReservationWidget::onStatusActionRequested(const QString &reservationId, co
 
     QString placeId = "";
 
-    // 从审批卡片中获取场所ID
-    if (m_approveCardMap.contains(reservationId)) {
+    // 1. 先从老师卡片映射中查找（老师审批页）
+    if (m_teacherCardMap.contains(reservationId)) {
+        ReservationCard *card = m_teacherCardMap[reservationId];
+        if (card) {
+            placeId = card->placeId();
+            qDebug() << "从老师卡片映射获取场所ID:" << placeId;
+        }
+    }
+    // 2. 如果没有，再从审批卡片映射中查找（管理员审批页）
+    else if (m_approveCardMap.contains(reservationId)) {
         ReservationCard *card = m_approveCardMap[reservationId];
         if (card) {
             placeId = card->placeId();
-            qDebug() << "从审批卡片获取场所ID:" << placeId;
+            qDebug() << "从审批卡片映射获取场所ID:" << placeId;
         }
     }
-
-    // 如果审批卡片中没有找到，尝试从所有卡片中查找
+    // 3. 如果还是没有，从所有审批卡片中查找
     if (placeId.isEmpty()) {
         for (ReservationCard *card : m_allApproveCards) {
             if (card && card->reservationId() == reservationId) {
@@ -2151,7 +2161,7 @@ void ReservationWidget::onStatusActionRequested(const QString &reservationId, co
         }
     }
 
-    // 如果还是没找到，使用当前选中的场所ID
+    // 4. 如果还是没找到，使用当前选中的场所ID
     if (placeId.isEmpty() && !m_currentApprovePlaceId.isEmpty()) {
         placeId = m_currentApprovePlaceId;
         qDebug() << "使用当前审批场所ID:" << placeId;
@@ -2159,12 +2169,6 @@ void ReservationWidget::onStatusActionRequested(const QString &reservationId, co
 
     if (placeId.isEmpty()) {
         QMessageBox::warning(this, "审批失败", "无法确定审批的场所，请重新选择");
-        return;
-    }
-
-    // 验证场所ID是否有效
-    if (placeId == "default_place") {
-        QMessageBox::warning(this, "审批失败", "场所ID无效，请联系管理员");
         return;
     }
 
@@ -2183,9 +2187,16 @@ void ReservationWidget::onStatusActionRequested(const QString &reservationId, co
     // 发送网络请求
     emit reservationApproveRequested(reservationId.toInt(), placeId, approve);
 
-    // 延迟刷新界面
+
+    // 延迟刷新界面（根据角色决定刷新方式）
     QTimer::singleShot(500, this, [this]() {
-        refreshCurrentApproveView();
+        if (m_userRole == "teacher") {
+            // 老师角色：重新查询所有预约数据，触发老师标签页刷新
+            emit reservationQueryRequested("all");
+        } else {
+            // 管理员等其他角色：刷新当前审批视图
+            refreshCurrentApproveView();
+        }
     });
 }
 
@@ -2228,6 +2239,15 @@ void ReservationWidget::onPlaceCardClicked(const QString &placeId)
         PlaceCard *card = m_placeCards[placeId];
         if (card) {
             card->setSelected(true);
+
+            // ==== 新增：同步更新 m_placeComboApply 的当前项 ====
+            for (int i = 0; i < m_placeComboApply->count(); ++i) {
+                if (m_placeComboApply->itemData(i).toString() == placeId) {
+                    m_placeComboApply->setCurrentIndex(i);
+                    break;
+                }
+            }
+            // =================================================
 
             // 显示设备列表
             QStringList equipmentList = card->equipmentList();
@@ -2882,45 +2902,55 @@ void ReservationWidget::clearQueryCardView()
 }
 
 void ReservationWidget::setUserRole(const QString &role, const QString &userId) {
+    qDebug() << "===== setUserRole =====";
+    qDebug() << "Role:" << role << "UserId:" << userId;
     m_userRole = role;
     m_currentUserId = userId;
 
-    // 移除可能已存在的老师审批页（避免重复）
-    for (int i = 0; i < m_tabWidget->count(); ++i) {
-        if (m_tabWidget->tabText(i) == "待我审批") {
+    // 移除现有所有审批相关标签页（管理员和老师）
+    for (int i = m_tabWidget->count() - 1; i >= 0; --i) {
+        QString tabText = m_tabWidget->tabText(i);
+        if (tabText == "📋 预约审批" || tabText == "👨‍🏫 待我审批") {
+            qDebug() << "Removing existing tab:" << tabText << "at index" << i;
             m_tabWidget->removeTab(i);
-            break;
         }
     }
 
+    // 重置老师标签页索引
+    m_teacherApproveTabIndex = -1;
+
     if (role == "admin") {
-        // 管理员：确保有审批页（已有）
-        if (m_tabWidget->count() < 3) {
-            setupApproveTab();
-            m_tabWidget->addTab(m_approveViewStack, "📋 预约审批");
+        // 管理员：添加管理员审批页
+        qDebug() << "Setting up admin approve tab...";
+        setupApproveTab();  // 确保界面已创建
+        if (m_approveViewStack) {
+            int newIndex = m_tabWidget->addTab(m_approveViewStack, "📋 预约审批");
+            qDebug() << "Admin approve tab added at index:" << newIndex;
+        } else {
+            qCritical() << "Error: m_approveViewStack is null after setupApproveTab!";
         }
     } else if (role == "teacher") {
-        setupTeacherApproveTab(); // 创建页面（如果尚未创建）
-        m_teacherApproveTabIndex = m_tabWidget->addTab(m_teacherApproveTab, "👨‍🏫 待我审批");
-        // 切换到该标签页时自动刷新
+        // 老师：添加老师审批页
+        qDebug() << "Setting up teacher approve tab...";
+        setupTeacherApproveTab();  // 确保界面已创建
+        if (m_teacherApproveTab) {
+            int newIndex = m_tabWidget->addTab(m_teacherApproveTab, "👨‍🏫 待我审批");
+            m_teacherApproveTabIndex = newIndex;
+            qDebug() << "Teacher approve tab added at index:" << newIndex;
+        }
+
+        // 断开旧连接，重新连接（确保只触发一次）
+        disconnect(m_tabWidget, &QTabWidget::currentChanged, this, nullptr);
         connect(m_tabWidget, &QTabWidget::currentChanged, this, [this](int index) {
+            qDebug() << "currentChanged signal, index =" << index << ", teacherTabIndex =" << m_teacherApproveTabIndex;
             if (index == m_teacherApproveTabIndex) {
+                qDebug() << "Emitting reservationQueryRequested(all)";
                 emit reservationQueryRequested("all");
             }
         });
     } else {
-        // 学生：不需要额外标签
-    }
-
-    // 移除管理员的审批页？如果之前有，需要处理？但管理员角色下我们已经添加，其他角色需要移除
-    // 如果当前不是管理员且审批页存在，需要移除
-    if (role != "admin") {
-        for (int i = 0; i < m_tabWidget->count(); ++i) {
-            if (m_tabWidget->tabText(i) == "📋 预约审批") {
-                m_tabWidget->removeTab(i);
-                break;
-            }
-        }
+        // 学生：无审批页
+        qDebug() << "Student role, no approve tab added.";
     }
 }
 
@@ -2966,7 +2996,14 @@ void ReservationWidget::onQueryButtonClicked()
 void ReservationWidget::loadAllReservationsForApproval(const QString &data)
 {
     qDebug() << "=== 审批页数据加载开始 ===";
-
+    if (m_userRole == "admin" && !m_approveViewStack) {
+        qWarning() << "Admin approve page not initialized, calling setupApproveTab()";
+        setupApproveTab();
+        // 不添加标签页，因为角色还没设置？但此时 m_userRole 已经是 admin，所以可以添加
+        if (m_approveViewStack && m_tabWidget->indexOf(m_approveViewStack) == -1) {
+            m_tabWidget->addTab(m_approveViewStack, "📋 预约审批");
+        }
+    }
     // 安全检查
     if (!this) {
         qCritical() << "错误: this 指针为空";
@@ -3083,16 +3120,17 @@ void ReservationWidget::loadAllReservationsForApproval(const QString &data)
                 );
 
             if (card) {
-                // 将卡片添加到所有卡片列表
+                // ===== 新增：连接信号 =====
+                connect(card, &ReservationCard::statusActionRequested,
+                        this, &ReservationWidget::onStatusActionRequested);
+                // ==========================
                 m_allApproveCards.append(card);
                 qDebug() << "创建审批卡片成功 - 预约ID:" << reservationId;
             } else {
                 qWarning() << "创建审批卡片失败 - 预约ID:" << reservationId;
             }
-        } else {
-            qWarning() << "数据格式错误，字段数:" << fields.size() << "数据:" << reservations[i];
         }
-    }
+    } // ===== 修复：补上这个缺失的 for 循环结束括号 =====
 
     qDebug() << "创建了" << m_allApproveCards.size() << "个审批卡片";
 
@@ -3129,7 +3167,10 @@ void ReservationWidget::loadAllReservationsForApproval(const QString &data)
     });
 
     // 延迟刷新视图
-    QTimer::singleShot(50, this, &ReservationWidget::refreshApprovePlaceListView);
+    // ===== 修改：只在管理员角色时刷新管理员审批页 =====
+    if (m_userRole == "admin") {
+        QTimer::singleShot(50, this, &ReservationWidget::refreshApprovePlaceListView);
+    }
 
     qDebug() << "=== 审批页数据加载完成 ===";
 }
@@ -3784,13 +3825,17 @@ void ReservationWidget::setupTeacherApproveTab() {
 }
 
 void ReservationWidget::refreshTeacherApproveView() {
-    if (!m_teacherCardContainer || !m_teacherCardGrid) return;
+    qDebug() << "刷新老师审批视图，当前卡片数:" << m_allApproveCards.size();
+    if (!m_teacherCardContainer || !m_teacherCardGrid) {
+        qWarning() << "老师审批视图控件未初始化";
+        return;
+    }
 
     // 清理现有卡片（仅从布局移除，不删除卡片对象）
     clearTeacherApproveCards();
 
     if (m_allApproveCards.isEmpty()) {
-        // 暂无数据，显示提示
+        // 显示空状态（原代码）
         QLabel *emptyLabel = new QLabel("暂无待审批的学生申请", m_teacherCardContainer);
         emptyLabel->setAlignment(Qt::AlignCenter);
         emptyLabel->setStyleSheet("color: #7f8c8d; font-size: 16px; padding: 60px;");
@@ -3815,9 +3860,10 @@ void ReservationWidget::refreshTeacherApproveView() {
         // 老师审批页只关心 pending_teacher，但保留筛选
     };
 
+    // 计算每行卡片数量
     int containerWidth = m_teacherCardContainer->width();
     if (containerWidth <= 0) containerWidth = 800;
-    int cardsPerRow = qMax(1, containerWidth / 320);
+    int cardsPerRow = qMax(1, containerWidth / 340);
 
     int row = 0, col = 0, visibleCards = 0;
     QWidget *gridContainer = new QWidget(m_teacherCardContainer);
@@ -3826,11 +3872,11 @@ void ReservationWidget::refreshTeacherApproveView() {
     gridLayout->setHorizontalSpacing(20);
     gridLayout->setVerticalSpacing(20);
 
-    // 遍历所有待审批卡片（m_allApproveCards 已在加载时填充）
+    // 遍历所有待审批卡片
     for (ReservationCard *card : m_allApproveCards) {
         if (!card) continue;
 
-        // 只显示状态为 pending_teacher 的卡片（学生申请待老师审批）
+        // 只显示状态为 pending_teacher 的卡片
         if (!card->status().contains("pending_teacher", Qt::CaseInsensitive))
             continue;
 
@@ -3855,9 +3901,9 @@ void ReservationWidget::refreshTeacherApproveView() {
         if (shouldShow) {
             card->setParent(gridContainer);
             card->setVisible(true);
+            card->setFixedSize(320, 220);  // 确保卡片大小固定
             gridLayout->addWidget(card, row, col);
-            m_teacherApproveCards.append(card);
-            m_teacherCardMap[card->reservationId()] = card;
+            // 信号已经连接过，无需再次连接
             visibleCards++;
             col++;
             if (col >= cardsPerRow) {
@@ -3925,7 +3971,8 @@ void ReservationWidget::filterAndDisplayTeacherPending(const QString &data) {
 
             connect(card, &ReservationCard::statusActionRequested,
                     this, &ReservationWidget::onStatusActionRequested);
-
+            // ==== 新增：添加到老师卡片映射 ====
+            m_teacherCardMap[reservationId] = card;
             m_teacherCardGrid->addWidget(card, row, col);
             m_teacherPendingCards.append(card);
             visible++;
