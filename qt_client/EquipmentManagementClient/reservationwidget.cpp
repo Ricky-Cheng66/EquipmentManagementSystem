@@ -985,8 +985,10 @@ void ReservationWidget::refreshApproveDetailView()
 
     // 获取筛选条件
     QString searchText = "";
+    QString selectedRole = "all";
     if (m_approveDetailFilterBar) {
         searchText = m_approveDetailFilterBar->searchText();
+        selectedRole = m_approveDetailFilterBar->selectedRole();
     }
 
     qDebug() << "搜索文本:" << searchText;
@@ -1044,6 +1046,19 @@ void ReservationWidget::refreshApproveDetailView()
 
         // 搜索筛选
         bool shouldShow = true;
+
+        // ========== 新增：角色筛选 ==========
+        if (selectedRole != "all") {
+            QString cardRole = card->applicantRole();
+            // 兼容旧数据：空角色视为学生
+            if (cardRole.isEmpty()) {
+                cardRole = "student";
+            }
+            if (cardRole != selectedRole) {
+                shouldShow = false;
+            }
+        }
+
         if (!searchText.isEmpty()) {
             QString searchLower = searchText.toLower();
             QString cardText = card->reservationId() + "|" +

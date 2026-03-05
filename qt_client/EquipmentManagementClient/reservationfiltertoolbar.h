@@ -8,6 +8,7 @@
 #include <QHBoxLayout>
 #include <QDateEdit>
 #include <QTimer>
+#include <QLabel>
 
 class ReservationFilterToolBar : public QWidget
 {
@@ -24,7 +25,7 @@ public:
     QString selectedDate() const;
     QString searchText() const;
     QString selectedPlaceType() const;     // 场所类型筛选
-
+    QString selectedRole() const; // 新增：获取选中角色
     // 设置选项
     void setPlaces(const QStringList &places);
     void setStatuses(const QStringList &statuses);
@@ -62,6 +63,9 @@ private:
 
     QTimer *m_filterTimer;
     bool m_isPlaceListMode;          // 新增：模式标识
+
+    QComboBox *m_roleCombo;      // 新增：角色筛选下拉框
+    QLabel    *m_roleLabel;      // 新增：角色标签（用于控制显示/隐藏）
 };
 
 #endif // RESERVATIONFILTERTOOLBAR_H

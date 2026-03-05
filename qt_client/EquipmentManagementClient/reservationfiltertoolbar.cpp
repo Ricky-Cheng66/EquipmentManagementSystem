@@ -46,6 +46,19 @@ ReservationFilterToolBar::ReservationFilterToolBar(QWidget *parent)
     m_placeTypeCombo->setFixedWidth(100);
     m_placeTypeCombo->setCurrentIndex(0);
 
+    // ========== 新增：申请人角色筛选 ==========
+    m_roleLabel = new QLabel("角色:", this);
+    m_roleCombo = new QComboBox(this);
+    m_roleCombo->setObjectName("roleCombo");
+    m_roleCombo->addItem("全部角色", "all");
+    m_roleCombo->addItem("学生申请", "student");
+    m_roleCombo->addItem("老师申请", "teacher");
+    m_roleCombo->setFixedWidth(100);
+    m_roleCombo->setCurrentIndex(0);
+    connect(m_roleCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            [this]() { m_filterTimer->start(); });
+    // ========================================
+
     // 场所筛选
     QLabel *placeLabel = new QLabel("场所:", this);
     m_placeCombo = new QComboBox(this);
@@ -106,6 +119,8 @@ ReservationFilterToolBar::ReservationFilterToolBar(QWidget *parent)
     m_mainLayout->addWidget(m_backButton);
     m_mainLayout->addWidget(placeTypeLabel);
     m_mainLayout->addWidget(m_placeTypeCombo);
+    m_mainLayout->addWidget(m_roleLabel);
+    m_mainLayout->addWidget(m_roleCombo);
     m_mainLayout->addWidget(placeLabel);
     m_mainLayout->addWidget(m_placeCombo);
     m_mainLayout->addWidget(statusLabel);
@@ -218,6 +233,11 @@ QString ReservationFilterToolBar::selectedPlaceType() const
     return m_placeTypeCombo->currentData().toString();
 }
 
+QString ReservationFilterToolBar::selectedRole() const
+{
+    return m_roleCombo ? m_roleCombo->currentData().toString() : "all";
+}
+
 QString ReservationFilterToolBar::searchText() const
 {
     return m_searchEdit->text().trimmed();
@@ -303,31 +323,35 @@ void ReservationFilterToolBar::setMode(bool isPlaceListMode, const QString &plac
 {
     m_isPlaceListMode = isPlaceListMode;
 
-    // 根据模式显示/隐藏控件
-    m_backButton->setVisible(!isPlaceListMode);      // 非场所列表模式显示返回按钮
+    m_backButton->setVisible(!isPlaceListMode);
+
+    // 控制角色筛选框显示（仅在详情模式显示）
+    if (m_roleLabel && m_roleCombo) {
+        m_roleLabel->setVisible(!isPlaceListMode);
+        m_roleCombo->setVisible(!isPlaceListMode);
+    }
 
     if (isPlaceListMode) {
-        // 场所列表模式：显示所有筛选控件（修改这里！）
+        // 场所列表模式：显示所有其他筛选控件
         m_placeTypeCombo->setVisible(true);
-        m_placeCombo->setVisible(true);     // 改为true，显示场所下拉框
-        m_statusCombo->setVisible(true);    // 改为true，显示状态筛选
-        m_dateFilterCombo->setVisible(true); // 改为true，显示日期筛选
-        m_startDateEdit->setVisible(true);  // 改为true，显示开始日期
-        m_endDateEdit->setVisible(true);    // 改为true，显示结束日期
+        m_placeCombo->setVisible(true);
+        m_statusCombo->setVisible(true);
+        m_dateFilterCombo->setVisible(true);
+        m_startDateEdit->setVisible(true);
+        m_endDateEdit->setVisible(true);
         m_searchEdit->setPlaceholderText("搜索场所名称");
     } else {
-        // 场所详情模式：显示完整筛选（不变）
-        m_placeTypeCombo->setVisible(true);  // 保留场所类型筛选
-        m_placeCombo->setVisible(false);     // 隐藏场所下拉框（因为已固定）
+        // 场所详情模式：隐藏场所下拉框（因为已固定），其他全显示
+        m_placeTypeCombo->setVisible(true);
+        m_placeCombo->setVisible(false);
         m_statusCombo->setVisible(true);
         m_dateFilterCombo->setVisible(true);
         m_startDateEdit->setVisible(true);
         m_endDateEdit->setVisible(true);
         m_searchEdit->setPlaceholderText("用途或用户ID");
 
-        // 如果传入了场所名称，可以在界面上显示一个标签来标识当前场所
         if (!placeName.isEmpty()) {
-            // 可以在这里设置一个标签显示当前场所名称
+            // 可设置标签显示当前场所
         }
     }
 
