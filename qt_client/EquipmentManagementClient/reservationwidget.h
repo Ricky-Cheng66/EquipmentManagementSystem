@@ -58,6 +58,9 @@ public:
     bool isInMainThread() const { return thread() == QThread::currentThread(); }
     //初始化检查函数
     bool isApprovePageInitialized() const;
+
+    bool isQueryPageEmpty() const;
+
     QComboBox *m_placeComboApply;
     QComboBox *m_placeComboQuery;
     QTabWidget *m_tabWidget;

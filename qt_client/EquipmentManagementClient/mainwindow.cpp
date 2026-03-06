@@ -873,9 +873,8 @@ void MainWindow::switchPage(int pageIndex)
             break;
 
         case PAGE_RESERVATION:
-            // 只有在首次切换到预约页面时才请求场所信息
+            // 原有场所列表请求（首次加载）
             if (!loadedPages.contains(PAGE_RESERVATION) && m_tcpClient && m_tcpClient->isConnected()) {
-                // 请求场所列表
                 std::vector<char> msg = ProtocolParser::pack_message(
                     ProtocolParser::build_message_body(
                         ProtocolParser::CLIENT_QT_CLIENT,
@@ -887,6 +886,14 @@ void MainWindow::switchPage(int pageIndex)
                 m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
                 loadedPages.insert(PAGE_RESERVATION);
                 logMessage("首次加载场所信息...");
+            }
+
+            // 新增：如果查询页数据为空，则触发预约查询
+            if (m_reservationPage && m_reservationPage->isQueryPageEmpty()) {
+                QTimer::singleShot(200, [this]() {
+                    qDebug() << "自动请求预约记录（查询页无数据）";
+                    emit m_reservationPage->reservationQueryRequested("all");
+                });
             }
             break;
 

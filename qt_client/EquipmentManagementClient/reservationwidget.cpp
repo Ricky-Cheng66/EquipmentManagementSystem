@@ -3448,6 +3448,11 @@ bool ReservationWidget::isApprovePageInitialized() const
     return initialized;
 }
 
+bool ReservationWidget::isQueryPageEmpty() const
+{
+    return m_queryCards.isEmpty();
+}
+
 void ReservationWidget::updatePlaceCardsLayout()
 {
     if (!m_placeCardsContainer || !m_placeCardsLayout || m_placeCards.isEmpty()) {
