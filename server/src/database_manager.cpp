@@ -316,12 +316,14 @@ bool DatabaseManager::update_reservation_status(int reservation_id,
 
 std::vector<std::vector<std::string>>
 DatabaseManager::get_reservations_by_place(const std::string &place_id) {
-  std::string query =
-      "SELECT id, place_id, user_id, purpose, start_time, end_time, status "
-      "FROM reservations WHERE place_id = '" +
-      place_id +
-      "' "
-      "ORDER BY start_time";
+  std::string query = "SELECT r.id, r.place_id, r.user_id, r.purpose, "
+                      "r.start_time, r.end_time, r.status, u.role "
+                      "FROM reservations r "
+                      "JOIN users u ON r.user_id = u.id "
+                      "WHERE r.place_id = '" +
+                      place_id +
+                      "' "
+                      "ORDER BY r.start_time";
   return execute_query(query);
 }
 
@@ -331,6 +333,7 @@ std::vector<std::vector<std::string>> DatabaseManager::get_all_reservations() {
                       "FROM reservations r "
                       "JOIN users u ON r.user_id = u.id "
                       "ORDER BY r.start_time";
+
   return execute_query(query);
 }
 

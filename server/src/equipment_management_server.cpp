@@ -1511,18 +1511,12 @@ void EquipmentManagementServer::handle_reservation_apply(
 void EquipmentManagementServer::handle_reservation_query(
     int fd, const std::string &equipment_id, const std::string &payload) {
 
-  // equipment_id 实际是 place_id（复用参数名）
-  std::string place_id = equipment_id;
+  std::cout << "处理预约查询: place_id=" << equipment_id
+            << " payload=" << payload << std::endl;
 
-  // 获取查询者信息
+  // 获取查询者信息（可选，用于日志）
   ConnectionManager::UserInfo user_info;
-  if (!connections_manager_->get_user_info(fd, user_info)) {
-    std::vector<char> response =
-        ProtocolParser::build_reservation_query_response(
-            ProtocolParser::CLIENT_QT_CLIENT, false, "无法获取用户信息");
-    send(fd, response.data(), response.size(), 0);
-    return;
-  }
+  connections_manager_->get_user_info(fd, user_info); // 不检查返回值，只是记录
 
   if (!db_manager_->is_connected()) {
     std::vector<char> response =
@@ -1532,14 +1526,19 @@ void EquipmentManagementServer::handle_reservation_query(
     return;
   }
 
-  // 调用新函数获取数据（已按角色过滤）
-  auto reservations = db_manager_->get_reservations_by_place_for_user(
-      place_id, user_info.user_id, user_info.role);
+  // 获取预约数据
+  std::string place_id = equipment_id;
+  std::vector<std::vector<std::string>> reservations;
+  if (place_id == "all" || place_id.empty()) {
+    reservations = db_manager_->get_all_reservations();
+  } else {
+    reservations = db_manager_->get_reservations_by_place(place_id);
+  }
 
-  // 构建响应数据（格式不变）
+  // 构建响应数据
   std::string response_data;
   for (const auto &reservation : reservations) {
-    if (reservation.size() >= 8) { // 现在有 8 个字段
+    if (reservation.size() >= 8) {
       if (!response_data.empty())
         response_data += ";";
       // 顺序：id, place_id, user_id, purpose, start_time, end_time, status,
@@ -1555,7 +1554,7 @@ void EquipmentManagementServer::handle_reservation_query(
       ProtocolParser::CLIENT_QT_CLIENT, true, response_data);
   send(fd, response.data(), response.size(), 0);
 
-  std::cout << "返回场所预约查询结果: " << reservations.size()
+  std::cout << "返回预约查询结果: " << reservations.size()
             << " 条记录 (角色=" << user_info.role << ")" << std::endl;
 }
 
