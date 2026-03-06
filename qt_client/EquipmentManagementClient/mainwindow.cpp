@@ -1400,20 +1400,19 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
 {
     QString payload = QString::fromStdString(result.payload);
     qDebug() << "=== 查询响应处理 ===";
-    qDebug() << "原始payload:" << payload;
 
-    // ★ 修复1：统一提取数据部分（去除可能的 "success|" 前缀）
+    // 提取数据部分（去除 "success|" 前缀）
     QString data;
     bool hasSuccess = payload.startsWith("success|");
     if (hasSuccess) {
-        data = payload.mid(8); // 跳过 "success|"
+        data = payload.mid(8);
     } else {
         data = payload;
     }
 
-    // ---------- 1. 场所使用率请求（点击卡片触发） ----------
+    // ---------- 1. 场所使用率请求（点击卡片触发）----------
     if (m_isRequestingPlaceUsage) {
-        // ★ 修复2：使用 data 而不是 payload 进行解析
+        // 原有场所使用率逻辑保持不变
         QMap<QString, int> placeTotalMinutes;
         QStringList records = data.split(';', Qt::SkipEmptyParts);
         for (const QString &rec : records) {
@@ -1430,9 +1429,7 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
                 }
             }
         }
-
-        const int AVAILABLE_MINUTES = 14 * 60; // 每个场所可用840分钟
-
+        const int AVAILABLE_MINUTES = 14 * 60;
         QString usageText = "今日场所使用率统计：\n";
         if (placeTotalMinutes.isEmpty()) {
             usageText += "  暂无预约记录";
@@ -1449,22 +1446,20 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
                                  .arg(QString::number(percentage, 'f', 1));
             }
         }
-
         QMessageBox::information(this, "场所使用率", usageText);
         m_isRequestingPlaceUsage = false;
         return;
     }
 
-    // ---------- 2. 仪表板今日预约请求（更新卡片） ----------
+    // ---------- 2. 仪表板今日预约请求（更新卡片）----------
     if (m_isRequestingTodayReservations) {
+        // 原有今日预约逻辑保持不变
         int todayCount = 0;
         int totalUsedMinutes = 0;
         QDate today = QDate::currentDate();
-        // ★ 修复3：使用 data 而不是 payload 进行分割
         QStringList records = data.split(';', Qt::SkipEmptyParts);
         for (const QString &rec : records) {
             QStringList fields = rec.split('|');
-            // 假设字段至少5个（id|placeId|userId|start|end|...）
             if (fields.size() >= 5) {
                 QString startStr = fields[3];
                 QString endStr = fields[4];
@@ -1477,13 +1472,9 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
                 }
             }
         }
-
-        // 更新今日预约数量
         if (m_todayReservationsLabel) {
             m_todayReservationsLabel->setText(QString::number(todayCount));
         }
-
-        // 计算并更新场所使用率
         if (m_placeUsageLabel) {
             int placeCount = m_placeNameMap.size();
             if (placeCount > 0) {
@@ -1496,70 +1487,35 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
                 m_placeUsageLabel->setText("0%");
             }
         }
-
-        // ★ 修复4：更新最近预约列表
         if (m_centralStack && m_centralStack->currentIndex() == PAGE_DASHBOARD) {
             updateRecentReservations(data);
         }
-
         m_isRequestingTodayReservations = false;
         return;
     }
 
-    // ---------- 3. 原有的错误检查和预约页面分发逻辑 ----------
-    if (payload.isEmpty() || payload.startsWith("fail|")) {
-        QString errorMsg = payload.isEmpty() ? "查询失败" : payload.mid(5);
+    // ---------- 3. 检查数据有效性 ----------
+    if (data.isEmpty() || payload.startsWith("fail|")) {
+        QString errorMsg = data.isEmpty() ? "查询失败" : payload.mid(5);
         qDebug() << "查询失败:" << errorMsg;
         if (m_reservationPage) {
-            QMetaObject::invokeMethod(m_reservationPage, [this]() {
-                m_reservationPage->updateQueryResultTable("");
-            }, Qt::QueuedConnection);
+            // 改为调用统一接口，传入空数据
+            m_reservationPage->handleReservationData("");
         }
         return;
     }
-
-    // data 已经提取完毕，直接使用
-    qDebug() << "处理后的数据:" << data;
 
     if (!m_reservationPage) {
         qDebug() << "错误: ReservationWidget 未初始化";
         return;
     }
 
-    // ===== 新增：根据角色分发 =====
-    if (m_userRole == "teacher") {
-        // 老师角色：调用老师审批页专用处理函数
-        m_reservationPage->handleTeacherPendingData(data);
-        return;
-    }
+    // ---------- 4. 将数据交给预约组件统一处理 ----------
+    m_reservationPage->handleReservationData(data);
 
-    int currentTab = m_reservationPage->m_tabWidget->currentIndex();
-    qDebug() << "当前标签页:" << currentTab;
-
-    if (currentTab == 2) {
-        qDebug() << "分发到审批页";
-        QMetaObject::invokeMethod(m_reservationPage, [this, data]() {
-            m_reservationPage->loadAllReservationsForApproval(data);
-        }, Qt::QueuedConnection);
-    } else if (currentTab == 1) {
-        qDebug() << "分发到查询页";
-        QMetaObject::invokeMethod(m_reservationPage, [this, data]() {
-            m_reservationPage->updateQueryResultTable(data);
-        }, Qt::QueuedConnection);
-    } else {
-        qDebug() << "数据未处理，当前标签页:" << currentTab;
-    }
-
-    if (m_reservationPage && m_reservationPage->userRole() == "teacher") {
-        m_reservationPage->filterAndDisplayTeacherPending(data);
-    }
-
-    // 如果当前在仪表板，更新最近预约显示（可能已在上面的分支处理过，但保留判断以防遗漏）
+    // ---------- 5. 仪表板更新（如果需要）----------
     if (m_centralStack && m_centralStack->currentIndex() == PAGE_DASHBOARD) {
         updateRecentReservations(data);
-    }
-    if (m_reservationPage) {
-        m_reservationPage->handleTeacherPendingData(data);
     }
 }
 

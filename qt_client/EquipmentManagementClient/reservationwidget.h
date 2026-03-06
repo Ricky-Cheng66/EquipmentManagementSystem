@@ -79,6 +79,7 @@ public slots:
 
     void handleTeacherPendingData(const QString& data);
 
+    void handleReservationData(const QString &data);
 private slots:
     void onTabChanged(int index);
     // 申请页

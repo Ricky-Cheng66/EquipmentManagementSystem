@@ -1732,6 +1732,13 @@ void ReservationWidget::updateQueryResultTable(const QString &data)
             QStringList equipmentList = getEquipmentListForPlace(placeId);
             QString equipmentText = equipmentList.isEmpty() ? "无设备" : equipmentList.join(", ");
 
+            // 新增过滤逻辑
+            if (m_userRole != "admin") {
+                if (status.toLower() != "approved") {
+                    continue; // 只显示已批准的预约
+                }
+            }
+
             try {
                 // 创建预约卡片，但不立即添加到布局
                 ReservationCard *card = new ReservationCard(
@@ -3837,6 +3844,20 @@ void ReservationWidget::handleTeacherPendingData(const QString& data) {
     if (m_userRole == "teacher" && m_tabWidget->currentIndex() == m_teacherApproveTabIndex) {
         filterAndDisplayTeacherPending(data);
     }
+}
+
+void ReservationWidget::handleReservationData(const QString &data)
+{
+    // 无论当前标签页，都更新查询页
+    updateQueryResultTable(data);
+
+    // 根据角色更新审批相关页面
+    if (m_userRole == "admin") {
+        loadAllReservationsForApproval(data);
+    } else if (m_userRole == "teacher") {
+        handleTeacherPendingData(data);
+    }
+    // 学生无审批页
 }
 
 void ReservationWidget::setupTeacherApproveTab() {
