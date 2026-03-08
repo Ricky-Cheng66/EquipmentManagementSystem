@@ -33,6 +33,7 @@ ReservationFilterToolBar::ReservationFilterToolBar(QWidget *parent)
 
     // 场所类型筛选（新增）
     QLabel *placeTypeLabel = new QLabel("类型:", this);
+    placeTypeLabel->setObjectName("placeTypeLabel");
     m_placeTypeCombo = new QComboBox(this);
     m_placeTypeCombo->setObjectName("placeTypeCombo");  // 设置对象名称
     m_placeTypeCombo->addItem("全部类型", "all");
@@ -61,6 +62,7 @@ ReservationFilterToolBar::ReservationFilterToolBar(QWidget *parent)
 
     // 场所筛选
     QLabel *placeLabel = new QLabel("场所:", this);
+    placeLabel->setObjectName("placeLabel");
     m_placeCombo = new QComboBox(this);
     m_placeCombo->setObjectName("placeCombo");  // 设置对象名称
     m_placeCombo->addItem("全部场所", "all");
@@ -356,4 +358,21 @@ void ReservationFilterToolBar::setMode(bool isPlaceListMode, const QString &plac
     }
 
     qDebug() << "筛选工具栏模式设置完成:" << (isPlaceListMode ? "场所列表模式" : "场所详情模式");
+}
+
+void ReservationFilterToolBar::setTeacherMode()
+{
+    // 隐藏场所类型下拉框及其标签
+    if (m_placeTypeCombo) m_placeTypeCombo->setVisible(false);
+    if (QLabel* label = findChild<QLabel*>("placeTypeLabel"))
+        label->setVisible(false);
+
+    // 隐藏场所下拉框及其标签
+    if (m_placeCombo) m_placeCombo->setVisible(false);
+    if (QLabel* label = findChild<QLabel*>("placeLabel"))
+        label->setVisible(false);
+
+    // 隐藏角色筛选相关控件（如果有）
+    if (m_roleCombo) m_roleCombo->setVisible(false);
+    if (m_roleLabel) m_roleLabel->setVisible(false);
 }

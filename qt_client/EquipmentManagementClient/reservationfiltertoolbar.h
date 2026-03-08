@@ -43,6 +43,8 @@ public:
     // 新增：设置模式（场所列表模式/预约记录模式）
     void setMode(bool isPlaceListMode, const QString &placeName = QString());
 
+    void setTeacherMode();  // 设置老师模式（隐藏场所类型、场所下拉框）
+
 signals:
     void filterChanged();
     void refreshRequested();

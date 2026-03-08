@@ -3875,7 +3875,19 @@ void ReservationWidget::setupTeacherApproveTab() {
 
     // 筛选工具栏（可选，复用 ReservationFilterToolBar）
     m_teacherFilterBar = new ReservationFilterToolBar(m_teacherApproveTab);
-    m_teacherFilterBar->setMode(false); // 设置为详情模式（只显示状态、日期、搜索）
+    m_teacherFilterBar->setTeacherMode();   // <-- 新增：设为老师模式
+    // 设置状态下拉框默认为“待审批”
+    if (m_teacherFilterBar->findChild<QComboBox*>("statusCombo")) {
+        QComboBox *statusCombo = m_teacherFilterBar->findChild<QComboBox*>("statusCombo");
+        if (statusCombo) {
+            for (int i = 0; i < statusCombo->count(); ++i) {
+                if (statusCombo->itemData(i).toString() == "pending") {
+                    statusCombo->setCurrentIndex(i);
+                    break;
+                }
+            }
+        }
+    }
     m_teacherApproveLayout->addWidget(m_teacherFilterBar);
 
     // 卡片区域滚动
@@ -3898,18 +3910,25 @@ void ReservationWidget::setupTeacherApproveTab() {
             this, &ReservationWidget::refreshTeacherApproveView);
 }
 
-void ReservationWidget::refreshTeacherApproveView() {
-    qDebug() << "刷新老师审批视图，当前卡片数:" << m_allApproveCards.size();
+void ReservationWidget::refreshTeacherApproveView()
+{
+    qDebug() << "刷新老师审批视图，待处理卡片数:" << m_teacherPendingCards.size();
+
     if (!m_teacherCardContainer || !m_teacherCardGrid) {
         qWarning() << "老师审批视图控件未初始化";
         return;
     }
 
-    // 清理现有卡片（仅从布局移除，不删除卡片对象）
-    clearTeacherApproveCards();
+    // 清空网格布局中的所有卡片（不删除卡片对象）
+    QLayoutItem* child;
+    while ((child = m_teacherCardGrid->takeAt(0)) != nullptr) {
+        if (child->widget()) {
+            child->widget()->setParent(nullptr);
+        }
+        delete child;
+    }
 
-    if (m_allApproveCards.isEmpty()) {
-        // 显示空状态（原代码）
+    if (m_teacherPendingCards.isEmpty()) {
         QLabel *emptyLabel = new QLabel("暂无待审批的学生申请", m_teacherCardContainer);
         emptyLabel->setAlignment(Qt::AlignCenter);
         emptyLabel->setStyleSheet("color: #7f8c8d; font-size: 16px; padding: 60px;");
@@ -3927,13 +3946,6 @@ void ReservationWidget::refreshTeacherApproveView() {
         endDate = m_teacherFilterBar->endDate();
     }
 
-    // 状态映射（同查询页）
-    QMap<QString, QStringList> statusMap = {
-        {"all", {"all"}},
-        {"pending", {"pending_teacher", "待老师审批"}},
-        // 老师审批页只关心 pending_teacher，但保留筛选
-    };
-
     // 计算每行卡片数量
     int containerWidth = m_teacherCardContainer->width();
     if (containerWidth <= 0) containerWidth = 800;
@@ -3946,39 +3958,41 @@ void ReservationWidget::refreshTeacherApproveView() {
     gridLayout->setHorizontalSpacing(20);
     gridLayout->setVerticalSpacing(20);
 
-    // 遍历所有待审批卡片
-    for (ReservationCard *card : m_allApproveCards) {
+    for (ReservationCard *card : m_teacherPendingCards) {
         if (!card) continue;
 
-        // 只显示状态为 pending_teacher 的卡片
-        if (!card->status().contains("pending_teacher", Qt::CaseInsensitive))
-            continue;
-
-        // 应用筛选条件
         bool shouldShow = true;
-        if (!searchText.isEmpty()) {
-            if (!card->reservationId().contains(searchText, Qt::CaseInsensitive) &&
-                !card->purpose().contains(searchText, Qt::CaseInsensitive))
-                shouldShow = false;
-        }
-        if (shouldShow && selectedStatus != "all") {
+
+        // 状态筛选（老师审批页默认只显示 pending_teacher，但筛选可能选其他，不过我们仍保留所有 pending_teacher 卡片）
+        if (selectedStatus != "all") {
             QString cardStatus = card->status().toLower();
-            if (!cardStatus.contains("pending_teacher"))
+            // 注意：老师页只有 pending_teacher 状态的卡片，所以如果筛选非 pending，结果为空
+            if (!cardStatus.contains(selectedStatus, Qt::CaseInsensitive))
                 shouldShow = false;
         }
+
+        // 日期范围筛选
         if (shouldShow && selectedDateRange != "all" && startDate.isValid() && endDate.isValid()) {
-            QDate cardStart = card->getStartDate();
-            if (cardStart < startDate || cardStart > endDate)
+            QDate cardStartDate = card->getStartDate();
+            if (cardStartDate < startDate || cardStartDate > endDate)
+                shouldShow = false;
+        }
+
+        // 搜索筛选
+        if (shouldShow && !searchText.isEmpty()) {
+            QString searchLower = searchText.toLower();
+            QString cardText = card->reservationId() + "|" + card->purpose() + "|" + card->userId();
+            if (!cardText.toLower().contains(searchLower))
                 shouldShow = false;
         }
 
         if (shouldShow) {
             card->setParent(gridContainer);
             card->setVisible(true);
-            card->setFixedSize(320, 220);  // 确保卡片大小固定
+            card->setFixedSize(320, 220);
             gridLayout->addWidget(card, row, col);
-            // 信号已经连接过，无需再次连接
             visibleCards++;
+
             col++;
             if (col >= cardsPerRow) {
                 col = 0;
@@ -3989,7 +4003,11 @@ void ReservationWidget::refreshTeacherApproveView() {
 
     if (visibleCards == 0) {
         delete gridContainer;
-        QLabel *noMatchLabel = new QLabel("没有符合条件的待审批申请", m_teacherCardContainer);
+        QString filterInfo;
+        if (!searchText.isEmpty()) filterInfo += QString("搜索:%1").arg(searchText);
+        QLabel *noMatchLabel = new QLabel(
+            filterInfo.isEmpty() ? "没有符合条件的待审批申请" : QString("没有符合条件的待审批申请\n筛选条件: %1").arg(filterInfo),
+            m_teacherCardContainer);
         noMatchLabel->setAlignment(Qt::AlignCenter);
         noMatchLabel->setStyleSheet("color: #95a5a6; font-size: 15px; padding: 60px;");
         m_teacherCardGrid->addWidget(noMatchLabel, 0, 0, 1, 1);
@@ -4002,11 +4020,13 @@ void ReservationWidget::refreshTeacherApproveView() {
     }
 }
 
-void ReservationWidget::filterAndDisplayTeacherPending(const QString &data) {
-    // 假设 data 是查询响应得到的字符串（格式同 updateQueryResultTable）
-    clearTeacherCards();
+void ReservationWidget::filterAndDisplayTeacherPending(const QString &data)
+{
+    // 清空原有卡片
+    clearTeacherCards();  // 该函数应删除 m_teacherPendingCards 中的对象并清空布局
 
     if (data.isEmpty() || data == "fail|" || data == "暂无预约记录") {
+        // 显示空状态，直接返回
         QLabel* emptyLabel = new QLabel("✅ 暂无待审批的学生预约", m_teacherCardContainer);
         emptyLabel->setAlignment(Qt::AlignCenter);
         emptyLabel->setStyleSheet("color: #27ae60; font-size: 16px; padding: 60px; background-color: #f8f9fa; border-radius: 8px;");
@@ -4015,10 +4035,12 @@ void ReservationWidget::filterAndDisplayTeacherPending(const QString &data) {
     }
 
     QStringList records = data.split(';', Qt::SkipEmptyParts);
-    int cardsPerRow = qMax(1, m_teacherCardContainer->width() / 340);
-    int row = 0, col = 0, visible = 0;
+    // 清空待审批卡片列表（但保留对象？ clearTeacherCards 已删除，这里直接重建）
+    qDeleteAll(m_teacherPendingCards);  // 确保内存释放
+    m_teacherPendingCards.clear();
+    m_teacherCardMap.clear();
 
-    for (const QString& rec : records) {
+    for (const QString &rec : records) {
         QStringList fields = rec.split('|');
         if (fields.size() >= 7) {
             QString reservationId = fields[0];
@@ -4028,16 +4050,9 @@ void ReservationWidget::filterAndDisplayTeacherPending(const QString &data) {
             QString startTime = fields[4];
             QString endTime = fields[5];
             QString status = fields[6];
+            QString role = (fields.size() >= 8) ? fields[7] : "";
 
-            // 提取角色字段
-            QString role;
-            if (fields.size() >= 8) {
-                role = fields[7].trimmed();
-            } else {
-                role = "";
-            }
-
-            // 只显示待老师审批的
+            // 只保留待老师审批的
             if (status.toLower() != "pending_teacher") continue;
 
             QString placeName = getPlaceNameById(placeId);
@@ -4047,40 +4062,25 @@ void ReservationWidget::filterAndDisplayTeacherPending(const QString &data) {
             ReservationCard* card = new ReservationCard(
                 reservationId, placeId, placeName, userId, purpose,
                 startTime, endTime, status, equipmentText,
-                role,       // 新增：角色参数
-                true,       // 审批模式
-                m_teacherCardContainer
-                );
+                role, true, m_teacherCardContainer);
 
             connect(card, &ReservationCard::statusActionRequested,
                     this, &ReservationWidget::onStatusActionRequested);
-            // ==== 新增：添加到老师卡片映射 ====
-            m_teacherCardMap[reservationId] = card;
-            m_teacherCardGrid->addWidget(card, row, col);
-            m_teacherPendingCards.append(card);
-            visible++;
 
-            col++;
-            if (col >= cardsPerRow) {
-                col = 0;
-                row++;
-            }
+            m_teacherPendingCards.append(card);
+            m_teacherCardMap[reservationId] = card;
         }
     }
 
-    if (visible == 0) {
-        QLabel* emptyLabel = new QLabel("🔍 没有待审批的学生预约", m_teacherCardContainer);
-        emptyLabel->setAlignment(Qt::AlignCenter);
-        emptyLabel->setStyleSheet("color: #95a5a6; font-size: 15px; padding: 60px; background-color: #f8f9fa; border-radius: 10px;");
-        m_teacherCardGrid->addWidget(emptyLabel, 0, 0, 1, cardsPerRow, Qt::AlignCenter);
-    }
+    // 调用刷新函数显示卡片
+    refreshTeacherApproveView();
 }
 
-void ReservationWidget::clearTeacherCards() {
-    for (ReservationCard* card : m_teacherPendingCards) {
-        if (card) card->deleteLater();
-    }
+void ReservationWidget::clearTeacherCards()
+{
+    qDeleteAll(m_teacherPendingCards);
     m_teacherPendingCards.clear();
+    m_teacherCardMap.clear();
 
     // 清空网格布局
     QLayoutItem* child;
