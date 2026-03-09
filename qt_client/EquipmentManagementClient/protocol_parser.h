@@ -62,6 +62,8 @@ public:
         QT_GET_ALL_THRESHOLDS_RESPONSE = 116,
         QT_ALARM_QUERY = 117, // Qt客户端 → 服务端：查询告警列表
         QT_ALARM_QUERY_RESPONSE = 118, // 服务端 → Qt客户端：返回告警列表
+        MY_RESERVATION_QUERY = 119,   // 客户端请求个人预约记录
+        MY_RESERVATION_RESPONSE = 120 // 服务端返回个人预约数据
     };
 
     // ============ 客户端类型枚举 ============
@@ -168,7 +170,7 @@ public:
     static std::vector<char>
     build_reservation_approve(ClientType client_type, const std::string &place_id,
                               const std::string &payload);
-
+    static std::vector<char> build_my_reservation_query(ClientType client_type);
     // ============ 控制相关消息构建 ============
     static std::vector<char>
     build_control_command(ClientType client_type, const std::string &equipment_id,
@@ -200,6 +202,8 @@ public:
     build_reservation_approve_response(ClientType client_type, bool success,
                                        const std::string &message);
 
+    static std::vector<char>
+    build_my_reservation_response(bool success, const std::string &data);
     // ============ 能耗采集消息构建 ============
     static std::vector<char>
     build_power_report_message(ClientType client_type,

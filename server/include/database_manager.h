@@ -117,6 +117,7 @@ public:
   std::vector<std::vector<std::string>>
   get_reservations_by_place_for_user(const std::string &place_id, int user_id,
                                      const std::string &role);
+  std::vector<std::vector<std::string>> get_my_reservations(int user_id);
 
 private:
   bool initialize_tables(); // 初始化数据库表

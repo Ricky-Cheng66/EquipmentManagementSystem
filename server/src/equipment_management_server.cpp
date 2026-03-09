@@ -378,6 +378,12 @@ void EquipmentManagementServer::process_qt_client_message(
   case ProtocolParser::QT_GET_ALL_THRESHOLDS:
     handle_get_all_thresholds(fd);
     break;
+
+  case ProtocolParser::MY_RESERVATION_QUERY:
+    handle_my_reservation_query(fd, parse_result.equipment_id,
+                                parse_result.payload);
+    break;
+
   default:
     std::cout << "未知消息类型: " << parse_result.type << " from fd=" << fd
               << std::endl;
@@ -1297,6 +1303,40 @@ void EquipmentManagementServer::handle_get_all_thresholds(int fd) {
           ProtocolParser::CLIENT_QT_CLIENT, true, ss.str());
   send(fd, response.data(), response.size(), 0);
   std::cout << "已发送所有阈值数据: " << results.size() << " 条" << std::endl;
+}
+
+void EquipmentManagementServer::handle_my_reservation_query(
+    int fd, const std::string &equipment_id, const std::string &payload) {
+
+  // 获取当前连接的用户信息
+  ConnectionManager::UserInfo user_info;
+  if (!connections_manager_->get_user_info(fd, user_info)) {
+    std::vector<char> response =
+        ProtocolParser::build_my_reservation_response(false, "用户未登录");
+    send(fd, response.data(), response.size(), 0);
+    return;
+  }
+
+  // 从数据库获取该用户的所有预约记录
+  auto reservations = db_manager_->get_my_reservations(user_info.user_id);
+
+  // 构建响应数据
+  std::string data;
+  for (const auto &row : reservations) {
+    if (!data.empty())
+      data += ";";
+    // 字段顺序：id, place_id, user_id, purpose, start_time, end_time, status,
+    // role role 从用户信息获取（但数据库返回的已包含 role，因为 join users）
+    for (size_t i = 0; i < row.size(); ++i) {
+      if (i > 0)
+        data += "|";
+      data += row[i];
+    }
+  }
+
+  std::vector<char> response =
+      ProtocolParser::build_my_reservation_response(true, data);
+  send(fd, response.data(), response.size(), 0);
 }
 
 void EquipmentManagementServer::handle_connection_close(int fd) {

@@ -280,6 +280,19 @@ DatabaseManager::get_reservations_by_place_for_user(const std::string &place_id,
   return execute_query(query);
 }
 
+std::vector<std::vector<std::string>>
+DatabaseManager::get_my_reservations(int user_id) {
+  std::string query = "SELECT r.id, r.place_id, r.user_id, r.purpose, "
+                      "r.start_time, r.end_time, r.status, u.role "
+                      "FROM reservations r "
+                      "JOIN users u ON r.user_id = u.id "
+                      "WHERE r.user_id = " +
+                      std::to_string(user_id) +
+                      " "
+                      "ORDER BY r.start_time DESC"; // 按时间倒序
+  return execute_query(query);
+}
+
 bool DatabaseManager::add_reservation(const std::string &place_id, int user_id,
                                       const std::string &purpose,
                                       const std::string &start_time,

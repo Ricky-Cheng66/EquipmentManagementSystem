@@ -332,6 +332,17 @@ std::vector<char> ProtocolParser::build_reservation_approve_response(
     return pack_message(body);
 }
 
+std::vector<char>
+ProtocolParser::build_my_reservation_response(bool success,
+                                              const std::string &data) {
+    std::vector<std::string> fields = {success ? "success" : "fail"};
+    if (!data.empty())
+        fields.push_back(data);
+    std::string body = build_message_body(
+        CLIENT_QT_CLIENT, MY_RESERVATION_RESPONSE, "response", fields);
+    return pack_message(body);
+}
+
 // ============ Qt端预约请求消息实现 ============
 
 std::vector<char>
@@ -357,6 +368,13 @@ ProtocolParser::build_reservation_approve(ClientType client_type,
                                           const std::string &payload) {
     std::string body = build_message_body(
         client_type, MessageType::RESERVATION_APPROVE, place_id, {payload});
+    return pack_message(body);
+}
+
+std::vector<char>
+ProtocolParser::build_my_reservation_query(ClientType client_type) {
+    std::string body =
+        build_message_body(client_type, MY_RESERVATION_QUERY, "", {});
     return pack_message(body);
 }
 

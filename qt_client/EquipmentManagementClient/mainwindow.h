@@ -56,6 +56,9 @@ private slots:
     void onReservationQueryRequested(const QString &placeId);
     void onReservationApproveRequested(int reservationId, const QString &placeId, bool approve);
 
+    void onMyReservationQueryRequested();
+    void handleMyReservationResponse(const ProtocolParser::ParseResult &result);
+
     void showReservationWidget();
     void showEnergyStatisticsWidget();
     void onEnergyQueryRequested(const QString &equipmentId, const QString &timeRange);

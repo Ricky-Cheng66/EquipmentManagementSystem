@@ -154,6 +154,9 @@ private:
 
   void handle_get_all_thresholds(int fd);
 
+  void handle_my_reservation_query(int fd, const std::string &equipment_id,
+                                   const std::string &payload);
+
   //成员变量
   const int MAXCLIENTFDS = 1024;
   int server_fd_;

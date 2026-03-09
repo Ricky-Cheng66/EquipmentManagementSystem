@@ -541,6 +541,8 @@ void MainWindow::setupCentralStack()
             this, &MainWindow::onReservationQueryRequested);
     connect(m_reservationPage, &ReservationWidget::reservationApproveRequested,
             this, &MainWindow::onReservationApproveRequested);
+    connect(m_reservationPage, &ReservationWidget::myReservationQueryRequested,
+            this, &MainWindow::onMyReservationQueryRequested);
     m_centralStack->addWidget(m_reservationPage);
 
     // 4. 能耗统计页面
@@ -1378,6 +1380,31 @@ void MainWindow::onReservationApproveRequested(int reservationId, const QString 
     }
 }
 
+void MainWindow::onMyReservationQueryRequested()
+{
+    if (!m_tcpClient || !m_tcpClient->isConnected()) {
+        QMessageBox::warning(this, "查询失败", "网络未连接");
+        return;
+    }
+    std::vector<char> msg = ProtocolParser::build_my_reservation_query(
+        ProtocolParser::CLIENT_QT_CLIENT);
+    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+    logMessage("已发送我的预约查询请求");
+}
+
+void MainWindow::handleMyReservationResponse(const ProtocolParser::ParseResult &result)
+{
+    QString payload = QString::fromStdString(result.payload);
+    // 格式: success|data 或 fail|error
+    QStringList parts = payload.split('|', Qt::KeepEmptyParts);
+    if (parts.isEmpty()) return;
+    bool success = (parts[0] == "success");
+    QString data = parts.mid(1).join('|');
+    if (m_reservationPage) {
+        m_reservationPage->handleMyReservationResponse(success ? data : "");
+    }
+}
+
 void MainWindow::handleReservationApplyResponse(const ProtocolParser::ParseResult &result)
 {
     QString payload = QString::fromStdString(result.payload);
@@ -1950,6 +1977,13 @@ void MainWindow::setupMessageHandlers() {
                                   [this](const ProtocolParser::ParseResult &result) {
                                       QMetaObject::invokeMethod(this, [this, result]() {
                                           this->handleAlarmQueryResponse(result);
+                                      });
+                                  });
+
+    m_dispatcher->registerHandler(ProtocolParser::MY_RESERVATION_RESPONSE,
+                                  [this](const ProtocolParser::ParseResult &result) {
+                                      QMetaObject::invokeMethod(this, [this, result]() {
+                                          this->handleMyReservationResponse(result);
                                       });
                                   });
 }
