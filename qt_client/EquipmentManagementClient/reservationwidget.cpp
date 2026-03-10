@@ -2993,7 +2993,7 @@ void ReservationWidget::setUserRole(const QString &role, const QString &userId) 
         }
 
         // 断开旧连接，重新连接（确保只触发一次）
-        disconnect(m_tabWidget, &QTabWidget::currentChanged, this, nullptr);
+        //disconnect(m_tabWidget, &QTabWidget::currentChanged, this, nullptr);
         connect(m_tabWidget, &QTabWidget::currentChanged, this, [this](int index) {
             qDebug() << "currentChanged signal, index =" << index << ", teacherTabIndex =" << m_teacherApproveTabIndex;
             if (index == m_teacherApproveTabIndex) {
@@ -3403,6 +3403,19 @@ void ReservationWidget::onTabChanged(int index)
             }
         }
     }
+
+    // ===== 新增：我的预约页（所有角色）=====
+    if (index == m_tabWidget->indexOf(m_myReservationPage)) {
+        if (m_myReservationCards.isEmpty()) {
+            QTimer::singleShot(200, [this]() {
+                emit myReservationQueryRequested();
+            });
+        } else {
+            refreshMyReservationView();
+        }
+    }
+
+
 }
 
 // ✅ 新增辅助函数：更新设备列表显示
