@@ -562,6 +562,14 @@ void MainWindow::setupCentralStack()
             this, &MainWindow::onEquipmentControlRequested); // 后续实现
     m_centralStack->addWidget(m_myReservationPage);
 
+    // 预约设备控制页面（二级页面）
+    m_reservationControlPage = new ReservationEquipmentControlWidget("", this);
+    m_reservationControlPage->setTcpClient(m_tcpClient);
+    m_reservationControlPage->setMessageDispatcher(m_dispatcher);
+    connect(m_reservationControlPage, &ReservationEquipmentControlWidget::backRequested,
+            this, &MainWindow::onBackFromControlPage);
+    m_centralStack->addWidget(m_reservationControlPage);
+
     // 4. 能耗统计页面
     m_energyPage = new EnergyStatisticsWidget(this);
     connect(m_energyPage, &EnergyStatisticsWidget::energyQueryRequested,
@@ -1120,8 +1128,16 @@ void MainWindow::onRefreshDashboard()
 
 void MainWindow::onEquipmentControlRequested(const QString &reservationId)
 {
-    // 后续打开设备控制子界面
-    qDebug() << "设备控制请求，预约ID:" << reservationId;
+    // 设置预约ID并加载数据
+    m_reservationControlPage->setReservationId(reservationId);
+    // 切换到控制页面
+    m_centralStack->setCurrentWidget(m_reservationControlPage);
+}
+
+void MainWindow::onBackFromControlPage()
+{
+    // 返回我的预约页面
+    m_centralStack->setCurrentWidget(m_myReservationPage);
 }
 
 // 其他原有的槽函数实现需要保持不变，但需要从构造函数移动到setupMessageHandlers中

@@ -190,6 +190,13 @@ public:
                          const std::string &parameters);
 
   static std::vector<char>
+  build_my_control_query(ClientType client_type,
+                         const std::string &reservation_id);
+  static std::vector<char> build_my_control_request(
+      ClientType client_type, const std::string &equipment_id,
+      const std::string &command, const std::string &parameters = "");
+
+  static std::vector<char>
   build_my_control_response(ClientType client_type, const std::string &payload);
 
   // ============ 心跳相关消息构建 ============

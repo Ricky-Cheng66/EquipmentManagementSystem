@@ -288,6 +288,36 @@ std::vector<char> ProtocolParser::build_control_response(
     return pack_message(body);
 }
 
+std::vector<char>
+ProtocolParser::build_my_control_query(ClientType client_type,
+                                       const std::string &reservation_id) {
+    // 消息体：类型 + 设备ID（留空）+ payload（预约ID）
+    std::string body = build_message_body(client_type, QT_MY_CONTROL_QUERY, "",
+                                          {reservation_id});
+    return pack_message(body);
+}
+
+std::vector<char> ProtocolParser::build_my_control_request(
+    ClientType client_type, const std::string &equipment_id,
+    const std::string &command, const std::string &parameters) {
+    // payload 格式：设备ID|命令|参数
+    std::string payload = equipment_id + "|" + command;
+    if (!parameters.empty()) {
+        payload += "|" + parameters;
+    }
+    std::string body =
+        build_message_body(client_type, QT_MY_CONTROL_REQUEST, "", {payload});
+    return pack_message(body);
+}
+
+std::vector<char>
+ProtocolParser::build_my_control_response(ClientType client_type,
+                                          const std::string &payload) {
+    std::string body =
+        build_message_body(client_type, QT_MY_CONTROL_RESPONSE, "", {payload});
+    return pack_message(body);
+}
+
 // ============ 心跳相关消息实现 ============
 
 std::vector<char>

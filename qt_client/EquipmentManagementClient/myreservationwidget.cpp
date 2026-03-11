@@ -222,15 +222,35 @@ void MyReservationWidget::onRefreshRequested()
 
 void MyReservationWidget::onCardClicked(const QString &reservationId)
 {
-    // 检查该预约是否正在进行中（可根据卡片状态判断，或者由子界面自行验证）
     ReservationCard *card = m_cardMap.value(reservationId);
     if (!card) return;
 
-    // 只有已批准且当前时间在预约时间段内的才能控制
-    // 这里简单判断状态为 approved，具体时间验证可由服务端控制
-    if (card->status().toLower() == "approved") {
-        emit equipmentControlRequested(reservationId);
-    } else {
+    // 状态必须为 approved
+    if (card->status().toLower() != "approved") {
         QMessageBox::information(this, "提示", "只有已批准的预约才能进行设备控制");
+        return;
     }
+
+    // 检查当前时间是否在预约时间段内
+    QDateTime now = QDateTime::currentDateTime();
+    QDateTime start = QDateTime::fromString(card->startTime(), "yyyy-MM-dd HH:mm:ss");
+    QDateTime end = QDateTime::fromString(card->endTime(), "yyyy-MM-dd HH:mm:ss");
+
+    if (!start.isValid() || !end.isValid()) {
+        QMessageBox::warning(this, "错误", "预约时间格式错误");
+        return;
+    }
+
+    if (now < start) {
+        QMessageBox::information(this, "提示", "预约尚未开始，请在开始时间后操作");
+        return;
+    }
+
+    if (now > end) {
+        QMessageBox::information(this, "提示", "预约已结束");
+        return;
+    }
+
+    // 通过，发出信号
+    emit equipmentControlRequested(reservationId);
 }

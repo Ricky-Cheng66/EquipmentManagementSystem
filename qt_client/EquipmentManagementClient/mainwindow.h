@@ -20,6 +20,7 @@
 #include "energystatisticswidget.h"
 #include "thresholdsettingswidget.h"
 #include "myreservationwidget.h"
+#include "reservationequipmentcontrolwidget.h"
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -83,6 +84,8 @@ private slots:
     void onRefreshDashboard();
 
     void onEquipmentControlRequested(const QString &reservationId);
+    void onBackFromControlPage();
+
 private:
     Ui::MainWindow *ui;
     TcpClient* m_tcpClient;
@@ -142,6 +145,7 @@ private:
 
     MyReservationWidget *m_myReservationPage;
 
+    ReservationEquipmentControlWidget *m_reservationControlPage;
 
     // 仪表板相关函数
     void updateDashboardStats();  // 更新仪表板统计数据
