@@ -1328,7 +1328,7 @@ void MainWindow::onReservationApplyRequested(const QString &placeId, const QStri
 // 发送预约查询
 void MainWindow::onReservationQueryRequested(const QString &placeId)
 {
-    qDebug() << "MainWindow::onReservationQueryRequested() called with placeId =" << placeId;
+    qDebug() << "********** [DIAG] onReservationQueryRequested() 被调用，placeId =" << placeId;
 
     if (!m_tcpClient) {
         qCritical() << "错误: TCP客户端未初始化";
@@ -1382,6 +1382,7 @@ void MainWindow::onReservationApproveRequested(int reservationId, const QString 
 
 void MainWindow::onMyReservationQueryRequested()
 {
+    qDebug() << "********** [DIAG] onMyReservationQueryRequested() 被调用";
     if (!m_tcpClient || !m_tcpClient->isConnected()) {
         QMessageBox::warning(this, "查询失败", "网络未连接");
         return;

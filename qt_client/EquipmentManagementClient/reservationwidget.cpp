@@ -726,12 +726,6 @@ void ReservationWidget::refreshApprovePlaceListView()
         return;
     }
 
-    // 安全检查：确保页面存在且未销毁
-    if (!m_approvePlaceListPage || !m_approvePlaceListPage->isVisible()) {
-        qDebug() << "审批场所列表页面不可用，跳过刷新";
-        return;
-    }
-
     if (!m_approvePlaceListLayout) {
         qCritical() << "错误: m_approvePlaceListLayout 未初始化";
         return;
@@ -1684,10 +1678,16 @@ void ReservationWidget::updateQueryResultTable(const QString &data)
     // 检查数据是否有效
     if (data.isEmpty() || data == "暂无预约记录" || data == "0") {
         qDebug() << "数据为空";
+        // 清空卡片和统计数据
+        clearQueryCardView();
+        m_placeReservationCount.clear();
+        m_placeReservations.clear();
         // 如果当前在场所详情页面，返回场所列表
         if (m_queryViewStack && m_queryViewStack->currentIndex() == 1) {
             m_queryViewStack->setCurrentIndex(0);
         }
+        // 刷新场所列表视图（显示空状态）
+        refreshPlaceListView();
         return;
     }
 
@@ -3379,40 +3379,20 @@ void ReservationWidget::onTabChanged(int index)
     }
 
     // ✅ 切换到审批页（索引2）时，自动请求所有预约数据
+    // 审批页（管理员）—— 强制请求所有预约数据
     if (index == 2 && m_userRole == "admin") {
-        qDebug() << "DEBUG: 切换到审批页，准备请求数据...";
-
-        // 安全检查：确保审批页已创建
-        if (!m_approveViewStack) {
-            qWarning() << "审批页未创建，正在创建...";
-            setupApproveTab();
-        }
-
-        // 只有在当前没有数据时才查询
-        if (m_allApproveCards.isEmpty()) {
-            QTimer::singleShot(100, [this]() {
-                qDebug() << "DEBUG: 发射 reservationQueryRequested('all')";
-                emit reservationQueryRequested("all");
-                qDebug() << "DEBUG: 信号已发射";
-            });
-        } else {
-            qDebug() << "DEBUG: 已有审批数据，刷新场所列表";
-            // 刷新审批场所列表视图
-            if (m_approveViewStack && m_approveViewStack->currentIndex() == 0) {
-                refreshApprovePlaceListView();
-            }
-        }
+        QTimer::singleShot(100, [this]() {
+            qDebug() << "DEBUG: [强制刷新] 发射 reservationQueryRequested('all')";
+            emit reservationQueryRequested("all");
+        });
     }
 
-    // ===== 新增：我的预约页（所有角色）=====
+    // 我的预约页 —— 强制请求个人预约数据
     if (index == m_tabWidget->indexOf(m_myReservationPage)) {
-        if (m_myReservationCards.isEmpty()) {
-            QTimer::singleShot(200, [this]() {
-                emit myReservationQueryRequested();
-            });
-        } else {
-            refreshMyReservationView();
-        }
+        QTimer::singleShot(200, [this]() {
+            qDebug() << "DEBUG: [强制刷新] 发射 myReservationQueryRequested()";
+            emit myReservationQueryRequested();
+        });
     }
 
 
@@ -4183,13 +4163,17 @@ void ReservationWidget::onMyReservationRefreshRequested()
 
 void ReservationWidget::refreshMyReservationView()
 {
+    qDebug() << "********** refreshMyReservationView() 被调用";
+
     if (m_isRefreshingMyReservation) return;
     m_isRefreshingMyReservation = true;
 
-    // 清空现有布局
+    // 清空主布局（只移除控件，不删除）
     QLayoutItem* child;
     while ((child = m_myReservationCardLayout->takeAt(0)) != nullptr) {
-        if (child->widget()) child->widget()->setParent(nullptr);
+        if (child->widget()) {
+            child->widget()->setParent(nullptr);  // 临时移除，但不删除
+        }
         delete child;
     }
 
@@ -4202,96 +4186,49 @@ void ReservationWidget::refreshMyReservationView()
         return;
     }
 
-    // 获取筛选条件
-    QString searchText = m_myReservationFilterBar->searchText();
-    QString selectedStatus = m_myReservationFilterBar->selectedStatus();
-    QString selectedDateRange = m_myReservationFilterBar->selectedDate();
-    QDate startDate, endDate;
-    if (selectedDateRange != "all") {
-        startDate = m_myReservationFilterBar->startDate();
-        endDate = m_myReservationFilterBar->endDate();
-    }
-
     // 计算每行卡片数
     int containerWidth = m_myReservationCardContainer->width();
     if (containerWidth <= 0) containerWidth = 800;
-    int cardsPerRow = qMax(1, containerWidth / 320);
+    int cardsPerRow = qMax(1, containerWidth / 340); // 按卡片宽度320+间距估算
 
-    int row = 0, col = 0, visibleCards = 0;
-    QWidget *gridContainer = new QWidget(m_myReservationCardContainer);
-    QGridLayout *gridLayout = new QGridLayout(gridContainer);
-    gridLayout->setContentsMargins(0, 0, 0, 0);
-    gridLayout->setHorizontalSpacing(20);
-    gridLayout->setVerticalSpacing(20);
-
-    // 状态映射
-    QMap<QString, QStringList> statusMap = {
-        {"all", {"all"}},
-        {"pending", {"pending", "pending_teacher", "pending_admin", "待审批"}},
-        {"approved", {"approved", "已批准"}},
-        {"rejected", {"rejected", "已拒绝"}},
-        {"completed", {"completed", "已完成"}},
-        {"cancelled", {"cancelled", "已取消"}}
-    };
-
+    int row = 0, col = 0;
     for (ReservationCard *card : m_myReservationCards) {
-        bool shouldShow = true;
+        // 确保父对象正确（如果之前被移除了，重新设置）
+        if (card->parentWidget() != m_myReservationCardContainer)
+            card->setParent(m_myReservationCardContainer);
 
-        // 状态筛选
-        if (selectedStatus != "all") {
-            QString cardStatus = card->status().toLower();
-            bool match = false;
-            for (const QString &s : statusMap.value(selectedStatus)) {
-                if (cardStatus.contains(s, Qt::CaseInsensitive)) {
-                    match = true;
-                    break;
-                }
-            }
-            if (!match) shouldShow = false;
-        }
+        card->setVisible(true);
+        card->setFixedSize(320, 220); // 再次确保大小
 
-        // 日期范围筛选
-        if (shouldShow && selectedDateRange != "all" && startDate.isValid() && endDate.isValid()) {
-            QDate cardStart = card->getStartDate();
-            if (cardStart < startDate || cardStart > endDate)
-                shouldShow = false;
-        }
-
-        // 搜索筛选
-        if (shouldShow && !searchText.isEmpty()) {
-            QString searchLower = searchText.toLower();
-            QString text = card->reservationId() + "|" + card->placeName() + "|" + card->purpose();
-            if (!text.toLower().contains(searchLower))
-                shouldShow = false;
-        }
-
-        if (shouldShow) {
-            card->setParent(gridContainer);
-            card->setVisible(true);
-            card->setFixedSize(320, 220);
-            gridLayout->addWidget(card, row, col);
-            visibleCards++;
-
-            col++;
-            if (col >= cardsPerRow) {
-                col = 0;
-                row++;
-            }
+        m_myReservationCardLayout->addWidget(card, row, col);
+        col++;
+        if (col >= cardsPerRow) {
+            col = 0;
+            row++;
         }
     }
 
-    if (visibleCards == 0) {
-        delete gridContainer;
-        QLabel *noMatchLabel = new QLabel("没有符合条件的预约记录", m_myReservationCardContainer);
-        noMatchLabel->setAlignment(Qt::AlignCenter);
-        noMatchLabel->setStyleSheet("color: #95a5a6; font-size: 15px; padding: 60px;");
-        m_myReservationCardLayout->addWidget(noMatchLabel, 0, 0, 1, 1);
-    } else {
-        m_myReservationCardLayout->addWidget(gridContainer);
-        QLabel *statsLabel = new QLabel(QString("共 %1 条记录").arg(visibleCards), m_myReservationCardContainer);
-        statsLabel->setStyleSheet("color: #4a69bd; font-size: 12px; font-weight: bold; padding: 5px;");
-        gridLayout->addWidget(statsLabel, row + 1, 0, 1, cardsPerRow, Qt::AlignCenter);
+    // 添加统计标签
+    QLabel *statsLabel = new QLabel(
+        QString("共 %1 条记录").arg(m_myReservationCards.size()),
+        m_myReservationCardContainer);
+    statsLabel->setStyleSheet("color: #4a69bd; font-size: 12px; font-weight: bold; padding: 5px;");
+    m_myReservationCardLayout->addWidget(statsLabel, row + 1, 0, 1, cardsPerRow, Qt::AlignCenter);
+
+
+    qDebug() << "布局项数量:" << m_myReservationCardLayout->count();
+    for (int i = 0; i < m_myReservationCardLayout->count(); ++i) {
+        QLayoutItem *item = m_myReservationCardLayout->itemAt(i);
+        if (item->widget()) {
+            qDebug() << "  项" << i << "widget:" << item->widget()
+                << "geometry:" << item->widget()->geometry()
+                << "visible:" << item->widget()->isVisible();
+        }
     }
+    qDebug() << "容器大小:" << m_myReservationCardContainer->size();
+    qDebug() << "滚动区域视口大小:"
+             << (m_myReservationCardContainer->parentWidget()
+                     ? m_myReservationCardContainer->parentWidget()->size() : QSize());
 
     m_isRefreshingMyReservation = false;
 }
@@ -4305,9 +4242,9 @@ void ReservationWidget::clearMyReservationCards()
 
 void ReservationWidget::handleMyReservationResponse(const QString &data)
 {
-    clearMyReservationCards();
+    clearMyReservationCards();  // 会删除旧卡片并清空列表
 
-    if (data.isEmpty() || data == "fail|" || data == "暂无预约记录") {
+    if (data.isEmpty() || data.startsWith("fail|") || data == "暂无预约记录") {
         refreshMyReservationView();
         return;
     }
@@ -4315,32 +4252,36 @@ void ReservationWidget::handleMyReservationResponse(const QString &data)
     QStringList records = data.split(';', Qt::SkipEmptyParts);
     for (const QString &rec : records) {
         QStringList fields = rec.split('|');
-        if (fields.size() >= 7) {
-            QString reservationId = fields[0];
-            QString placeId = fields[1];
-            QString userId = fields[2];
-            QString purpose = fields[3];
-            QString startTime = fields[4];
-            QString endTime = fields[5];
-            QString status = fields[6];
-            QString role = (fields.size() >= 8) ? fields[7] : "";
+        if (fields.size() < 7) continue;
 
-            QString placeName = getPlaceNameById(placeId);
-            QStringList equipmentList = getEquipmentListForPlace(placeId);
-            QString equipmentText = equipmentList.isEmpty() ? "无设备" : equipmentList.join(", ");
+        QString reservationId = fields[0];
+        QString placeId = fields[1];
+        QString userId = fields[2];
+        QString purpose = fields[3];
+        QString startTime = fields[4];
+        QString endTime = fields[5];
+        QString status = fields[6];
+        QString role = (fields.size() >= 8) ? fields[7] : "";
 
-            ReservationCard *card = new ReservationCard(
-                reservationId, placeId, placeName, userId, purpose,
-                startTime, endTime, status, equipmentText,
-                role, false, m_myReservationCardContainer);
+        QString placeName = getPlaceNameById(placeId);
+        QStringList equipmentList = getEquipmentListForPlace(placeId);
+        QString equipmentText = equipmentList.isEmpty() ? "无设备" : equipmentList.join(", ");
 
-            // 连接点击信号等（可选）
-            connect(card, &ReservationCard::cardClicked,
-                    this, &ReservationWidget::onReservationCardClicked);
+        // 父对象设置为 m_myReservationCardContainer
+        ReservationCard *card = new ReservationCard(
+            reservationId, placeId, placeName, userId, purpose,
+            startTime, endTime, status, equipmentText,
+            role, false, m_myReservationCardContainer);
 
-            m_myReservationCards.append(card);
-            m_myReservationCardMap[reservationId] = card;
-        }
+        // 连接信号
+        connect(card, &ReservationCard::cardClicked,
+                this, &ReservationWidget::onReservationCardClicked);
+
+        // 设置固定大小（必须）
+        card->setFixedSize(320, 220);
+
+        m_myReservationCards.append(card);
+        m_myReservationCardMap[reservationId] = card;
     }
 
     refreshMyReservationView();
