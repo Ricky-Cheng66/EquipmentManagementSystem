@@ -6,6 +6,7 @@
 #include <memory>
 #include <netinet/in.h>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string.h>
 #include <string_view>
@@ -382,6 +383,13 @@ void EquipmentManagementServer::process_qt_client_message(
   case ProtocolParser::MY_RESERVATION_QUERY:
     handle_my_reservation_query(fd, parse_result.equipment_id,
                                 parse_result.payload);
+    break;
+
+  case ProtocolParser::QT_MY_CONTROL_QUERY:
+    handle_my_control_query(fd, parse_result.payload);
+    break;
+  case ProtocolParser::QT_MY_CONTROL_REQUEST:
+    handle_my_control_request(fd, parse_result.payload);
     break;
 
   default:
@@ -768,6 +776,169 @@ void EquipmentManagementServer::handle_qt_client_control_command(
     return;
   }
   std::cout << "send_control_to_simulator success" << std::endl;
+}
+
+void EquipmentManagementServer::handle_my_control_query(
+    int fd, const std::string &payload) {
+  // 1. 获取用户信息
+  ConnectionManager::UserInfo user;
+  if (!connections_manager_->get_user_info(fd, user)) {
+    std::vector<char> resp = ProtocolParser::build_my_control_response(
+        ProtocolParser::CLIENT_QT_CLIENT, "fail|用户未登录");
+    send(fd, resp.data(), resp.size(), 0);
+    return;
+  }
+
+  // 2. 查询当前有效预约的场所及设备
+  std::string sql = "SELECT p.place_id, p.equipment_ids "
+                    "FROM reservations r "
+                    "JOIN places p ON r.place_id = p.place_id "
+                    "WHERE r.user_id = " +
+                    std::to_string(user.user_id) +
+                    " "
+                    "AND r.status = 'approved' "
+                    "AND r.start_time <= NOW() "
+                    "AND r.end_time >= NOW()";
+  auto results = db_manager_->execute_query(sql);
+
+  // 3. 收集设备ID（去重）
+  std::set<std::string> equipment_ids;
+  for (const auto &row : results) {
+    if (row.size() < 2)
+      continue;
+    std::string ids_str = row[1];
+    size_t pos = 0;
+    while ((pos = ids_str.find(',')) != std::string::npos) {
+      std::string id = ids_str.substr(0, pos);
+      if (!id.empty())
+        equipment_ids.insert(id);
+      ids_str.erase(0, pos + 1);
+    }
+    if (!ids_str.empty())
+      equipment_ids.insert(ids_str);
+  }
+
+  // 4. 构建响应数据：设备ID|类型|名称|位置|电源状态|在线状态;...
+  std::stringstream data;
+  bool first = true;
+  for (const auto &eq_id : equipment_ids) {
+    auto equipment = equipment_manager_->get_equipment(eq_id);
+    if (!equipment)
+      continue;
+
+    // 从数据库获取详细名称、类型、位置
+    std::string name_sql = "SELECT equipment_name, equipment_type, location "
+                           "FROM equipments WHERE equipment_id = '" +
+                           eq_id + "'";
+    auto name_result = db_manager_->execute_query(name_sql);
+    std::string eq_name = eq_id, eq_type = "unknown", location = "";
+    if (!name_result.empty() && name_result[0].size() >= 3) {
+      eq_name = name_result[0][0];
+      eq_type = name_result[0][1];
+      location = name_result[0][2];
+    }
+
+    bool online = connections_manager_->is_equipment_connected(eq_id);
+    std::string power_state = equipment->get_power_state();
+
+    if (!first)
+      data << ";";
+    data << eq_id << "|" << eq_type << "|" << eq_name << "|" << location << "|"
+         << power_state << "|" << (online ? "online" : "offline");
+    first = false;
+  }
+
+  // 5. 发送响应
+  std::string payload_data = "success|" + data.str();
+  std::vector<char> resp = ProtocolParser::build_my_control_response(
+      ProtocolParser::CLIENT_QT_CLIENT, payload_data);
+  send(fd, resp.data(), resp.size(), 0);
+}
+
+void EquipmentManagementServer::handle_my_control_request(
+    int fd, const std::string &payload) {
+  // 解析 payload: 设备ID|命令|参数
+  auto parts = ProtocolParser::split_string(payload, '|');
+  if (parts.size() < 2) {
+    std::vector<char> resp = ProtocolParser::build_control_response(
+        ProtocolParser::CLIENT_QT_CLIENT, "", false, "fail|格式错误");
+    send(fd, resp.data(), resp.size(), 0);
+    return;
+  }
+
+  std::string equipment_id = parts[0];
+  std::string command = parts[1];
+  std::string parameters = (parts.size() > 2) ? parts[2] : "";
+
+  // 获取用户信息
+  ConnectionManager::UserInfo user;
+  if (!connections_manager_->get_user_info(fd, user)) {
+    std::vector<char> resp = ProtocolParser::build_control_response(
+        ProtocolParser::CLIENT_QT_CLIENT, equipment_id, false,
+        "fail|用户未登录");
+    send(fd, resp.data(), resp.size(), 0);
+    return;
+  }
+
+  // 权限验证：查询当前有效预约中是否包含该设备
+  std::string check_sql = "SELECT COUNT(*) FROM reservations r "
+                          "JOIN places p ON r.place_id = p.place_id "
+                          "WHERE r.user_id = " +
+                          std::to_string(user.user_id) +
+                          " "
+                          "AND r.status = 'approved' "
+                          "AND r.start_time <= NOW() "
+                          "AND r.end_time >= NOW() "
+                          "AND FIND_IN_SET('" +
+                          equipment_id + "', p.equipment_ids) > 0";
+  auto result = db_manager_->execute_query(check_sql);
+  if (result.empty() || result[0][0] == "0") {
+    std::vector<char> resp = ProtocolParser::build_control_response(
+        ProtocolParser::CLIENT_QT_CLIENT, equipment_id, false,
+        "fail|无权控制或不在预约时间内");
+    send(fd, resp.data(), resp.size(), 0);
+    return;
+  }
+
+  // 检查设备是否在线
+  if (!connections_manager_->is_equipment_connected(equipment_id)) {
+    std::vector<char> resp = ProtocolParser::build_control_response(
+        ProtocolParser::CLIENT_QT_CLIENT, equipment_id, false,
+        "fail|设备不在线");
+    send(fd, resp.data(), resp.size(), 0);
+    return;
+  }
+
+  // 转换命令类型（使用协议中定义的枚举）
+  ProtocolParser::ControlCommandType cmd_type;
+  if (command == "turn_on")
+    cmd_type = ProtocolParser::TURN_ON;
+  else if (command == "turn_off")
+    cmd_type = ProtocolParser::TURN_OFF;
+  else if (command == "restart")
+    cmd_type = ProtocolParser::RESTART;
+  else {
+    std::vector<char> resp = ProtocolParser::build_control_response(
+        ProtocolParser::CLIENT_QT_CLIENT, equipment_id, false,
+        "fail|不支持的命令");
+    send(fd, resp.data(), resp.size(), 0);
+    return;
+  }
+
+  // 转发给设备，并附上当前fd以便设备返回时能识别
+  std::string full_params =
+      std::to_string(fd) + "|" + command + "|" + parameters;
+  bool success = connections_manager_->send_control_to_simulator(
+      ProtocolParser::CLIENT_EQUIPMENT, equipment_id, cmd_type, full_params);
+
+  if (!success) {
+    std::vector<char> resp = ProtocolParser::build_control_response(
+        ProtocolParser::CLIENT_QT_CLIENT, equipment_id, false,
+        "fail|发送命令失败");
+    send(fd, resp.data(), resp.size(), 0);
+  }
+  // 成功时不立即响应，等待设备返回后通过
+  // handle_control_command_response_from_simulator 转发
 }
 
 // 处理心跳

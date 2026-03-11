@@ -12,6 +12,7 @@ enum NavigationPages {
     PAGE_DASHBOARD = 0,
     PAGE_EQUIPMENT,
     PAGE_RESERVATION,
+    PAGE_MY_RESERVATION,
     PAGE_ENERGY,
     PAGE_SETTINGS
 };
@@ -545,6 +546,22 @@ void MainWindow::setupCentralStack()
             this, &MainWindow::onMyReservationQueryRequested);
     m_centralStack->addWidget(m_reservationPage);
 
+    // 我的预约页面（学生/老师专用）
+    m_myReservationPage = new MyReservationWidget(this);
+    connect(m_myReservationPage, &MyReservationWidget::queryRequested,
+            this, [this]() {
+                // 当用户点击刷新或页面需要数据时，发送我的预约查询请求
+                if (m_tcpClient && m_tcpClient->isConnected()) {
+                    std::vector<char> msg = ProtocolParser::build_my_reservation_query(
+                        ProtocolParser::CLIENT_QT_CLIENT);
+                    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+                    logMessage("请求我的预约记录");
+                }
+            });
+    connect(m_myReservationPage, &MyReservationWidget::equipmentControlRequested,
+            this, &MainWindow::onEquipmentControlRequested); // 后续实现
+    m_centralStack->addWidget(m_myReservationPage);
+
     // 4. 能耗统计页面
     m_energyPage = new EnergyStatisticsWidget(this);
     connect(m_energyPage, &EnergyStatisticsWidget::energyQueryRequested,
@@ -802,6 +819,11 @@ void MainWindow::setupNavigation()
     reservationItem->setText(0, "预约管理");
     reservationItem->setIcon(0, QIcon(":/icons/reservation.png"));
     reservationItem->setData(0, Qt::UserRole, PAGE_RESERVATION);
+
+    QTreeWidgetItem *myReservationItem = new QTreeWidgetItem(m_navigationTree);
+    myReservationItem->setText(0, "我的预约");
+    myReservationItem->setIcon(0, QIcon(":/icons/reservation.png")); // 复用预约图标
+    myReservationItem->setData(0, Qt::UserRole, PAGE_MY_RESERVATION); // 需要定义 PAGE_MY_RESERVATION
 
     QTreeWidgetItem *energyItem = new QTreeWidgetItem(m_navigationTree);
     energyItem->setText(0, "能耗统计");
@@ -1094,6 +1116,12 @@ void MainWindow::onRefreshDashboard()
             btn->setEnabled(true);
         });
     }
+}
+
+void MainWindow::onEquipmentControlRequested(const QString &reservationId)
+{
+    // 后续打开设备控制子界面
+    qDebug() << "设备控制请求，预约ID:" << reservationId;
 }
 
 // 其他原有的槽函数实现需要保持不变，但需要从构造函数移动到setupMessageHandlers中
@@ -1396,13 +1424,12 @@ void MainWindow::onMyReservationQueryRequested()
 void MainWindow::handleMyReservationResponse(const ProtocolParser::ParseResult &result)
 {
     QString payload = QString::fromStdString(result.payload);
-    // 格式: success|data 或 fail|error
     QStringList parts = payload.split('|', Qt::KeepEmptyParts);
     if (parts.isEmpty()) return;
     bool success = (parts[0] == "success");
     QString data = parts.mid(1).join('|');
-    if (m_reservationPage) {
-        m_reservationPage->handleMyReservationResponse(success ? data : "");
+    if (m_myReservationPage) {
+        m_myReservationPage->handleReservationResponse(success ? data : "");
     }
 }
 
@@ -1840,20 +1867,22 @@ void MainWindow::setupPermissionByRole() {
 
     // 更新菜单项权限
     if (m_reservationAction) {
-        m_reservationAction->setEnabled(true); // 所有用户都可预约
+        m_reservationAction->setEnabled(true);
     }
     if (m_energyAction) {
-        m_energyAction->setEnabled(isAdmin); // 仅管理员可查看能耗
+        m_energyAction->setEnabled(isAdmin);
     }
 
-    // 更新导航栏显示 - 这是关键修复！
+    // 更新导航栏显示
     if (m_navigationTree) {
         for (int i = 0; i < m_navigationTree->topLevelItemCount(); ++i) {
             QTreeWidgetItem *item = m_navigationTree->topLevelItem(i);
             int pageIndex = item->data(0, Qt::UserRole).toInt();
 
-            // 普通用户隐藏能耗统计和系统设置
-            if (!isAdmin && (pageIndex == PAGE_ENERGY || pageIndex == PAGE_SETTINGS)) {
+            if (pageIndex == PAGE_MY_RESERVATION) {
+                // 我的预约：管理员隐藏，学生和老师显示
+                item->setHidden(isAdmin);
+            } else if (!isAdmin && (pageIndex == PAGE_ENERGY || pageIndex == PAGE_SETTINGS)) {
                 item->setHidden(true);
             } else {
                 item->setHidden(false);

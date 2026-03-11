@@ -55,6 +55,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         placequerycard.h placequerycard.cpp
         thresholdsettingswidget.h thresholdsettingswidget.cpp
         alarmwidget.h alarmwidget.cpp
+        myreservationwidget.h myreservationwidget.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET EquipmentManagementClient APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

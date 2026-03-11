@@ -288,6 +288,14 @@ std::vector<char> ProtocolParser::build_control_response(
   return pack_message(body);
 }
 
+std::vector<char>
+ProtocolParser::build_my_control_response(ClientType client_type,
+                                          const std::string &payload) {
+  std::string body =
+      build_message_body(client_type, QT_MY_CONTROL_RESPONSE, "", {payload});
+  return pack_message(body);
+}
+
 // ============ 心跳相关消息实现 ============
 
 std::vector<char>

@@ -62,8 +62,11 @@ public:
     QT_GET_ALL_THRESHOLDS_RESPONSE = 116,
     QT_ALARM_QUERY = 117, // Qt客户端 → 服务端：查询告警列表
     QT_ALARM_QUERY_RESPONSE = 118, // 服务端 → Qt客户端：返回告警列表
-    MY_RESERVATION_QUERY = 119,   // 客户端请求个人预约记录
-    MY_RESERVATION_RESPONSE = 120 // 服务端返回个人预约数据
+    MY_RESERVATION_QUERY = 119,    // 客户端请求个人预约记录
+    MY_RESERVATION_RESPONSE = 120, // 服务端返回个人预约数据
+    QT_MY_CONTROL_QUERY = 121,     // Qt客户端请求可控制设备列表
+    QT_MY_CONTROL_RESPONSE = 122,  // 服务端返回可控制设备列表
+    QT_MY_CONTROL_REQUEST = 123    // Qt客户端发送控制命令
   };
 
   // ============ 客户端类型枚举 ============
@@ -171,6 +174,7 @@ public:
   build_reservation_approve(ClientType client_type, const std::string &place_id,
                             const std::string &payload);
   static std::vector<char> build_my_reservation_query(ClientType client_type);
+
   // ============ 控制相关消息构建 ============
   static std::vector<char>
   build_control_command(ClientType client_type, const std::string &equipment_id,
@@ -184,6 +188,9 @@ public:
   build_control_response(ClientType client_type,
                          const std::string &equipment_id, bool success,
                          const std::string &parameters);
+
+  static std::vector<char>
+  build_my_control_response(ClientType client_type, const std::string &payload);
 
   // ============ 心跳相关消息构建 ============
   static std::vector<char>

@@ -122,6 +122,9 @@ private:
   // 处理来自客户端的控制命令
   void handle_qt_client_control_command(int fd, const std::string &equipment_id,
                                         const std::string &payload);
+  void handle_my_control_query(int fd, const std::string &payload);
+  void handle_my_control_request(int fd, const std::string &payload);
+
   //预约处理函数
   void handle_reservation_apply(int fd, const std::string &equipment_id,
                                 const std::string &payload);
