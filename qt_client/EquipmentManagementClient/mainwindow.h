@@ -21,6 +21,7 @@
 #include "thresholdsettingswidget.h"
 #include "myreservationwidget.h"
 #include "reservationequipmentcontrolwidget.h"
+#include "dashboardwidget.h"
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -86,6 +87,8 @@ private slots:
     void onEquipmentControlRequested(const QString &reservationId);
     void onBackFromControlPage();
 
+    void onDashboardCardClicked(int cardIndex); // 新增：处理仪表板卡片点击
+
 private:
     Ui::MainWindow *ui;
     TcpClient* m_tcpClient;
@@ -146,6 +149,11 @@ private:
     MyReservationWidget *m_myReservationPage;
 
     ReservationEquipmentControlWidget *m_reservationControlPage;
+
+    QWidget *m_adminDashboard;                   // 管理员仪表板
+    QStackedWidget *m_dashboardStack;           // 仪表板堆栈
+    DashboardWidget *m_studentTeacherDashboard; // 学生/老师仪表板
+
 
     // 仪表板相关函数
     void updateDashboardStats();  // 更新仪表板统计数据

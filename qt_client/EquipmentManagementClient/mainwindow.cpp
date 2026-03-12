@@ -241,18 +241,20 @@ void MainWindow::setupStatusBar()
 void MainWindow::setupCentralStack()
 {
     m_centralStack = new QStackedWidget(this);
-    //给整个中央区域设置浅灰色背景
-    // 1. 仪表板页面 - 完全重写
-    m_dashboardPage = new QWidget();
-    m_dashboardPage->setObjectName("dashboardPage");
 
-    // 设置主布局
-    QVBoxLayout *mainLayout = new QVBoxLayout(m_dashboardPage);
+    // ===== 仪表板堆栈（索引0）=====
+    m_dashboardStack = new QStackedWidget(this);
+
+    // 1. 管理员仪表板（原 m_dashboardPage 内容）
+    m_adminDashboard = new QWidget();
+    m_adminDashboard->setObjectName("adminDashboard");
+
+    QVBoxLayout *mainLayout = new QVBoxLayout(m_adminDashboard);
     mainLayout->setContentsMargins(20, 15, 20, 15);
     mainLayout->setSpacing(20);
 
     // 顶部欢迎区域
-    QWidget *welcomeSection = new QWidget(m_dashboardPage);
+    QWidget *welcomeSection = new QWidget(m_adminDashboard);
     welcomeSection->setObjectName("welcomeSection");
     QHBoxLayout *welcomeLayout = new QHBoxLayout(welcomeSection);
     welcomeLayout->setContentsMargins(0, 0, 0, 0);
@@ -268,7 +270,7 @@ void MainWindow::setupCentralStack()
     welcomeLayout->addStretch();
 
     // 统计卡片区域 - 2行网格
-    QWidget *statsSection = new QWidget(m_dashboardPage);
+    QWidget *statsSection = new QWidget(m_adminDashboard);
     QGridLayout *statsGrid = new QGridLayout(statsSection);
     statsGrid->setContentsMargins(0, 0, 0, 0);
     statsGrid->setHorizontalSpacing(15);
@@ -293,7 +295,6 @@ void MainWindow::setupCentralStack()
                                 "}"
                                 ).arg(color));
 
-        // 为卡片添加点击事件
         card->installEventFilter(this);
         card->setProperty("cardType", title);
 
@@ -301,7 +302,6 @@ void MainWindow::setupCentralStack()
         cardLayout->setContentsMargins(20, 20, 20, 20);
         cardLayout->setSpacing(12);
 
-        // 图标和标题
         QHBoxLayout *headerLayout = new QHBoxLayout();
         headerLayout->setContentsMargins(0, 0, 0, 0);
 
@@ -314,7 +314,6 @@ void MainWindow::setupCentralStack()
                                      "}"
                                      ).arg(color));
 
-        // 简单模拟图标，实际使用FontAwesome
         if (icon == "devices") iconLabel->setText("📱");
         else if (icon == "online") iconLabel->setText("🟢");
         else if (icon == "offline") iconLabel->setText("🔴");
@@ -331,16 +330,13 @@ void MainWindow::setupCentralStack()
         headerLayout->addWidget(titleLabel);
         headerLayout->addStretch();
 
-        // 数值
         QLabel *valueLabel = new QLabel(value, card);
         valueLabel->setStyleSheet("font-size: 28px; font-weight: bold; color: #2c3e50;");
 
-        // 保存数值标签指针
         if (valueLabelPtr) {
             *valueLabelPtr = valueLabel;
         }
 
-        // 底部描述
         QLabel *descLabel = new QLabel("点击查看详情", card);
         descLabel->setStyleSheet("color: #95a5a6; font-size: 12px;");
 
@@ -352,21 +348,18 @@ void MainWindow::setupCentralStack()
         return card;
     };
 
-    // 修改统计卡片创建，保存指针
     statsGrid->addWidget(createStatCard("设备总数", "0", "devices", "#3498db", &m_totalDevicesLabel), 0, 0);
     statsGrid->addWidget(createStatCard("可用设备", "0", "online", "#27ae60", &m_onlineDevicesLabel), 0, 1);
     statsGrid->addWidget(createStatCard("离线设备", "0", "offline", "#e74c3c", &m_offlineDevicesLabel), 0, 2);
     statsGrid->addWidget(createStatCard("使用中", "0", "reserved", "#f39c12", &m_reservedDevicesLabel), 0, 3);
 
-
-    // 第二行：能耗和告警卡片
     statsGrid->addWidget(createStatCard("今日能耗", "0 kWh", "energy", "#9b59b6", &m_todayEnergyLabel), 1, 0);
     statsGrid->addWidget(createStatCard("待处理告警", "0", "alert", "#e67e22", &m_activeAlertsLabel), 1, 1);
     statsGrid->addWidget(createStatCard("今日预约", "0", "reservation", "#1abc9c", &m_todayReservationsLabel), 1, 2);
     statsGrid->addWidget(createStatCard("场所使用率", "0%", "usage", "#34495e", &m_placeUsageLabel), 1, 3);
 
     // 快速操作区域
-    QWidget *quickActionsSection = new QWidget(m_dashboardPage);
+    QWidget *quickActionsSection = new QWidget(m_adminDashboard);
     QVBoxLayout *actionsLayout = new QVBoxLayout(quickActionsSection);
     actionsLayout->setContentsMargins(0, 0, 0, 0);
 
@@ -376,7 +369,6 @@ void MainWindow::setupCentralStack()
     QGridLayout *actionsGrid = new QGridLayout();
     actionsGrid->setSpacing(15);
 
-    // 创建快速操作按钮
     auto createActionButton = [quickActionsSection](const QString &text, const QString &icon,
                                                     const QString &desc) -> QPushButton* {
         QPushButton *btn = new QPushButton(quickActionsSection);
@@ -427,7 +419,6 @@ void MainWindow::setupCentralStack()
         return btn;
     };
 
-    // 创建按钮并保存指针
     QPushButton *refreshBtn = createActionButton("刷新数据", "refresh", "刷新仪表板数据");
     QPushButton *reserveBtn = createActionButton("预约场所", "reserve", "快速预约场所");
     QPushButton *energyBtn = createActionButton("能耗分析", "energy", "查看能耗统计数据");
@@ -435,7 +426,6 @@ void MainWindow::setupCentralStack()
     QPushButton *reportBtn = createActionButton("报表导出", "report", "导出能耗表格");
     QPushButton *alertBtn = createActionButton("查看告警", "alert", "查看系统告警信息");
 
-    // 添加到网格
     actionsGrid->addWidget(refreshBtn, 0, 0);
     actionsGrid->addWidget(reserveBtn, 0, 1);
     actionsGrid->addWidget(energyBtn, 0, 2);
@@ -443,12 +433,11 @@ void MainWindow::setupCentralStack()
     actionsGrid->addWidget(reportBtn, 1, 1);
     actionsGrid->addWidget(alertBtn, 1, 2);
 
-    // 直接连接信号
     connect(refreshBtn, &QPushButton::clicked, this, &MainWindow::onRefreshDashboard);
     connect(reserveBtn, &QPushButton::clicked, this, [this]() {
         switchPage(PAGE_RESERVATION);
         if (m_reservationPage && m_reservationPage->m_tabWidget) {
-            m_reservationPage->m_tabWidget->setCurrentIndex(0); // 0 为申请页
+            m_reservationPage->m_tabWidget->setCurrentIndex(0);
         }
     });
     connect(energyBtn, &QPushButton::clicked, this, [this]() { switchPage(PAGE_ENERGY); });
@@ -460,7 +449,7 @@ void MainWindow::setupCentralStack()
     actionsLayout->addLayout(actionsGrid);
 
     // 实时信息区域
-    QWidget *realtimeSection = new QWidget(m_dashboardPage);
+    QWidget *realtimeSection = new QWidget(m_adminDashboard);
     QHBoxLayout *realtimeLayout = new QHBoxLayout(realtimeSection);
     realtimeLayout->setContentsMargins(0, 0, 0, 0);
     realtimeLayout->setSpacing(15);
@@ -503,6 +492,7 @@ void MainWindow::setupCentralStack()
     logTitle->setStyleSheet("font-size: 16px; font-weight: bold; color: #2c3e50; margin-bottom: 10px;");
 
     QTextEdit *logList = new QTextEdit(logCard);
+    m_activityTextEdit = logList;
     logList->setReadOnly(true);
     logList->setPlaceholderText("暂无预约记录");
     logList->setStyleSheet(
@@ -516,25 +506,38 @@ void MainWindow::setupCentralStack()
     logLayout->addWidget(logTitle);
     logLayout->addWidget(logList);
 
-    m_activityTextEdit = logList;
-
     realtimeLayout->addWidget(alertCard);
     realtimeLayout->addWidget(logCard);
 
-    // 添加到主布局
     mainLayout->addWidget(welcomeSection);
     mainLayout->addWidget(statsSection);
     mainLayout->addWidget(quickActionsSection);
     mainLayout->addWidget(realtimeSection);
     mainLayout->addStretch();
 
-    m_centralStack->addWidget(m_dashboardPage);
+    // 2. 学生/老师仪表板
+    m_studentTeacherDashboard = new DashboardWidget(m_userRole, this);
+    connect(m_studentTeacherDashboard, &DashboardWidget::cardClicked,
+            this, &MainWindow::onDashboardCardClicked);
 
-    // 2. 设备管理页面（保持不变）
+    // 将两个仪表板添加到堆栈
+    m_dashboardStack->addWidget(m_adminDashboard);
+    m_dashboardStack->addWidget(m_studentTeacherDashboard);
+
+    // 根据角色设置当前显示的仪表板
+    if (m_userRole == "admin") {
+        m_dashboardStack->setCurrentWidget(m_adminDashboard);
+    } else {
+        m_dashboardStack->setCurrentWidget(m_studentTeacherDashboard);
+    }
+
+    // 将仪表板堆栈加入中央堆栈（索引0）
+    m_centralStack->addWidget(m_dashboardStack);
+
+    // ===== 后续其他页面（设备管理、预约管理等）顺序不变 =====
     m_equipmentPage = new EquipmentManagerWidget(m_tcpClient, m_dispatcher, this);
     m_centralStack->addWidget(m_equipmentPage);
 
-    // 3. 预约管理页面
     m_reservationPage = new ReservationWidget(this);
     connect(m_reservationPage, &ReservationWidget::reservationApplyRequested,
             this, &MainWindow::onReservationApplyRequested);
@@ -546,11 +549,9 @@ void MainWindow::setupCentralStack()
             this, &MainWindow::onMyReservationQueryRequested);
     m_centralStack->addWidget(m_reservationPage);
 
-    // 我的预约页面（学生/老师专用）
     m_myReservationPage = new MyReservationWidget(this);
     connect(m_myReservationPage, &MyReservationWidget::queryRequested,
             this, [this]() {
-                // 当用户点击刷新或页面需要数据时，发送我的预约查询请求
                 if (m_tcpClient && m_tcpClient->isConnected()) {
                     std::vector<char> msg = ProtocolParser::build_my_reservation_query(
                         ProtocolParser::CLIENT_QT_CLIENT);
@@ -559,76 +560,13 @@ void MainWindow::setupCentralStack()
                 }
             });
     connect(m_myReservationPage, &MyReservationWidget::equipmentControlRequested,
-            this, &MainWindow::onEquipmentControlRequested); // 后续实现
+            this, &MainWindow::onEquipmentControlRequested);
     m_centralStack->addWidget(m_myReservationPage);
 
-    // 4. 能耗统计页面
     m_energyPage = new EnergyStatisticsWidget(this);
     connect(m_energyPage, &EnergyStatisticsWidget::energyQueryRequested,
             this, &MainWindow::onEnergyQueryRequested);
     m_centralStack->addWidget(m_energyPage);
-
-    // 连接设备管理页面的设备列表加载完成信号
-    if (m_equipmentPage) {
-        // 如果设备列表已存在数据，立即填充
-        if (m_equipmentPage->m_equipmentModel->rowCount() > 0) {
-            populateEnergyPageFilters();
-        }
-        // 无论是否已有数据，都连接信号确保后续更新时刷新
-        connect(m_equipmentPage, &EquipmentManagerWidget::deviceListLoaded,
-                this, &MainWindow::populateEnergyPageFilters);
-    }
-    // 连接设备列表加载完成信号，用于填充阈值页面的设备下拉框
-    connect(m_equipmentPage, &EquipmentManagerWidget::deviceListLoaded,
-            this, [this]() {
-                // 如果阈值页面和设备页面都已就绪
-                if (m_thresholdSettingsPage && m_equipmentPage) {
-                    QHash<QString, QString> devMap;
-                    QStandardItemModel *model = m_equipmentPage->m_equipmentModel;
-                    // 遍历设备模型，提取设备ID、类型和位置
-                    for (int row = 0; row < model->rowCount(); ++row) {
-                        QString devId = model->item(row, 0)->text();   // 设备ID
-                        QString type = model->item(row, 1)->text();   // 设备类型
-                        QString loc = model->item(row, 2)->text();    // 位置
-                        QString display = type + " @ " + loc;         // 组合显示名称
-                        devMap[devId] = display;
-                    }
-                    // 将设备列表传递给阈值设置页面
-                    m_thresholdSettingsPage->setEquipmentList(devMap);
-                }
-            });
-
-    // 5. 系统设置页面（告警中心 + 阈值设置）
-    QWidget *settingsContainer = new QWidget();
-    QVBoxLayout *settingsLayout = new QVBoxLayout(settingsContainer);
-    settingsLayout->setContentsMargins(0, 0, 0, 0);
-
-    QTabWidget *settingsTab = new QTabWidget(settingsContainer);
-    settingsTab->setDocumentMode(true);
-    settingsTab->tabBar()->setExpanding(false);
-    settingsTab->setObjectName("settingsTab");
-
-    // 告警中心页面
-    m_alarmPage = new AlarmWidget(this);
-    settingsTab->addTab(m_alarmPage, "告警中心");
-
-    // 阈值设置页面
-    m_thresholdSettingsPage = new ThresholdSettingsWidget(this);
-    connect(m_thresholdSettingsPage, &ThresholdSettingsWidget::setThresholdRequested,
-            this, &MainWindow::onSetThresholdRequested);
-    settingsTab->addTab(m_thresholdSettingsPage, "阈值设置");
-
-    settingsLayout->addWidget(settingsTab);
-    m_centralStack->addWidget(settingsContainer);
-
-    // 连接告警确认信号
-    connect(m_alarmPage, &AlarmWidget::acknowledgeAlarm,
-            this, &MainWindow::onAcknowledgeAlarm);
-
-    // 如果已有告警缓存，初始化告警页面
-    if (!m_alarms.isEmpty()) {
-        m_alarmPage->setAlarms(m_alarms);
-    }
 
     // 预约设备控制页面（二级页面）
     m_reservationControlPage = new ReservationEquipmentControlWidget("", this);
@@ -638,6 +576,57 @@ void MainWindow::setupCentralStack()
             this, &MainWindow::onBackFromControlPage);
     m_centralStack->addWidget(m_reservationControlPage);
 
+    // 系统设置页面（告警中心 + 阈值设置）
+    QWidget *settingsContainer = new QWidget();
+    QVBoxLayout *settingsLayout = new QVBoxLayout(settingsContainer);
+    settingsLayout->setContentsMargins(0, 0, 0, 0);
+
+    QTabWidget *settingsTab = new QTabWidget(settingsContainer);
+    settingsTab->setDocumentMode(true);
+    settingsTab->tabBar()->setExpanding(false);
+    settingsTab->setObjectName("settingsTab");
+
+    m_alarmPage = new AlarmWidget(this);
+    settingsTab->addTab(m_alarmPage, "告警中心");
+
+    m_thresholdSettingsPage = new ThresholdSettingsWidget(this);
+    connect(m_thresholdSettingsPage, &ThresholdSettingsWidget::setThresholdRequested,
+            this, &MainWindow::onSetThresholdRequested);
+    settingsTab->addTab(m_thresholdSettingsPage, "阈值设置");
+
+    settingsLayout->addWidget(settingsTab);
+    m_centralStack->addWidget(settingsContainer);
+
+    connect(m_alarmPage, &AlarmWidget::acknowledgeAlarm,
+            this, &MainWindow::onAcknowledgeAlarm);
+
+    if (!m_alarms.isEmpty()) {
+        m_alarmPage->setAlarms(m_alarms);
+    }
+
+    // 连接设备管理页面的设备列表加载完成信号（保持不变）
+    if (m_equipmentPage) {
+        if (m_equipmentPage->m_equipmentModel->rowCount() > 0) {
+            populateEnergyPageFilters();
+        }
+        connect(m_equipmentPage, &EquipmentManagerWidget::deviceListLoaded,
+                this, &MainWindow::populateEnergyPageFilters);
+    }
+    connect(m_equipmentPage, &EquipmentManagerWidget::deviceListLoaded,
+            this, [this]() {
+                if (m_thresholdSettingsPage && m_equipmentPage) {
+                    QHash<QString, QString> devMap;
+                    QStandardItemModel *model = m_equipmentPage->m_equipmentModel;
+                    for (int row = 0; row < model->rowCount(); ++row) {
+                        QString devId = model->item(row, 0)->text();
+                        QString type = model->item(row, 1)->text();
+                        QString loc = model->item(row, 2)->text();
+                        QString display = type + " @ " + loc;
+                        devMap[devId] = display;
+                    }
+                    m_thresholdSettingsPage->setEquipmentList(devMap);
+                }
+            });
 
     // 设置仪表板信号连接
     setupDashboardConnections();
@@ -1140,6 +1129,45 @@ void MainWindow::onBackFromControlPage()
     m_centralStack->setCurrentWidget(m_myReservationPage);
 }
 
+void MainWindow::onDashboardCardClicked(int cardIndex)
+{
+    switch (cardIndex) {
+    case 0: // 今日我的预约
+        switchPage(PAGE_MY_RESERVATION);
+        // TODO: 后续可在 MyReservationWidget 中添加今日筛选功能
+        logMessage("跳转到我的预约页面（今日）");
+        break;
+    case 1: // 我的预约总数
+        switchPage(PAGE_MY_RESERVATION);
+        logMessage("跳转到我的预约页面（全部）");
+        break;
+    case 2: // 待审批
+        if (m_userRole == "teacher") {
+            // 老师：切换到预约管理页的“待我审批”标签
+            switchPage(PAGE_RESERVATION);
+            if (m_reservationPage && m_reservationPage->m_tabWidget) {
+                int tabCount = m_reservationPage->m_tabWidget->count();
+                for (int i = 0; i < tabCount; ++i) {
+                    if (m_reservationPage->m_tabWidget->tabText(i) == "👨‍🏫 待我审批") {
+                        m_reservationPage->m_tabWidget->setCurrentIndex(i);
+                        break;
+                    }
+                }
+            }
+            logMessage("跳转到预约管理页（待我审批）");
+        } else { // 学生
+            switchPage(PAGE_MY_RESERVATION);
+            // TODO: 后续可在 MyReservationWidget 中添加状态筛选功能
+            logMessage("跳转到我的预约页面（待审批）");
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+
+
 // 其他原有的槽函数实现需要保持不变，但需要从构造函数移动到setupMessageHandlers中
 
 // 注意：原有的所有消息处理器注册代码需要从构造函数移动到setupMessageHandlers函数中
@@ -1590,6 +1618,60 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
 
     // ---------- 4. 将数据交给预约组件统一处理 ----------
     m_reservationPage->handleReservationData(data);
+
+
+    // ---------- 更新学生/老师仪表板 ----------
+    if (m_userRole != "admin" && m_studentTeacherDashboard) {
+        int todayCount = 0;
+        int totalCount = 0;
+        int pendingCount = 0;
+        QStringList recentMine;
+        QStringList recentPending;
+
+        QStringList records = data.split(';', Qt::SkipEmptyParts);
+        QDate today = QDate::currentDate();
+
+        for (const QString &rec : records) {
+            QStringList fields = rec.split('|');
+            if (fields.size() < 7) continue;
+            QString userId = fields[2];
+            QString placeId = fields[1];
+            QString purpose = fields[3];
+            QString startTime = fields[4];
+            QString status = fields[6];
+
+            QDateTime start = QDateTime::fromString(startTime, "yyyy-MM-dd HH:mm:ss");
+            if (userId == QString::number(m_currentUserId)) {
+                totalCount++;
+                if (start.date() == today) todayCount++;
+                if (recentMine.size() < 2) {
+                    QString placeName = m_reservationPage ? m_reservationPage->getPlaceNameById(placeId) : placeId;
+                    recentMine.append(QString("[%1] %2: %3").arg(start.toString("hh:mm")).arg(placeName).arg(purpose));
+                }
+            }
+            if (m_userRole == "teacher") {
+                if (status.toLower() == "pending_teacher") {
+                    pendingCount++;
+                    if (recentPending.size() < 2) {
+                        QString placeName = m_reservationPage ? m_reservationPage->getPlaceNameById(placeId) : placeId;
+                        recentPending.append(QString("[%1] %2: %3").arg(start.toString("hh:mm")).arg(placeName).arg(purpose));
+                    }
+                }
+            } else { // student
+                if (status.toLower() == "pending_teacher" || status.toLower() == "pending_admin") {
+                    pendingCount++;
+                }
+            }
+        }
+
+        m_studentTeacherDashboard->setTodayMyReservations(todayCount);
+        m_studentTeacherDashboard->setTotalMyReservations(totalCount);
+        m_studentTeacherDashboard->setPendingApprovalCount(pendingCount);
+        m_studentTeacherDashboard->setRecentMyReservations(recentMine);
+        if (m_userRole == "teacher") {
+            m_studentTeacherDashboard->setRecentPendingReservations(recentPending);
+        }
+    }
 
     // ---------- 5. 仪表板更新（如果需要）----------
     if (m_centralStack && m_centralStack->currentIndex() == PAGE_DASHBOARD) {
