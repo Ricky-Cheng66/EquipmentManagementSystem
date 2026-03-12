@@ -562,14 +562,6 @@ void MainWindow::setupCentralStack()
             this, &MainWindow::onEquipmentControlRequested); // 后续实现
     m_centralStack->addWidget(m_myReservationPage);
 
-    // 预约设备控制页面（二级页面）
-    m_reservationControlPage = new ReservationEquipmentControlWidget("", this);
-    m_reservationControlPage->setTcpClient(m_tcpClient);
-    m_reservationControlPage->setMessageDispatcher(m_dispatcher);
-    connect(m_reservationControlPage, &ReservationEquipmentControlWidget::backRequested,
-            this, &MainWindow::onBackFromControlPage);
-    m_centralStack->addWidget(m_reservationControlPage);
-
     // 4. 能耗统计页面
     m_energyPage = new EnergyStatisticsWidget(this);
     connect(m_energyPage, &EnergyStatisticsWidget::energyQueryRequested,
@@ -637,6 +629,14 @@ void MainWindow::setupCentralStack()
     if (!m_alarms.isEmpty()) {
         m_alarmPage->setAlarms(m_alarms);
     }
+
+    // 预约设备控制页面（二级页面）
+    m_reservationControlPage = new ReservationEquipmentControlWidget("", this);
+    m_reservationControlPage->setTcpClient(m_tcpClient);
+    m_reservationControlPage->setMessageDispatcher(m_dispatcher);
+    connect(m_reservationControlPage, &ReservationEquipmentControlWidget::backRequested,
+            this, &MainWindow::onBackFromControlPage);
+    m_centralStack->addWidget(m_reservationControlPage);
 
 
     // 设置仪表板信号连接

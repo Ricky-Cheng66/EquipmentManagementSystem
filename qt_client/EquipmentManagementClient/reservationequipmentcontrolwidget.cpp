@@ -306,6 +306,8 @@ void ReservationEquipmentControlWidget::onControlButtonClicked()
     QString equipmentId = btn->property("equipmentId").toString();
     QString command = btn->property("command").toString();
 
+    qDebug() << "[发送] 设备:" << equipmentId << "命令:" << command;
+
     if (!m_tcpClient || !m_tcpClient->isConnected()) {
         QMessageBox::warning(this, "错误", "网络未连接");
         return;
@@ -322,6 +324,14 @@ void ReservationEquipmentControlWidget::onControlButtonClicked()
 
 void ReservationEquipmentControlWidget::handleControlResponse(const ProtocolParser::ParseResult &result)
 {
+    if (!isVisible()) {
+        qDebug() << "ReservationEquipmentControlWidget not visible, ignoring control response";
+        return;
+    }
+    qDebug() << "[ReservationEquipmentControlWidget] handleControlResponse called, this:" << this;
+    QString equipId = QString::fromStdString(result.equipment_id);
+    qDebug() << "[响应] 设备:" << equipId << "载荷:" << QString::fromStdString(result.payload);
+    qDebug() << "[响应] 当前控件映射:" << m_equipmentControls.keys();
     QString equipmentId = QString::fromStdString(result.equipment_id);  // 设备ID从消息中获取
     QString payload = QString::fromStdString(result.payload);
     QStringList parts = payload.split('|');
