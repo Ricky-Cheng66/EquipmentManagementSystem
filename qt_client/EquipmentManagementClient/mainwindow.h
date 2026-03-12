@@ -154,6 +154,8 @@ private:
     QStackedWidget *m_dashboardStack;           // 仪表板堆栈
     DashboardWidget *m_studentTeacherDashboard; // 学生/老师仪表板
 
+    QAction *m_equipmentAction; // 设备管理工具栏按钮
+
 
     // 仪表板相关函数
     void updateDashboardStats();  // 更新仪表板统计数据

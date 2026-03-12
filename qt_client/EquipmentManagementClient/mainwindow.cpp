@@ -174,7 +174,10 @@ void MainWindow::setupToolBar()
     QAction *refreshAction = m_toolBar->addAction(QIcon(":/icons/refresh.png"), "刷新");
     m_toolBar->addSeparator();
     QAction *dashboardAction = m_toolBar->addAction(QIcon(":/icons/dashboard.png"), "仪表板");
-    QAction *equipmentAction = m_toolBar->addAction(QIcon(":/icons/equipment.png"), "设备管理");
+    m_equipmentAction = m_toolBar->addAction(QIcon(":/icons/equipment.png"), "设备管理"); // 保存指针
+
+    // 根据角色隐藏设备管理按钮
+    m_equipmentAction->setVisible(m_userRole == "admin");
 
     // 移除原有的连接状态检查逻辑
     connect(refreshAction, &QAction::triggered, [this]() {
@@ -202,7 +205,7 @@ void MainWindow::setupToolBar()
     });
 
     connect(dashboardAction, &QAction::triggered, [this]() { switchPage(PAGE_DASHBOARD); });
-    connect(equipmentAction, &QAction::triggered, [this]() { switchPage(PAGE_EQUIPMENT); });
+    connect(m_equipmentAction, &QAction::triggered, [this]() { switchPage(PAGE_EQUIPMENT); });
 }
 
 void MainWindow::setupStatusBar()
@@ -423,6 +426,7 @@ void MainWindow::setupCentralStack()
     QPushButton *reserveBtn = createActionButton("预约场所", "reserve", "快速预约场所");
     QPushButton *energyBtn = createActionButton("能耗分析", "energy", "查看能耗统计数据");
     QPushButton *controlBtn = createActionButton("远程开关设备", "control", "远程控制设备开关");
+    controlBtn->setVisible(m_userRole == "admin");
     QPushButton *reportBtn = createActionButton("报表导出", "report", "导出能耗表格");
     QPushButton *alertBtn = createActionButton("查看告警", "alert", "查看系统告警信息");
 
@@ -811,6 +815,7 @@ void MainWindow::setupNavigation()
     equipmentItem->setText(0, "设备管理");
     equipmentItem->setIcon(0, QIcon(":/icons/equipment.png"));
     equipmentItem->setData(0, Qt::UserRole, PAGE_EQUIPMENT);
+    equipmentItem->setHidden(m_userRole != "admin");
 
     QTreeWidgetItem *reservationItem = new QTreeWidgetItem(m_navigationTree);
     reservationItem->setText(0, "预约管理");
@@ -858,6 +863,11 @@ void MainWindow::onNavigationItemClicked(QTreeWidgetItem *item, int column)
 
 void MainWindow::switchPage(int pageIndex)
 {
+    // 非管理员禁止切换到设备管理页面
+    if (pageIndex == PAGE_EQUIPMENT && m_userRole != "admin") {
+        return; // 直接忽略
+    }
+
     static QSet<int> loadedPages;  // 记录已经加载过的页面
 
     if (pageIndex >= 0 && pageIndex < m_centralStack->count()) {
