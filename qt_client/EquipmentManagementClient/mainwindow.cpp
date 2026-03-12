@@ -815,7 +815,6 @@ void MainWindow::setupNavigation()
     equipmentItem->setText(0, "设备管理");
     equipmentItem->setIcon(0, QIcon(":/icons/equipment.png"));
     equipmentItem->setData(0, Qt::UserRole, PAGE_EQUIPMENT);
-    equipmentItem->setHidden(m_userRole != "admin");
 
     QTreeWidgetItem *reservationItem = new QTreeWidgetItem(m_navigationTree);
     reservationItem->setText(0, "预约管理");
@@ -2004,12 +2003,8 @@ void MainWindow::setupPermissionByRole() {
     bool isAdmin = (m_userRole == "admin");
 
     // 更新菜单项权限
-    if (m_reservationAction) {
-        m_reservationAction->setEnabled(true);
-    }
-    if (m_energyAction) {
-        m_energyAction->setEnabled(isAdmin);
-    }
+    if (m_reservationAction) m_reservationAction->setEnabled(true);
+    if (m_energyAction) m_energyAction->setEnabled(isAdmin);
 
     // 更新导航栏显示
     if (m_navigationTree) {
@@ -2018,10 +2013,11 @@ void MainWindow::setupPermissionByRole() {
             int pageIndex = item->data(0, Qt::UserRole).toInt();
 
             if (pageIndex == PAGE_MY_RESERVATION) {
-                // 我的预约：管理员隐藏，学生和老师显示
-                item->setHidden(isAdmin);
+                item->setHidden(isAdmin);                     // 管理员隐藏
+            } else if (pageIndex == PAGE_EQUIPMENT) {
+                item->setHidden(!isAdmin);                    // 仅管理员显示
             } else if (!isAdmin && (pageIndex == PAGE_ENERGY || pageIndex == PAGE_SETTINGS)) {
-                item->setHidden(true);
+                item->setHidden(true);                         // 非管理员隐藏能耗和设置
             } else {
                 item->setHidden(false);
             }
