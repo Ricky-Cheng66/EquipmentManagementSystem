@@ -65,6 +65,30 @@ void MyReservationWidget::setUserInfo(const QString &role, const QString &userId
     m_userId = userId;
 }
 
+void MyReservationWidget::setTodayFilter()
+{
+    if (!m_filterBar) return;
+    m_filterBar->setDateFilterCombo("today");  // 设置为“今天”
+    m_filterBar->setStatusComboDefault("all");
+    onFilterChanged();
+}
+
+void MyReservationWidget::setPendingFilter()
+{
+    if (!m_filterBar) return;
+    m_filterBar->setDateFilterCombo("all");      // 确保日期为全部
+    m_filterBar->setStatusComboDefault("pending");
+    onFilterChanged();
+}
+
+void MyReservationWidget::clearFilters()
+{
+    if (!m_filterBar) return;
+    m_filterBar->setDateFilterCombo("all");      // 日期设为“全部日期”
+    m_filterBar->setStatusComboDefault("all");   // 状态设为“全部状态”
+    onFilterChanged(); // 触发刷新
+}
+
 void MyReservationWidget::handleReservationResponse(const QString &data)
 {
     // 清空旧卡片

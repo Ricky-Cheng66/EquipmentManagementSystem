@@ -31,6 +31,8 @@ public:
     void setStatuses(const QStringList &statuses);
     void setPlaceTypes(const QStringList &types);  // 设置场所类型
 
+    void setDateFilterCombo(const QString &value);
+
     // 获取日期范围
     QDate startDate() const;
     QDate endDate() const;

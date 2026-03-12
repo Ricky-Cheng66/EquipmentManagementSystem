@@ -1134,16 +1134,18 @@ void MainWindow::onDashboardCardClicked(int cardIndex)
     switch (cardIndex) {
     case 0: // 今日我的预约
         switchPage(PAGE_MY_RESERVATION);
-        // TODO: 后续可在 MyReservationWidget 中添加今日筛选功能
-        logMessage("跳转到我的预约页面（今日）");
+        if (m_myReservationPage) {
+            m_myReservationPage->setTodayFilter();
+        }
         break;
     case 1: // 我的预约总数
         switchPage(PAGE_MY_RESERVATION);
-        logMessage("跳转到我的预约页面（全部）");
+        if (m_myReservationPage) {
+            m_myReservationPage->clearFilters(); // 重置所有筛选
+        }
         break;
     case 2: // 待审批
         if (m_userRole == "teacher") {
-            // 老师：切换到预约管理页的“待我审批”标签
             switchPage(PAGE_RESERVATION);
             if (m_reservationPage && m_reservationPage->m_tabWidget) {
                 int tabCount = m_reservationPage->m_tabWidget->count();
@@ -1154,11 +1156,11 @@ void MainWindow::onDashboardCardClicked(int cardIndex)
                     }
                 }
             }
-            logMessage("跳转到预约管理页（待我审批）");
         } else { // 学生
             switchPage(PAGE_MY_RESERVATION);
-            // TODO: 后续可在 MyReservationWidget 中添加状态筛选功能
-            logMessage("跳转到我的预约页面（待审批）");
+            if (m_myReservationPage) {
+                m_myReservationPage->setPendingFilter(); // 已包含日期重置
+            }
         }
         break;
     default:
@@ -1634,32 +1636,60 @@ void MainWindow::handleReservationQueryResponse(const ProtocolParser::ParseResul
         for (const QString &rec : records) {
             QStringList fields = rec.split('|');
             if (fields.size() < 7) continue;
-            QString userId = fields[2];
+            QString reservationId = fields[0];
             QString placeId = fields[1];
+            QString userId = fields[2];
             QString purpose = fields[3];
             QString startTime = fields[4];
+            QString endTime = fields[5];
             QString status = fields[6];
+            QString role = fields.size() > 7 ? fields[7] : "";
 
             QDateTime start = QDateTime::fromString(startTime, "yyyy-MM-dd HH:mm:ss");
+            QDateTime end = QDateTime::fromString(endTime, "yyyy-MM-dd HH:mm:ss");
+            if (!start.isValid() || !end.isValid()) continue;
+
+            // 统计我的预约（当前用户的）
             if (userId == QString::number(m_currentUserId)) {
                 totalCount++;
-                if (start.date() == today) todayCount++;
+                if (start.date() == today) {
+                    todayCount++;
+                }
                 if (recentMine.size() < 2) {
                     QString placeName = m_reservationPage ? m_reservationPage->getPlaceNameById(placeId) : placeId;
-                    recentMine.append(QString("[%1] %2: %3").arg(start.toString("hh:mm")).arg(placeName).arg(purpose));
+                    QString dateStr = start.toString("yyyy-MM-dd");
+                    QString timeRange = start.toString("hh:mm") + "-" + end.toString("hh:mm");
+                    QString item = QString("%1 %2 %3: %4")
+                                       .arg(placeName)
+                                       .arg(dateStr)
+                                       .arg(timeRange)
+                                       .arg(purpose);
+                    recentMine.append(item);
                 }
             }
+
+            // 统计待审批
             if (m_userRole == "teacher") {
                 if (status.toLower() == "pending_teacher") {
                     pendingCount++;
                     if (recentPending.size() < 2) {
                         QString placeName = m_reservationPage ? m_reservationPage->getPlaceNameById(placeId) : placeId;
-                        recentPending.append(QString("[%1] %2: %3").arg(start.toString("hh:mm")).arg(placeName).arg(purpose));
+                        QString dateStr = start.toString("yyyy-MM-dd");
+                        QString timeRange = start.toString("hh:mm") + "-" + end.toString("hh:mm");
+                        QString item = QString("%1 %2 %3: %4")
+                                           .arg(placeName)
+                                           .arg(dateStr)
+                                           .arg(timeRange)
+                                           .arg(purpose);
+                        recentPending.append(item);
                     }
                 }
             } else { // student
-                if (status.toLower() == "pending_teacher" || status.toLower() == "pending_admin") {
+                // 只统计当前用户的待审批预约
+                if (userId == QString::number(m_currentUserId) &&
+                    (status.toLower() == "pending_teacher" || status.toLower() == "pending_admin")) {
                     pendingCount++;
+                    // 学生不显示待审批详情，只计数
                 }
             }
         }

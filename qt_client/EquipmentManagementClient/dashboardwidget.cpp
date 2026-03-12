@@ -1,5 +1,6 @@
 #include "dashboardwidget.h"
 #include <QDebug>
+#include <QEvent>
 
 DashboardWidget::DashboardWidget(const QString &role, QWidget *parent)
     : QWidget(parent), m_role(role)
@@ -188,6 +189,7 @@ void DashboardWidget::setRecentPendingReservations(const QStringList &items)
     }
 }
 
+
 void DashboardWidget::onCardClicked()
 {
     QObject *senderObj = sender();
@@ -204,4 +206,21 @@ void DashboardWidget::resizeEvent(QResizeEvent *event)
 {
     QWidget::resizeEvent(event);
     // 可在此处调整卡片布局
+}
+
+bool DashboardWidget::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::MouseButtonPress) {
+        if (watched == m_cardToday) {
+            emit cardClicked(0);
+            return true;
+        } else if (watched == m_cardTotal) {
+            emit cardClicked(1);
+            return true;
+        } else if (watched == m_cardPending) {
+            emit cardClicked(2);
+            return true;
+        }
+    }
+    return QWidget::eventFilter(watched, event);
 }

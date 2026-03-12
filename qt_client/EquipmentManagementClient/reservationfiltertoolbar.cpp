@@ -305,6 +305,14 @@ void ReservationFilterToolBar::setPlaceTypes(const QStringList &types)
     }
 }
 
+void ReservationFilterToolBar::setDateFilterCombo(const QString &value)
+{
+    int index = m_dateFilterCombo->findData(value);
+    if (index >= 0) {
+        m_dateFilterCombo->setCurrentIndex(index);
+    }
+}
+
 QDate ReservationFilterToolBar::startDate() const
 {
     return m_startDateEdit ? m_startDateEdit->date() : QDate();

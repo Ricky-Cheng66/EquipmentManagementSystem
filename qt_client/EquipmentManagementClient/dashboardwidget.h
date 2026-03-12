@@ -25,11 +25,14 @@ public:
     void setRecentMyReservations(const QStringList &items);      // 个人预约列表（格式：时间-场所-用途）
     void setRecentPendingReservations(const QStringList &items); // 待审批列表（仅老师）
 
+
 signals:
     void cardClicked(int cardIndex); // 0:今日预约, 1:我的预约总数, 2:待审批
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
+
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private slots:
     void onCardClicked();

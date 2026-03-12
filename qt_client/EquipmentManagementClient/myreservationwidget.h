@@ -24,6 +24,12 @@ public:
     // 设置用户信息（角色、ID），由 MainWindow 调用
     void setUserInfo(const QString &role, const QString &userId);
 
+    void setTodayFilter();   // 筛选今日记录
+    void setPendingFilter(); // 筛选待审批记录
+
+    void clearFilters(); // 重置所有筛选条件（全部日期、全部状态）
+
+
 signals:
     // 请求查询我的预约（由 MainWindow 转发给服务器）
     void queryRequested();
