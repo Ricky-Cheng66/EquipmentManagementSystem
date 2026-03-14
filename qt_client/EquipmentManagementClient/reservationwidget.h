@@ -86,7 +86,6 @@ public slots:
 
     void handleReservationData(const QString &data);
 
-    void handleMyReservationResponse(const QString &data);
 private slots:
     void onTabChanged(int index);
     // 申请页
@@ -132,8 +131,6 @@ private slots:
 
     void onTeacherStatusActionRequested(const QString &reservationId, const QString &action);
 
-    void onMyReservationFilterChanged();
-    void onMyReservationRefreshRequested();
 
 
 private:
@@ -309,21 +306,6 @@ private:
     void clearTeacherCards();                      // 清理卡片（原代码）
     void clearTeacherApproveCards();               // 清理审批卡片（新改动）
 
-
-    // 我的预约页面相关
-    ReservationFilterToolBar *m_myReservationFilterBar;
-    QWidget *m_myReservationPage;
-    QWidget *m_myReservationCardContainer;
-    QGridLayout *m_myReservationCardLayout;
-    QList<ReservationCard*> m_myReservationCards;
-    QMap<QString, ReservationCard*> m_myReservationCardMap;
-    QTimer *m_myReservationRefreshTimer;
-    bool m_isRefreshingMyReservation;
-
-    // 辅助函数
-    void setupMyReservationPage();
-    void refreshMyReservationView();
-    void clearMyReservationCards();
 };
 
 #endif // RESERVATIONWIDGET_H
