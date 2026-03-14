@@ -566,21 +566,13 @@ void MainWindow::setupCentralStack()
     connect(m_myReservationPage, &MyReservationWidget::equipmentControlRequested,
             this, &MainWindow::onEquipmentControlRequested);
     m_centralStack->addWidget(m_myReservationPage);
-
+    //
     m_energyPage = new EnergyStatisticsWidget(this);
     connect(m_energyPage, &EnergyStatisticsWidget::energyQueryRequested,
             this, &MainWindow::onEnergyQueryRequested);
-    m_centralStack->addWidget(m_energyPage);
+    m_centralStack->addWidget(m_energyPage);  // 索引4
 
-    // 预约设备控制页面（二级页面）
-    m_reservationControlPage = new ReservationEquipmentControlWidget("", this);
-    m_reservationControlPage->setTcpClient(m_tcpClient);
-    m_reservationControlPage->setMessageDispatcher(m_dispatcher);
-    connect(m_reservationControlPage, &ReservationEquipmentControlWidget::backRequested,
-            this, &MainWindow::onBackFromControlPage);
-    m_centralStack->addWidget(m_reservationControlPage);
-
-    // 系统设置页面（告警中心 + 阈值设置）
+    // 系统设置页面（告警中心 + 阈值设置）—— 移到预约控制页面之前
     QWidget *settingsContainer = new QWidget();
     QVBoxLayout *settingsLayout = new QVBoxLayout(settingsContainer);
     settingsLayout->setContentsMargins(0, 0, 0, 0);
@@ -599,7 +591,7 @@ void MainWindow::setupCentralStack()
     settingsTab->addTab(m_thresholdSettingsPage, "阈值设置");
 
     settingsLayout->addWidget(settingsTab);
-    m_centralStack->addWidget(settingsContainer);
+    m_centralStack->addWidget(settingsContainer);  // 索引5
 
     connect(m_alarmPage, &AlarmWidget::acknowledgeAlarm,
             this, &MainWindow::onAcknowledgeAlarm);
@@ -607,6 +599,14 @@ void MainWindow::setupCentralStack()
     if (!m_alarms.isEmpty()) {
         m_alarmPage->setAlarms(m_alarms);
     }
+
+    // 预约设备控制页面（二级页面）—— 放在系统设置之后
+    m_reservationControlPage = new ReservationEquipmentControlWidget("", this);
+    m_reservationControlPage->setTcpClient(m_tcpClient);
+    m_reservationControlPage->setMessageDispatcher(m_dispatcher);
+    connect(m_reservationControlPage, &ReservationEquipmentControlWidget::backRequested,
+            this, &MainWindow::onBackFromControlPage);
+    m_centralStack->addWidget(m_reservationControlPage);  // 索引6
 
     // 连接设备管理页面的设备列表加载完成信号（保持不变）
     if (m_equipmentPage) {
