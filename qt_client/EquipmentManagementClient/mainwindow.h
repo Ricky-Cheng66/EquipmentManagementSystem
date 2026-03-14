@@ -159,6 +159,7 @@ private:
 
     // 仪表板相关函数
     void updateDashboardStats();  // 更新仪表板统计数据
+    void updateNonAdminDashboardStats(); //非管理员更新仪表板统计数据
     void updateRecentAlerts();    // 更新最近告警
     void updateActivityLog();     // 更新活动日志
     void setupDashboardConnections(); // 设置仪表板信号连接
@@ -182,6 +183,8 @@ private:
     void requestTodayReservations();
 
     void requestInitialData();   // 请求初始数据
+    void requestNonAdminInitialData();      // 非管理员初始化函数
+
 
     void updateRecentReservations(const QString &data);
 };

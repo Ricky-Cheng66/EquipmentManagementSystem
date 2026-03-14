@@ -87,8 +87,11 @@ MainWindow::MainWindow(TcpClient* tcpClient, MessageDispatcher* dispatcher,
     m_alarms.clear();   // 初始化告警列表
 
     logMessage(QString("系统启动完成，欢迎 %1 (ID: %2, 角色: %3)").arg(username).arg(userId).arg(role));
-    // 延迟100ms启动初始数据请求，确保窗口已显示且网络稳定
-    QTimer::singleShot(100, this, &MainWindow::requestInitialData);
+    if (m_userRole == "admin") {
+        QTimer::singleShot(100, this, &MainWindow::requestInitialData);
+    } else {
+        QTimer::singleShot(100, this, &MainWindow::requestNonAdminInitialData);
+    }
 }
 
 MainWindow::~MainWindow()
@@ -737,6 +740,28 @@ void MainWindow::requestInitialData()
     logMessage("初始数据请求已发送");
 }
 
+void MainWindow::requestNonAdminInitialData()
+{
+    logMessage("非管理员初始化数据请求开始...");
+
+    // 1. 请求场所列表
+    if (m_tcpClient && m_tcpClient->isConnected()) {
+        std::vector<char> placeMsg = ProtocolParser::pack_message(
+            ProtocolParser::build_message_body(
+                ProtocolParser::CLIENT_QT_CLIENT,
+                ProtocolParser::QT_PLACE_LIST_QUERY,
+                "",  // equipment_id为空
+                {""} // payload为空
+                )
+            );
+        m_tcpClient->sendData(QByteArray(placeMsg.data(), placeMsg.size()));
+        logMessage("已发送场所列表查询请求");
+    }
+
+    // 2. 请求全量预约数据
+    updateNonAdminDashboardStats();  // 统一调用
+}
+
 void MainWindow::updateRecentReservations(const QString &data)
 {
     if (!m_activityTextEdit) return;
@@ -884,8 +909,11 @@ void MainWindow::switchPage(int pageIndex)
         // 页面切换时的特殊处理
         switch (pageIndex) {
         case PAGE_DASHBOARD:
-            // 切换到仪表板时自动刷新数据
-            updateDashboardStats();
+            if (m_userRole == "admin") {
+                updateDashboardStats(); // 管理员刷新所有数据
+            } else {
+                updateNonAdminDashboardStats(); // 学生/老师刷新预约数据
+            }
             logMessage("仪表板数据已刷新");
             break;
 
@@ -924,6 +952,19 @@ void MainWindow::switchPage(int pageIndex)
                     qDebug() << "自动请求预约记录（查询页无数据）";
                     emit m_reservationPage->reservationQueryRequested("all");
                 });
+            }
+            break;
+
+        case PAGE_MY_RESERVATION:
+            // 首次加载我的预约数据
+            if (!loadedPages.contains(PAGE_MY_RESERVATION)) {
+                if (m_tcpClient && m_tcpClient->isConnected()) {
+                    std::vector<char> msg = ProtocolParser::build_my_reservation_query(
+                        ProtocolParser::CLIENT_QT_CLIENT);
+                    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+                    loadedPages.insert(PAGE_MY_RESERVATION);
+                    logMessage("首次加载我的预约数据...");
+                }
             }
             break;
 
@@ -1251,6 +1292,18 @@ void MainWindow::updateDashboardStats()
     requestTodayEnergy();
     requestUnreadAlarms();
     requestTodayReservations();
+}
+
+void MainWindow::updateNonAdminDashboardStats()
+{
+    if (!m_tcpClient || !m_tcpClient->isConnected()) {
+        logMessage("网络未连接，无法刷新仪表板");
+        return;
+    }
+    std::vector<char> msg = ProtocolParser::build_reservation_query(
+        ProtocolParser::CLIENT_QT_CLIENT, "all");
+    m_tcpClient->sendData(QByteArray(msg.data(), msg.size()));
+    logMessage("非管理员仪表板：请求全量预约数据");
 }
 
 // 更新最近告警
